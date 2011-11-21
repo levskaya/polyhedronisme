@@ -201,6 +201,27 @@ class polyhedron
     #return edges
     uniqedges
 
+# produces vanilla OBJ files for import into 3d apps
+toOBJ = (poly) ->
+  objstr="#Produced by polyHédronisme http://levskaya.github.com/polyhedronisme\n"
+  objstr+="group poly\n"
+  objstr+="#vertices\n"
+  for v in poly.xyz
+    objstr += "v #{v[0]} #{v[1]} #{v[2]}\n"
+
+  objstr += "#normal vector defs \n"
+  for f in poly.face
+    norm = normal(poly.xyz[v] for v in f)
+    objstr += "vn #{norm[0]} #{norm[1]} #{norm[2]}\n"
+
+  objstr += "#face defs \n"
+  for [i,f] in enumerate(poly.face)
+    objstr += "f "
+    for v in f
+      objstr += "#{v+1}//#{i+1} "
+    objstr += "\n"
+
+  objstr
 
 #===================================================================================================
 # Primitive Polyhedra Seeds

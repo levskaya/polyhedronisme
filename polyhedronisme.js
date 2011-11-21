@@ -1,5 +1,5 @@
 (function() {
-  var BG_CLEAR, BG_COLOR, CANVAS_HEIGHT, CANVAS_WIDTH, COLOR_METHOD, LastMouseX, LastMouseY, MOUSEDOWN, PALETTE, PI, abs, add, adjustXYZ, ambo, animateShape, antiprism, canonicalXYZ, canonicalize, centroid, clear, colorassign, convexarea, copyVecArray, cos, cross, ctx, ctx_linewidth, cube, def_palette, dodecahedron, dot, drawShape, drawpoly, dual, edgeDist, enumerate, faceCenters, faceToEdges, floor, generatePoly, getOps, globPolys, globphi, globtheta, globtime, gyro, hextofloats, icosahedron, init, intersect, kisN, mag, mag2, midName, midpoint, mm3, mult, mv3, normal, octahedron, oneThird, orthogonal, paintPolyhedron, palette, parseurl, perspT, persp_ratio, persp_z_max, persp_z_min, perspective_scale, planarize, polyflag, polyhedron, pow, prism, propellor, pyramid, random, randomchoice, recenter, reciprocal, reciprocalC, reciprocalN, reflect, rotm, round, rwb_palette, rwbg_palette, sin, sortfaces, specreplacements, sqrt, sub, tan, tangentPoint, tangentify, testrig, tetrahedron, topolog, tween, unit, _2d_x_offset, _2d_y_offset, _mult;
+  var BG_CLEAR, BG_COLOR, CANVAS_HEIGHT, CANVAS_WIDTH, COLOR_METHOD, LastMouseX, LastMouseY, MOUSEDOWN, PALETTE, PI, abs, add, adjustXYZ, ambo, animateShape, antiprism, canonicalXYZ, canonicalize, centroid, clear, colorassign, convexarea, copyVecArray, cos, cross, ctx, ctx_linewidth, cube, def_palette, dodecahedron, dot, drawShape, drawpoly, dual, edgeDist, enumerate, faceCenters, faceToEdges, floor, generatePoly, getOps, globPolys, globphi, globtheta, globtime, gyro, hextofloats, icosahedron, init, intersect, kisN, mag, mag2, midName, midpoint, mm3, mult, mv3, normal, octahedron, oneThird, orthogonal, paintPolyhedron, palette, parseurl, perspT, persp_ratio, persp_z_max, persp_z_min, perspective_scale, planarize, polyflag, polyhedron, pow, prism, propellor, pyramid, random, randomchoice, recenter, reciprocal, reciprocalC, reciprocalN, reflect, rotm, round, rwb_palette, rwbg_palette, sin, sortfaces, specreplacements, sqrt, sub, tan, tangentPoint, tangentify, testrig, tetrahedron, toOBJ, topolog, tween, unit, _2d_x_offset, _2d_y_offset, _mult;
   var __bind = function(fn, me){ return function(){ return fn.apply(me, arguments); }; };
   random = Math.random;
   round = Math.round;
@@ -169,6 +169,44 @@
     };
     return polyhedron;
   })();
+  toOBJ = function(poly) {
+    var f, i, norm, objstr, v, _i, _j, _k, _l, _len, _len2, _len3, _len4, _ref, _ref2, _ref3, _ref4;
+    objstr = "#Produced by polyHédronisme http://levskaya.github.com/polyhedronisme\n";
+    objstr += "group poly\n";
+    objstr += "#vertices\n";
+    _ref = poly.xyz;
+    for (_i = 0, _len = _ref.length; _i < _len; _i++) {
+      v = _ref[_i];
+      objstr += "v " + v[0] + " " + v[1] + " " + v[2] + "\n";
+    }
+    objstr += "#normal vector defs \n";
+    _ref2 = poly.face;
+    for (_j = 0, _len2 = _ref2.length; _j < _len2; _j++) {
+      f = _ref2[_j];
+      norm = normal((function() {
+        var _k, _len3, _results;
+        _results = [];
+        for (_k = 0, _len3 = f.length; _k < _len3; _k++) {
+          v = f[_k];
+          _results.push(poly.xyz[v]);
+        }
+        return _results;
+      })());
+      objstr += "vn " + norm[0] + " " + norm[1] + " " + norm[2] + "\n";
+    }
+    objstr += "#face defs \n";
+    _ref3 = enumerate(poly.face);
+    for (_k = 0, _len3 = _ref3.length; _k < _len3; _k++) {
+      _ref4 = _ref3[_k], i = _ref4[0], f = _ref4[1];
+      objstr += "f ";
+      for (_l = 0, _len4 = f.length; _l < _len4; _l++) {
+        v = f[_l];
+        objstr += "" + (v + 1) + "//" + (i + 1) + " ";
+      }
+      objstr += "\n";
+    }
+    return objstr;
+  };
   tetrahedron = function() {
     var poly;
     poly = new polyhedron();
