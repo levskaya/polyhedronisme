@@ -1,0 +1,117 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta http-equiv="Content-Type" content="text/html; charset=ISO-8859-1">
+<title>polyHédronisme</title>
+
+<script type="text/javascript" src="libs/jquery-1.7.min.js"></script>
+<script type="text/javascript" src="libs/jquery.mousewheel.js"></script>
+<script type="text/javascript" src="libs/underscore-min.js"></script>
+
+<!--
+<script type="text/javascript" src="libs/coffee-script.js"></script>
+<script type="text/coffeescript" src="polyhedronisme.coffee"></script>
+-->
+<script type="text/javascript" src="polyhedronisme.js"></script>
+
+<!-- <script type="text/javascript" src="conway_polyhedra.js"></script> -->
+
+<style>
+  body {
+      font-size: 16px;
+      line-height: 24px;
+      background: #f0f0e5;
+      color: #252519;
+      font-family: "Palatino Linotype", "Book Antiqua", Palatino, FreeSerif, serif;
+    }
+    div.container {
+      width: 720px;
+      display: block;
+      margin-left: auto;
+      margin-right: auto;
+    }
+    #poly {
+      margin-left: auto;
+      margin-right: auto;
+    }
+    #spec {
+      margin-left: auto;
+      margin-right: auto;
+    }
+   ul { list-style:none; }
+   .fadey {color:rgba(255, 0, 0, 0.4); }
+   .canvaswrapper { text-align:center; margin-right: auto; margin-left:
+  auto; }
+   .specwrapper { text-align: center; margin-right: auto; margin-left:
+  auto; }
+   #spec { width:300px; }
+
+.footer { text-align: center; font-size: 12px; }
+
+</style>
+</head>
+
+<body>
+<div class="container">
+  
+<h2 style="text-align:center;"><span class="fadey">poly</span>Héd<span
+  class="fadey">r</span>onisme<span style="font-size:10px;"> v0.1<span></h2>
+
+<div class="canvaswrapper"><canvas id="poly" width="600" height="300"></canvas></div><br>
+<div class="specwrapper"><label>recipe <input id="spec"></input></label></div>
+
+<p>The specification consists of a space-delimited series of polyhedral recipes.  Each recipe looks like: </p>
+
+  <p>[<b>op</b>][<b>op</b>] ... [<b>op</b>][<b>base</b>] <i>no spaces,
+  just a string of characters</i> </p>
+
+  <p>where [<b>base</b>] is one of</p>
+
+  <ul>
+    <li>T - tetrahedron</li>
+    <li>C - cube</li>
+    <li>O - octahedron</li>
+    <li>I - icosahedron</li>
+    <li>D - dodecahedron</li>
+    <li>P<i>N</i> - N-sided prism</li>
+    <li>A<i>N</i> - N-sided anti-prism</li>
+    <li>Y<i>N</i> - N-sided pyramid</li>
+  </ul>
+
+  <p>and <b>op</b> is one of</p>
+<ul>
+  <li><b>k<i>N</i></b> - kisN if no N then general kis</li>
+  <li><b>a</b> - ambo</li>
+  <li><b>g</b> - gyro</li>
+  <li><b>d</b> - dual</li>
+  <li><b>r</b> - reflect</li>
+  <li><b>e</b> - explode (equiv. to <i>aa</i>) </li>
+  <li><b>b</b> - bevel (equiv. to <i>ta</i>) </li>
+  <li><b>o</b> - ortho (equiv. to <i>jj</i>) </li>
+  <li><b>m</b> - meta (equiv. to <i>k3j</i>) </li>
+  <li><b>t<i>N</i></b> - truncate (equiv. to <i>dkNd</i>) </li>
+  <li><b>j</b> - join (equiv. to <i>dad</i>) </li>
+  <li><b>s</b> - snub (equiv. to <i>dgd</i>) </li>
+  <li><b>p</b> - propellor</li>
+</ul>
+
+  <p>there are also two "refinement" operators for the
+  canonicalization of the polyhedral shape </p>
+<ul>
+  <li><b>.<i>N</i></b> - quick and dirty canonicalization, it can blow
+  up, iteratively refines shape 5*N times.</li>
+  <li><b>!<i>N</i></b> - proper canonicalization, intensive, slow
+  convergence,  iteratively refines shape 80*N times.</li>
+</ul>
+
+<p>these can blow up the geometry, which can be interesting too!</p>
+
+<div class="footer">
+  Text & Figures CC-BY | Code MIT License | Anselm Levskaya 2011
+</div>
+
+</div>
+
+</body>
+</html>
+
