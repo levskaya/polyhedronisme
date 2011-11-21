@@ -1052,7 +1052,7 @@
   $(function() {
     var defspecs, specs, urlParams;
     init();
-    defspecs = ["dakD", "oopD", "ajI", ".akY5", ".ooC", "bT"];
+    defspecs = ["dakD", "oopD", "ajI", ".ooC", "bT", "pmoI"];
     urlParams = parseurl();
     if ("recipe" in urlParams) {
       specs = [urlParams["recipe"]];
