@@ -421,6 +421,7 @@ kisN = (poly, n)->
     # each old vertex is a new vertex
     flag.newV "v#{i}", p
 
+  normals = faceNormals(poly)
   centers = faceCenters(poly)      # new vertices in centers of n-sided face
   foundAny = false                 # alert if don't find any
   for [i,f] in enumerate(poly.face)
@@ -429,7 +430,7 @@ kisN = (poly, n)->
       v2 = "v" + v
       if f.length is n or n is 0
         foundAny = true
-        flag.newV "f#{i}", centers[i]
+        flag.newV "f#{i}", add(centers[i],mult(0.1,normals[i]))
         fname = i + v1
         flag.newFlag fname,      v1,      v2
         flag.newFlag fname,      v2, "f#{i}"
@@ -443,9 +444,100 @@ kisN = (poly, n)->
 
   newpoly = flag.topoly()
   newpoly.name = "k" + (if n is 0 then "" else n) + poly.name
-  newpoly.xyz = adjustXYZ(newpoly, 3)
+  #newpoly.xyz = adjustXYZ(newpoly, 3)
   #newpoly.xyz = canonicalXYZ(newpoly, 3)  # this tends to make results look like shit
   newpoly
+
+
+# insetN ------------------------------------------------------------------------------------------
+insetN = (poly, n)->
+  console.log "Taking inset of #{if n==0 then "" else n}-sided faces of #{poly.name}..."
+
+  flag = new polyflag()
+  for [i,p] in enumerate(poly.xyz)
+    # each old vertex is a new vertex
+    flag.newV "v#{i}", p
+
+  normals = faceNormals(poly)
+  centers = faceCenters(poly)
+  for [i,f] in enumerate(poly.face) #new inset vertex for every vert in face
+    if f.length is n or n is 0
+      for v in f
+        flag.newV "f"+i+"v"+v, add(midpoint(poly.xyz[v],centers[i]),mult(-0.2,normals[i]))
+
+  foundAny = false                 # alert if don't find any
+  for [i,f] in enumerate(poly.face)
+    v1 = "v"+f[f.length-1]
+    for v in f
+      v2 = "v"+v
+      if f.length is n or n is 0
+        foundAny = true
+        fname = i + v1
+        flag.newFlag fname,      v1,       v2
+        flag.newFlag fname,      v2,       "f"+i+v2
+        flag.newFlag fname, "f"+i+v2,  "f"+i+v1
+        flag.newFlag fname, "f"+i+v1,  v1
+        #new inset, extruded face
+        flag.newFlag "ex"+i, "f"+i+v1,  "f"+i+v2
+      else
+        flag.newFlag i, v1, v2  # same old flag, if non-n
+      v1=v2  # current becomes previous
+
+  if not foundAny
+    console.log "No #{n}-fold components were found."
+
+  newpoly = flag.topoly()
+  newpoly.name = "n" + (if n is 0 then "" else n) + poly.name
+  console.log newpoly
+  #newpoly.xyz = adjustXYZ(newpoly, 3)
+  #newpoly.xyz = canonicalXYZ(newpoly, 3)  # this tends to make results look like shit
+  newpoly
+
+# ExtrudeN ------------------------------------------------------------------------------------------
+extrudeN = (poly, n)->
+  console.log "Taking extrusion of #{if n==0 then "" else n}-sided faces of #{poly.name}..."
+
+  flag = new polyflag()
+  for [i,p] in enumerate(poly.xyz)
+    # each old vertex is a new vertex
+    flag.newV "v#{i}", p
+
+  normals = faceNormals(poly)
+  centers = faceCenters(poly)
+  for [i,f] in enumerate(poly.face) #new inset vertex for every vert in face
+    if f.length is n or n is 0
+      for v in f
+        #flag.newV "f"+i+"v"+v, add(midpoint(poly.xyz[v],centers[i]),mult(-0.2,normals[i]))
+        flag.newV "f"+i+"v"+v, add(poly.xyz[v], mult(0.3,normals[i]))
+
+  foundAny = false                 # alert if don't find any
+  for [i,f] in enumerate(poly.face)
+    v1 = "v"+f[f.length-1]
+    for v in f
+      v2 = "v"+v
+      if f.length is n or n is 0
+        foundAny = true
+        fname = i + v1
+        flag.newFlag fname,      v1,       v2
+        flag.newFlag fname,      v2,       "f"+i+v2
+        flag.newFlag fname, "f"+i+v2,  "f"+i+v1
+        flag.newFlag fname, "f"+i+v1,  v1
+        #new inset, extruded face
+        flag.newFlag "ex"+i, "f"+i+v1,  "f"+i+v2
+      else
+        flag.newFlag i, v1, v2  # same old flag, if non-n
+      v1=v2  # current becomes previous
+
+  if not foundAny
+    console.log "No #{n}-fold components were found."
+
+  newpoly = flag.topoly()
+  newpoly.name = "x" + (if n is 0 then "" else n) + poly.name
+  console.log newpoly
+  #newpoly.xyz = adjustXYZ(newpoly, 3)
+  #newpoly.xyz = canonicalXYZ(newpoly, 3)  # this tends to make results look like shit
+  newpoly
+
 
 
 # Ambo ------------------------------------------------------------------------------------------
@@ -828,6 +920,10 @@ generatePoly = (notation) ->
       # canonicalization operators
       when "." then poly.xyz = canonicalXYZ(poly, if n is 0 then 5 else n*5)
       when "!" then poly.xyz = canonicalize(poly, if n is 0 then 5 else n*80)
+      when "_" then poly.xyz =    adjustXYZ(poly, if n is 0 then 5 else n*3)
+      # experimental
+      when "n" then poly     = insetN(poly, n)
+      when "x" then poly     = extrudeN(poly, n)
 
     ops = ops.slice(0,-1);  # remove last character
 

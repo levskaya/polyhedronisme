@@ -1,5 +1,5 @@
 (function() {
-  var BG_CLEAR, BG_COLOR, CANVAS_HEIGHT, CANVAS_WIDTH, COLOR_METHOD, LastMouseX, LastMouseY, MOUSEDOWN, PALETTE, PI, abs, add, adjustXYZ, ambo, animateShape, antiprism, canonicalXYZ, canonicalize, centroid, clear, colorassign, convexarea, copyVecArray, cos, cross, ctx, ctx_linewidth, cube, def_palette, dodecahedron, dot, drawShape, drawpoly, dual, edgeDist, enumerate, faceCenters, faceToEdges, floor, generatePoly, getOps, globPolys, globphi, globtheta, globtime, gyro, hextofloats, icosahedron, init, intersect, kisN, mag, mag2, midName, midpoint, mm3, mult, mv3, normal, octahedron, oneThird, orthogonal, paintPolyhedron, palette, parseurl, perspT, persp_ratio, persp_z_max, persp_z_min, perspective_scale, planarize, polyflag, polyhedron, pow, prism, propellor, pyramid, random, randomchoice, recenter, reciprocal, reciprocalC, reciprocalN, reflect, rotm, round, rwb_palette, rwbg_palette, sin, sortfaces, specreplacements, sqrt, sub, tan, tangentPoint, tangentify, testrig, tetrahedron, toOBJ, topolog, tween, unit, _2d_x_offset, _2d_y_offset, _mult;
+  var BG_CLEAR, BG_COLOR, CANVAS_HEIGHT, CANVAS_WIDTH, COLOR_METHOD, LastMouseX, LastMouseY, MOUSEDOWN, PALETTE, PI, abs, add, adjustXYZ, ambo, animateShape, antiprism, canonicalXYZ, canonicalize, centroid, clear, colorassign, convexarea, copyVecArray, cos, cross, ctx, ctx_linewidth, cube, def_palette, dodecahedron, dot, drawShape, drawpoly, dual, edgeDist, enumerate, extrudeN, faceCenters, faceNormals, faceToEdges, floor, generatePoly, getOps, globPolys, globphi, globtheta, globtime, gyro, hextofloats, icosahedron, init, insetN, intersect, kisN, mag, mag2, midName, midpoint, mm3, mult, mv3, normal, octahedron, oneThird, orthogonal, paintPolyhedron, palette, parseurl, perspT, persp_ratio, persp_z_max, persp_z_min, perspective_scale, planarize, polyflag, polyhedron, pow, prism, propellor, pyramid, random, randomchoice, recenter, reciprocal, reciprocalC, reciprocalN, reflect, rotm, round, rwb_palette, rwbg_palette, sin, sortfaces, specreplacements, sqrt, sub, tan, tangentPoint, tangentify, testrig, tetrahedron, toOBJ, topolog, tween, unit, _2d_x_offset, _2d_y_offset, _mult;
   var __bind = function(fn, me){ return function(){ return fn.apply(me, arguments); }; };
   random = Math.random;
   round = Math.round;
@@ -382,7 +382,7 @@
     return polyflag;
   })();
   kisN = function(poly, n) {
-    var centers, f, flag, fname, foundAny, i, newpoly, p, v, v1, v2, _i, _j, _k, _len, _len2, _len3, _ref, _ref2, _ref3, _ref4;
+    var centers, f, flag, fname, foundAny, i, newpoly, normals, p, v, v1, v2, _i, _j, _k, _len, _len2, _len3, _ref, _ref2, _ref3, _ref4;
     console.log("Taking kis of " + (n === 0 ? "" : n) + "-sided faces of " + poly.name + "...");
     flag = new polyflag();
     _ref = enumerate(poly.xyz);
@@ -390,6 +390,7 @@
       _ref2 = _ref[_i], i = _ref2[0], p = _ref2[1];
       flag.newV("v" + i, p);
     }
+    normals = faceNormals(poly);
     centers = faceCenters(poly);
     foundAny = false;
     _ref3 = enumerate(poly.face);
@@ -401,7 +402,7 @@
         v2 = "v" + v;
         if (f.length === n || n === 0) {
           foundAny = true;
-          flag.newV("f" + i, centers[i]);
+          flag.newV("f" + i, add(centers[i], mult(0.1, normals[i])));
           fname = i + v1;
           flag.newFlag(fname, v1, v2);
           flag.newFlag(fname, v2, "f" + i);
@@ -417,7 +418,108 @@
     }
     newpoly = flag.topoly();
     newpoly.name = "k" + (n === 0 ? "" : n) + poly.name;
-    newpoly.xyz = adjustXYZ(newpoly, 3);
+    return newpoly;
+  };
+  insetN = function(poly, n) {
+    var centers, f, flag, fname, foundAny, i, newpoly, normals, p, v, v1, v2, _i, _j, _k, _l, _len, _len2, _len3, _len4, _len5, _m, _ref, _ref2, _ref3, _ref4, _ref5, _ref6;
+    console.log("Taking inset of " + (n === 0 ? "" : n) + "-sided faces of " + poly.name + "...");
+    flag = new polyflag();
+    _ref = enumerate(poly.xyz);
+    for (_i = 0, _len = _ref.length; _i < _len; _i++) {
+      _ref2 = _ref[_i], i = _ref2[0], p = _ref2[1];
+      flag.newV("v" + i, p);
+    }
+    normals = faceNormals(poly);
+    centers = faceCenters(poly);
+    _ref3 = enumerate(poly.face);
+    for (_j = 0, _len2 = _ref3.length; _j < _len2; _j++) {
+      _ref4 = _ref3[_j], i = _ref4[0], f = _ref4[1];
+      if (f.length === n || n === 0) {
+        for (_k = 0, _len3 = f.length; _k < _len3; _k++) {
+          v = f[_k];
+          flag.newV("f" + i + "v" + v, add(midpoint(poly.xyz[v], centers[i]), mult(-0.2, normals[i])));
+        }
+      }
+    }
+    foundAny = false;
+    _ref5 = enumerate(poly.face);
+    for (_l = 0, _len4 = _ref5.length; _l < _len4; _l++) {
+      _ref6 = _ref5[_l], i = _ref6[0], f = _ref6[1];
+      v1 = "v" + f[f.length - 1];
+      for (_m = 0, _len5 = f.length; _m < _len5; _m++) {
+        v = f[_m];
+        v2 = "v" + v;
+        if (f.length === n || n === 0) {
+          foundAny = true;
+          fname = i + v1;
+          flag.newFlag(fname, v1, v2);
+          flag.newFlag(fname, v2, "f" + i + v2);
+          flag.newFlag(fname, "f" + i + v2, "f" + i + v1);
+          flag.newFlag(fname, "f" + i + v1, v1);
+          flag.newFlag("ex" + i, "f" + i + v1, "f" + i + v2);
+        } else {
+          flag.newFlag(i, v1, v2);
+        }
+        v1 = v2;
+      }
+    }
+    if (!foundAny) {
+      console.log("No " + n + "-fold components were found.");
+    }
+    newpoly = flag.topoly();
+    newpoly.name = "n" + (n === 0 ? "" : n) + poly.name;
+    console.log(newpoly);
+    return newpoly;
+  };
+  extrudeN = function(poly, n) {
+    var centers, f, flag, fname, foundAny, i, newpoly, normals, p, v, v1, v2, _i, _j, _k, _l, _len, _len2, _len3, _len4, _len5, _m, _ref, _ref2, _ref3, _ref4, _ref5, _ref6;
+    console.log("Taking extrusion of " + (n === 0 ? "" : n) + "-sided faces of " + poly.name + "...");
+    flag = new polyflag();
+    _ref = enumerate(poly.xyz);
+    for (_i = 0, _len = _ref.length; _i < _len; _i++) {
+      _ref2 = _ref[_i], i = _ref2[0], p = _ref2[1];
+      flag.newV("v" + i, p);
+    }
+    normals = faceNormals(poly);
+    centers = faceCenters(poly);
+    _ref3 = enumerate(poly.face);
+    for (_j = 0, _len2 = _ref3.length; _j < _len2; _j++) {
+      _ref4 = _ref3[_j], i = _ref4[0], f = _ref4[1];
+      if (f.length === n || n === 0) {
+        for (_k = 0, _len3 = f.length; _k < _len3; _k++) {
+          v = f[_k];
+          flag.newV("f" + i + "v" + v, add(poly.xyz[v], mult(0.3, normals[i])));
+        }
+      }
+    }
+    foundAny = false;
+    _ref5 = enumerate(poly.face);
+    for (_l = 0, _len4 = _ref5.length; _l < _len4; _l++) {
+      _ref6 = _ref5[_l], i = _ref6[0], f = _ref6[1];
+      v1 = "v" + f[f.length - 1];
+      for (_m = 0, _len5 = f.length; _m < _len5; _m++) {
+        v = f[_m];
+        v2 = "v" + v;
+        if (f.length === n || n === 0) {
+          foundAny = true;
+          fname = i + v1;
+          flag.newFlag(fname, v1, v2);
+          flag.newFlag(fname, v2, "f" + i + v2);
+          flag.newFlag(fname, "f" + i + v2, "f" + i + v1);
+          flag.newFlag(fname, "f" + i + v1, v1);
+          flag.newFlag("ex" + i, "f" + i + v1, "f" + i + v2);
+        } else {
+          flag.newFlag(i, v1, v2);
+        }
+        v1 = v2;
+      }
+    }
+    if (!foundAny) {
+      console.log("No " + n + "-fold components were found.");
+    }
+    newpoly = flag.topoly();
+    newpoly.name = "x" + (n === 0 ? "" : n) + poly.name;
+    console.log(newpoly);
     return newpoly;
   };
   midName = function(v1, v2) {
@@ -727,6 +829,24 @@
     }
     return centers;
   };
+  faceNormals = function(poly) {
+    var f, normals, v, _i, _len, _ref;
+    normals = [];
+    _ref = poly.face;
+    for (_i = 0, _len = _ref.length; _i < _len; _i++) {
+      f = _ref[_i];
+      normals.push(normal((function() {
+        var _j, _len2, _results;
+        _results = [];
+        for (_j = 0, _len2 = f.length; _j < _len2; _j++) {
+          v = f[_j];
+          _results.push(poly.xyz[v]);
+        }
+        return _results;
+      })()));
+    }
+    return normals;
+  };
   centroid = function(xyzs) {
     var centroidV, v, _i, _len;
     centroidV = [0, 0, 0];
@@ -837,6 +957,15 @@
           break;
         case "!":
           poly.xyz = canonicalize(poly, n === 0 ? 5 : n * 80);
+          break;
+        case "_":
+          poly.xyz = adjustXYZ(poly, n === 0 ? 5 : n * 3);
+          break;
+        case "n":
+          poly = insetN(poly, n);
+          break;
+        case "x":
+          poly = extrudeN(poly, n);
       }
       ops = ops.slice(0, -1);
     }
