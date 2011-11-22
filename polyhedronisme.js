@@ -533,7 +533,7 @@
     return poly;
   };
   dual = function(poly) {
-    var dpoly, f, face, flag, i, j, k, sortF, v1, v2, _i, _len, _ref, _ref2, _ref3, _ref4, _ref5, _ref6, _ref7;
+    var centers, dpoly, f, face, flag, i, j, k, sortF, v1, v2, _i, _len, _ref, _ref2, _ref3, _ref4, _ref5, _ref6, _ref7;
     console.log("Taking dual of " + poly.name + "...");
     flag = new polyflag();
     face = [];
@@ -548,8 +548,9 @@
         v1 = v2;
       }
     }
+    centers = faceCenters(poly);
     for (i = 0, _ref4 = poly.face.length - 1; 0 <= _ref4 ? i <= _ref4 : i >= _ref4; 0 <= _ref4 ? i++ : i--) {
-      flag.newV("" + i, []);
+      flag.newV("" + i, centers[i]);
     }
     for (i = 0, _ref5 = poly.face.length - 1; 0 <= _ref5 ? i <= _ref5 : i >= _ref5; 0 <= _ref5 ? i++ : i--) {
       v1 = poly.face[i][poly.face[i].length - 1];
@@ -568,7 +569,6 @@
       sortF[k] = f;
     }
     dpoly.face = sortF;
-    dpoly.xyz = reciprocalN(poly);
     if (poly.name[0] !== "d") {
       dpoly.name = "d" + poly.name;
     } else {

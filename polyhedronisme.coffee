@@ -561,8 +561,12 @@ dual = (poly) ->
       face[v1]["v#{v2}"] = "#{i}" # fill it. 2nd index is associative
       v1=v2 # current becomes previous
 
+  #for i in [0..poly.face.length-1]
+  #  flag.newV("#{i}",[])
+
+  centers = faceCenters(poly)
   for i in [0..poly.face.length-1]
-    flag.newV("#{i}",[])
+    flag.newV("#{i}",centers[i])
 
   for i in [0..poly.face.length-1]
     v1 = poly.face[i][poly.face[i].length-1]
@@ -581,7 +585,7 @@ dual = (poly) ->
   dpoly.face = sortF
 
   # compute coordinates as dual to those of original poly
-  dpoly.xyz = reciprocalN(poly)
+  #dpoly.xyz = reciprocalN(poly)
 
   if poly.name[0] isnt "d"
     dpoly.name = "d"+poly.name
@@ -723,6 +727,14 @@ faceCenters = (poly) ->
     centers[i] = mult(1.0/poly.face[i].length, centers[i]) # div by n
 
   centers
+
+# get array of face centers
+faceNormals = (poly) ->
+  normals = []
+  for f in poly.face
+    normals.push normal(poly.xyz[v] for v in f)
+
+  normals
 
 # calculate centroid of array of vertices
 centroid = (xyzs) ->
