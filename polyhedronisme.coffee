@@ -331,12 +331,13 @@ antiprism = (n) ->
 
 pyramid = (n) ->
   theta = 2*PI/n # pie angle
+  height = 1
   poly = new polyhedron()
   poly.name = "Y#{n}"
 
   for i in [0..n-1] # vertex #'s 0...n-1 around one face
     poly.xyz.push [cos(i*theta), sin(i*theta), 0.2]
-  poly.xyz.push [0,0,-2] # apex
+  poly.xyz.push [0,0,-1*height] # apex
 
   poly.face.push [n-1..0] # base
   for i in [0..n-1] # n triangular sides
@@ -391,9 +392,14 @@ class polyflag
       v = v0 # v moves around face
       poly.face[ctr].push @verts[v] #record index
       v = @flags[i][v] # goto next vertex
-      while v isnt v0  # loop until back to start
+      faceCTR=0
+      while v isnt v0 # loop until back to start
         poly.face[ctr].push @verts[v]
         v = @flags[i][v]
+        faceCTR++
+        if faceCTR>200
+          console.log "Bad flag spec, have a neverending face:", i, @flags[i]
+          break
       ctr++
 
     poly.name = "unknown polyhedron"
@@ -493,6 +499,7 @@ insetN = (poly, n)->
   #newpoly.xyz = canonicalXYZ(newpoly, 3)  # this tends to make results look like shit
   newpoly
 
+
 # ExtrudeN ------------------------------------------------------------------------------------------
 extrudeN = (poly, n)->
   console.log "Taking extrusion of #{if n==0 then "" else n}-sided faces of #{poly.name}..."
@@ -517,11 +524,11 @@ extrudeN = (poly, n)->
       v2 = "v"+v
       if f.length is n or n is 0
         foundAny = true
-        fname = i + v1
-        flag.newFlag fname,      v1,       v2
-        flag.newFlag fname,      v2,       "f"+i+v2
-        flag.newFlag fname, "f"+i+v2,  "f"+i+v1
-        flag.newFlag fname, "f"+i+v1,  v1
+        #fname = i+v1
+        flag.newFlag i+v1,       v1,       v2
+        flag.newFlag i+v1,       v2, "f"+i+v2
+        flag.newFlag i+v1, "f"+i+v2, "f"+i+v1
+        flag.newFlag i+v1, "f"+i+v1,       v1
         #new inset, extruded face
         flag.newFlag "ex"+i, "f"+i+v1,  "f"+i+v2
       else
@@ -538,6 +545,55 @@ extrudeN = (poly, n)->
   #newpoly.xyz = canonicalXYZ(newpoly, 3)  # this tends to make results look like shit
   newpoly
 
+
+# StellaN ------------------------------------------------------------------------------------------
+stellaN = (poly)->
+  console.log "Taking stella of #{poly.name}..."
+
+  centers = faceCenters(poly)  # calculate face centers
+
+  flag = new polyflag()
+  for [i,p] in enumerate(poly.xyz)
+    flag.newV "v#{i}", p      # each old vertex is a new vertex
+
+  # iterate over triplets of faces v1,v2,v3
+  for [i,f] in enumerate(poly.face)
+    v1 = "v"+f[f.length-2]
+    v2 = "v"+f[f.length-1]
+    vert1 = poly.xyz[f[f.length-2]]
+    vert2 = poly.xyz[f[f.length-1]]
+    for v in f
+      v3 = "v"+v
+      vert3 = poly.xyz[v]
+      v12=v1+"~"+v2 # names for "oriented" midpoints
+      v21=v2+"~"+v1
+      v23=v2+"~"+v3
+
+      # on each Nface, N new points inset from edge midpoints towards center = "stellated" points
+      flag.newV v12, midpoint( midpoint(vert1,vert2), centers[i] )
+
+      # inset Nface made of new, stellated points
+      flag.newFlag "in#{i}",      v12,       v23
+
+      # new tri face constituting the remainder of the stellated Nface
+      flag.newFlag "f#{i}#{v2}",      v23,      v12
+      flag.newFlag "f#{i}#{v2}",       v12,      v2
+      flag.newFlag "f#{i}#{v2}",      v2,      v23
+
+      # one of the two new triangles replacing old edge between v1->v2
+      flag.newFlag "f"+v12,     v1,        v21
+      flag.newFlag "f"+v12,     v21,       v12
+      flag.newFlag "f"+v12,      v12,       v1
+
+      [v1,v2]=[v2,v3]  # current becomes previous
+      [vert1,vert2]=[vert2,vert3]
+
+  newpoly = flag.topoly()
+  newpoly.name = "*" + poly.name
+  #console.log "stellaN", newpoly
+  #newpoly.xyz = adjustXYZ(newpoly, 3)
+  #newpoly.xyz = canonicalXYZ(newpoly, 3)  # this tends to make results look like shit
+  newpoly
 
 
 # Ambo ------------------------------------------------------------------------------------------
@@ -563,6 +619,7 @@ ambo = (poly)->
   newpoly.name = "a" + poly.name
   newpoly.xyz = adjustXYZ(newpoly, 2)
   newpoly
+
 
 # Gyro ----------------------------------------------------------------------------------------------
 gyro = (poly)->
@@ -595,6 +652,7 @@ gyro = (poly)->
   newpoly.xyz = adjustXYZ(newpoly, 3)
   newpoly
 
+
 # Propellor ------------------------------------------------------------------------------------------
 propellor = (poly) ->
   console.log "Taking propellor of #{poly.name}..."
@@ -622,6 +680,7 @@ propellor = (poly) ->
   newpoly.xyz  = adjustXYZ(newpoly, 3)
   newpoly
 
+
 # Reflection ------------------------------------------------------------------------------------------
 # compute reflection through origin
 reflect = (poly) ->
@@ -634,11 +693,12 @@ reflect = (poly) ->
   poly.xyz = adjustXYZ(poly, 1)                    # build dual
   poly
 
+
 # Dual ------------------------------------------------------------------------------------------------
 # the dual function computes the dual's topology, matching F and V indices, and invokes simple
 # canonicalization for the determination of xyz coordinates
 dual = (poly) ->
-  console.log "Taking dual of #{poly.name}..."
+  console.log "Taking dual of #{poly.name}...", poly
 
   flag = new polyflag()
 
@@ -646,35 +706,35 @@ dual = (poly) ->
   for i in [0..poly.xyz.length-1]
     face[i] = {} # create empty associative table
 
-  for i in [0..poly.face.length-1]
-    v1 = poly.face[i][poly.face[i].length-1] #previous vertex
-    for j in [0..poly.face[i].length-1]
-      v2 = poly.face[i][j] # this vertex
+  for [i,f] in enumerate(poly.face)
+    v1 = f[f.length-1] #previous vertex
+    for v2 in f
+      console.log v1,v2,i
+      # THIS ASSUMES that no 2 faces that share an edge share it in the same orientation!
+      # which of course never happens for proper manifold meshes, so get your meshes right.
       face[v1]["v#{v2}"] = "#{i}" # fill it. 2nd index is associative
       v1=v2 # current becomes previous
-
-  #for i in [0..poly.face.length-1]
-  #  flag.newV("#{i}",[])
 
   centers = faceCenters(poly)
   for i in [0..poly.face.length-1]
     flag.newV("#{i}",centers[i])
 
-  for i in [0..poly.face.length-1]
-    v1 = poly.face[i][poly.face[i].length-1]
-    for j in [0..poly.face[i].length-1]
-      v2 = poly.face[i][j]
+  for [i,f] in enumerate(poly.face)
+    v1 = f[f.length-1] #previous vertex
+    for v2 in f
       flag.newFlag(v1, face[v2]["v#{v1}"], "#{i}")
-      v1=v2
+      v1=v2 # current becomes previous
 
+  #console.log face, flag
   dpoly = flag.topoly() # build topological dual from flags
+  #console.log dpoly
 
   # match F index ordering to V index ordering on dual
-  sortF = []
-  for f in dpoly.face
-    k = intersect(poly.face[f[0]],poly.face[f[1]],poly.face[f[2]])
-    sortF[k] = f
-  dpoly.face = sortF
+  #sortF = []
+  #for f in dpoly.face
+  #  k = intersect(poly.face[f[0]],poly.face[f[1]],poly.face[f[2]])
+  #  sortF[k] = f
+  #dpoly.face = sortF
 
   # compute coordinates as dual to those of original poly
   #dpoly.xyz = reciprocalN(poly)
@@ -685,6 +745,7 @@ dual = (poly) ->
     dpoly.name = poly.name[1..]
 
   dpoly
+
 
 
 #===================================================================================================
@@ -924,11 +985,12 @@ generatePoly = (notation) ->
       # experimental
       when "n" then poly     = insetN(poly, n)
       when "x" then poly     = extrudeN(poly, n)
+      when "*" then poly     = stellaN(poly, n)
 
     ops = ops.slice(0,-1);  # remove last character
 
   # Recenter polyhedra at origin (rarely needed)
-  poly.xyz = recenter(poly.xyz, poly.getEdges())
+  #poly.xyz = recenter(poly.xyz, poly.getEdges())
 
   # Color the faces of the polyhedra for display
   poly = paintPolyhedron(poly)
@@ -1062,6 +1124,7 @@ paintPolyhedron = (poly) ->
     if COLOR_METHOD is "area"
       # color by face area (quick proxy for different kinds of faces) convexarea
       face_verts = (poly.xyz[v] for v in f)
+      #console.log (v for v in f)
       clr = colorassign(convexarea(face_verts), colormemory)
     else
       # color by face-sidedness
@@ -1119,9 +1182,13 @@ drawpoly = (poly,tvec,rot) ->
   tvec ||= [3,3,3]
   rot  ||= [1,0,1]
 
+  #centers = _.map(faceCenters(poly), (x)->mv3(rotm(rot[0],rot[1],rot[2]),x))
+  #oldfaces = ("#{fno}" for fno in [0..centers.length-1])
+
   # rotate poly in 3d
   oldxyz = _.map(poly.xyz, (x)->x)
   poly.xyz = _.map(poly.xyz, (x)->mv3(rotm(rot[0],rot[1],rot[2]),x))
+
   # z sort faces
   sortfaces(poly)
 
@@ -1147,6 +1214,12 @@ drawpoly = (poly,tvec,rot) ->
     ctx.fillStyle = "rgba(#{round(clr[0]*255)}, #{round(clr[1]*255)}, #{round(clr[2]*255)}, #{1.0})"
     ctx.fill()
     ctx.stroke()
+
+  #for [fno,face] in enumerate(poly.face)
+  #  ctx.textAlign = "center"
+  #  ctx.fillStyle = "rgba(0,0,0,1)"
+  #  [x,y] = perspT(add(tvec, centers[fno]),persp_z_max,persp_z_min,persp_ratio,perspective_scale)
+  #  ctx.fillText(oldfaces[fno],x+_2d_x_offset,y+_2d_y_offset)
 
   # reset coords, for setting absolute rotation, as poly is passed by ref
   poly.xyz = oldxyz
