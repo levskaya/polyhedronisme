@@ -878,26 +878,26 @@
     return centers;
   };
   reciprocalN = function(poly) {
-    var ans, avgEdgeDist, f, tmp, v1, v2, v3, _i, _j, _len, _len2, _ref, _ref2, _ref3;
+    var ans, avgEdgeDist, f, normalV, tmp, v1, v2, v3, _i, _j, _len, _len2, _ref, _ref2, _ref3;
     ans = [];
     _ref = poly.face;
     for (_i = 0, _len = _ref.length; _i < _len; _i++) {
       f = _ref[_i];
       centroid = [0, 0, 0];
-      normal = [0, 0, 0];
+      normalV = [0, 0, 0];
       avgEdgeDist = 0.0;
       _ref2 = f.slice(-2), v1 = _ref2[0], v2 = _ref2[1];
       for (_j = 0, _len2 = f.length; _j < _len2; _j++) {
         v3 = f[_j];
         centroid = add(centroid, poly.xyz[v3]);
-        normal = add(normal, orthogonal(poly.xyz[v1], poly.xyz[v2], poly.xyz[v3]));
+        normalV = add(normalV, orthogonal(poly.xyz[v1], poly.xyz[v2], poly.xyz[v3]));
         avgEdgeDist += edgeDist(poly.xyz[v1], poly.xyz[v2]);
         _ref3 = [v2, v3], v1 = _ref3[0], v2 = _ref3[1];
       }
       centroid = mult(1 / f.length, centroid);
-      normal = unit(normal);
+      normalV = unit(normalV);
       avgEdgeDist = avgEdgeDist / f.length;
-      tmp = reciprocal(mult(dot(centroid, normal), normal));
+      tmp = reciprocal(mult(dot(centroid, normalV), normalV));
       ans.push(mult((1 + avgEdgeDist) / 2, tmp));
     }
     return ans;
@@ -922,7 +922,7 @@
     }
     return poly.xyz;
   };
-  specreplacements = [[/P4$/g, "C"], [/e/g, "aa"], [/b/g, "ta"], [/o/g, "jj"], [/m/g, "kj"], [/t(\d*)/g, "dk$1d"], [/j/g, "dad"], [/s/g, "dgd"], [/dd/g, ""], [/aO/g, "aC"], [/aI/g, "aD"], [/gO/g, "gC"], [/gI/g, "gD"]];
+  specreplacements = [[/P4$/g, "C"], [/e/g, "aa"], [/b/g, "ta"], [/o/g, "jj"], [/m/g, "kj"], [/t(\d*)/g, "dk$1d"], [/j/g, "dad"], [/s/g, "dgd"], [/dd/g, ""], [/ad/g, "a"], [/gd/g, "g"], [/aO/g, "aC"], [/aI/g, "aD"], [/gO/g, "gC"], [/gI/g, "gD"]];
   getOps = function(notation) {
     var equiv, expanded, orig, _i, _len, _ref;
     expanded = notation;

@@ -93,7 +93,7 @@ orthogonal = (v1,v2,v3) ->
   # cross product
   cross d1, d2
 
-# find element common to 3 sets by brute force search
+# find first element common to 3 sets by brute force search
 intersect = (set1, set2, set3) ->
   for s1 in set1
     for s2 in set2
@@ -101,7 +101,7 @@ intersect = (set1, set2, set3) ->
         for s3 in set3
           if s1 is s3
             return s1
-  return null
+  return null # oh noes!
 
 # copies array of arrays by value (deep copy)
 copyVecArray = (vecArray)->
@@ -132,6 +132,7 @@ mm3 = (A,B) ->
 
 # Rotation Matrix
 # Totally ghetto, not at all in agreement with euler angles!
+# use quaternions instead
 rotm = (phi,theta,psi)->
     xy_mat = [
       [cos(phi), -1.0*sin(phi),  0.0],
@@ -148,11 +149,12 @@ rotm = (phi,theta,psi)->
 
     mm3(xz_mat, mm3(yz_mat,xy_mat))
 
+# Perspective Transform
+# assumes world's been rotated appropriately such that Z is depth
+# scales perspective such that inside depth regions min_real_depth <--> max_real_depth
+# perspective lengths vary no more than:   desired_ratio
+# with target dimension of roughly length: desired_length
 perspT = (vec3, max_real_depth, min_real_depth, desired_ratio, desired_length) ->
-  # assumes world's been rotated appropriately such that Z is depth
-  # scales perspective such that inside depth regions min_real_depth <--> max_real_depth
-  # perspective lengths vary no more than:   desired_ratio
-  # with target dimension of roughly length: desired_length
   z0          = (max_real_depth * desired_ratio - min_real_depth)/(1-desired_ratio)
   scalefactor =  desired_length * desired_ratio/(1-desired_ratio)
 
@@ -910,20 +912,20 @@ reciprocalN = (poly) ->
   ans = []
   for f in poly.face #for each face
     centroid    = [0,0,0] # running sum of vertex coords
-    normal      = [0,0,0] # running sum of normal vectors
+    normalV      = [0,0,0] # running sum of normal vectors
     avgEdgeDist =    0.0  # running sum for avg edge distance
 
     [v1, v2] = f[-2..-1]
     for v3 in f
       centroid = add centroid, poly.xyz[v3]
-      normal   = add normal, orthogonal(poly.xyz[v1], poly.xyz[v2], poly.xyz[v3])
+      normalV   = add normalV, orthogonal(poly.xyz[v1], poly.xyz[v2], poly.xyz[v3])
       avgEdgeDist += edgeDist(poly.xyz[v1], poly.xyz[v2])
       [v1, v2] = [v2, v3] # shift over one
 
     centroid    = mult(1/f.length, centroid)
-    normal      = unit(normal)
+    normalV      = unit(normalV)
     avgEdgeDist = avgEdgeDist / f.length
-    tmp         = reciprocal mult dot(centroid, normal), normal # based on face
+    tmp         = reciprocal mult dot(centroid, normalV), normalV # based on face
     ans.push mult((1 + avgEdgeDist) / 2, tmp) # edge correction
 
   ans
@@ -966,8 +968,8 @@ specreplacements = [[/P4$/g, "C"],  # P4 --> C   (C is prism)
   [/j/g, "dad"],  # j --> dad  (dual operations)
   [/s/g, "dgd"],  # s --> dgd  (dual operations)
   [/dd/g, ""],    # dd --> null  (order 2)
-# [/ad/g, "a"],   # ad --> a   (a_ = ad_)
-# [/gd/g, "g"],   # gd --> g   (g_ = gd_)
+  [/ad/g, "a"],   # ad --> a   (a_ = ad_)
+  [/gd/g, "g"],   # gd --> g   (g_ = gd_)
   [/aO/g, "aC"],  # aO --> aC  (for uniqueness)
   [/aI/g, "aD"],  # aI --> aD  (for uniqueness)
   [/gO/g, "gC"],  # gO --> gC  (for uniqueness)
@@ -1158,7 +1160,8 @@ paintPolyhedron = (poly) ->
 # Drawing Functions
 #===================================================================================================
 
-#init canvas element -------------------------------------------------------------------------------
+# init canvas element
+# -------------------------------------------------------------------------------
 init = ->
   canvas = $('#poly')
   canvas.width(CANVAS_WIDTH)
@@ -1174,7 +1177,8 @@ init = ->
     ctx.fillStyle = BG_COLOR
     ctx.fillRect 0, 0, CANVAS_WIDTH, CANVAS_HEIGHT
 
-# clear canvas -----------------------------------------------------------------------------------
+# clear canvas
+# -----------------------------------------------------------------------------------
 clear = ->
   if BG_CLEAR
     ctx.clearRect 0, 0, CANVAS_WIDTH, CANVAS_HEIGHT
@@ -1183,10 +1187,14 @@ clear = ->
     ctx.fillStyle = BG_COLOR
     ctx.fillRect 0, 0, CANVAS_WIDTH, CANVAS_HEIGHT
 
-# z sorts faces of poly -------------------------------------------------------------------------
+# z sorts faces of poly
+# -------------------------------------------------------------------------
 sortfaces = (poly) ->
+  #smallestZ = (x) -> _.sortBy(x,(a,b)->a[2]-b[2])[0]
+  #closests = (smallestZ(poly.xyz[v] for v in f) for f in poly.face)
   centroids = faceCenters(poly)
-  zsortIndex = _.zip(centroids,[0..poly.face.length-1])
+
+  zsortIndex = _.zip(centroids, [0..poly.face.length-1])
     .sort((a,b) -> a[0][2]-b[0][2]) # js sort is lexicographic even for numbers!
     .map((x)->x[1])
 
@@ -1195,8 +1203,8 @@ sortfaces = (poly) ->
   poly.face_colors = (poly.face_colors[idx] for idx in zsortIndex)
 
 
-#===================================================================================================
 # main drawing routine for polyhedra
+#===================================================================================================
 drawpoly = (poly,tvec,rot) ->
   tvec ||= [3,3,3]
   rot  ||= [1,0,1]
