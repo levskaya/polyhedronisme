@@ -7,52 +7,28 @@
 <script type="text/javascript" src="libs/jquery-1.7.min.js"></script>
 <script type="text/javascript" src="libs/jquery.mousewheel.js"></script>
 <script type="text/javascript" src="libs/underscore-min.js"></script>
-
+<!--
+<script type="text/javascript" src="libs/coffee-script.js"></script>
+<script type="text/coffeescript" src="polyhedronisme.coffee"></script>
+-->
 <script type="text/javascript" src="polyhedronisme.js"></script>
 
+<link rel="stylesheet" type="text/css" href="polyhedronisme.css">
 <style>
-  body {
-      font-size: 16px;
-      line-height: 24px;
-      background: #f0f0e5;
-      color: #252519;
-      font-family: "Palatino Linotype", "Book Antiqua", Palatino, FreeSerif, serif;
-    }
-    div.container {
-      width: 720px;
-      display: block;
-      margin-left: auto;
-      margin-right: auto;
-    }
-    #poly {
-      margin-left: auto;
-      margin-right: auto;
-    }
-    #spec {
-      margin-left: auto;
-      margin-right: auto;
-    }
-   ul { list-style:none; }
-   .fadey {color:rgba(255, 0, 0, 0.4); }
-   .canvaswrapper { text-align:center; margin-right: auto; margin-left:auto; }
-   .specwrapper { text-align: center; margin-right: auto; margin-left:auto; }
-   #spec { width:300px; }
-.centered { text-align: center}
-.footer { text-align: center; font-size: 12px; }
-
 </style>
 </head>
 
 <body>
 <div class="container">
-  
-<h2 style="text-align:center;"><span class="fadey">poly</span>Héd<span
-  class="fadey">r</span>onisme<span style="font-size:10px;"> v0.1<span></h2>
+
+<h2 style="text-align:center;">
+  <span class="fadey">poly</span>Héd<span class="fadey">r</span>onisme<span style="font-size:10px;">v0.1<span>
+</h2>
 
 <div class="canvaswrapper"><canvas id="poly" width="600" height="300"></canvas>
-<p class="centered"><i>rotate by dragging, rescale by scrolling over canvas</i></p>
+  <p class="centered"><i>rotate by dragging, rescale by scrolling over canvas</i></p>
 </div>
-
+<br>
 <div class="specwrapper"><label>recipe <input id="spec"></input></label></div>
 
 <p>The specification consists of a space-delimited series of polyhedral recipes.  Each recipe looks like: </p>
@@ -74,6 +50,7 @@
   </ul>
 
   <p>and <b>op</b> is one of</p>
+
 <ul>
   <li><b>k<i>N</i></b> - kisN if no N then general kis</li>
   <li><b>a</b> - ambo</li>
@@ -90,8 +67,17 @@
   <li><b>p</b> - propellor</li>
 </ul>
 
+<p> also, some newer, experimental operators </p>
+
+<ul>
+  <li><b>*</b> - stellation</li>
+  <li><b>n<i>N</i></b> - insetN </li>
+  <li><b>x<i>N</i></b> - extrudeN </li>
+</ul>
+
   <p>there are also two "refinement" operators for the
-  canonicalization of the polyhedral shape </p>
+  canonicalization of the polyhedral shape, mainly intended for making
+  the more traditional, convex polyhedra more symmetric</p>
 <ul>
   <li><b>.<i>N</i></b> - quick and dirty canonicalization, it can blow
   up, iteratively refines shape 5*N times.</li>
@@ -99,7 +85,7 @@
   convergence,  iteratively refines shape 80*N times.</li>
 </ul>
 
-<p>these can blow up the geometry, which can be interesting too!</p>
+<p>these can blow up the geometry of the weirder polyhedra, which can be interesting too!</p>
 
 <p>Some relevant links: </p>
 <ul>
