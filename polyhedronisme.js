@@ -1,5 +1,5 @@
 (function() {
-  var BG_CLEAR, BG_COLOR, CANVAS_HEIGHT, CANVAS_WIDTH, COLOR_METHOD, LastMouseX, LastMouseY, MOUSEDOWN, PALETTE, PI, abs, add, adjustXYZ, ambo, animateShape, antiprism, atan, canonicalXYZ, canonicalize, centroid, clear, colorassign, convexarea, copyVecArray, cos, cross, ctx, ctx_linewidth, cube, def_palette, dodecahedron, dot, drawShape, drawpoly, dual, edgeDist, enumerate, extrudeN, faceCenters, faceNormals, faceToEdges, floor, generatePoly, getOps, globPolys, globphi, globtheta, globtime, gyro, hextofloats, icosahedron, init, insetN, intersect, kisN, mag, mag2, midName, midpoint, mm3, mult, mv3, normal, octahedron, oneThird, orthogonal, paintPolyhedron, palette, parseurl, perspT, persp_ratio, persp_z_max, persp_z_min, perspective_scale, planarize, polyflag, polyhedron, pow, prism, propellor, pyramid, random, randomchoice, recenter, reciprocal, reciprocalC, reciprocalN, reflect, rotm, round, rwb_palette, rwbg_palette, sin, sortfaces, specreplacements, sqrt, stellaN, sub, tan, tangentPoint, tangentify, testrig, tetrahedron, tween, unit, _2d_x_offset, _2d_y_offset, _mult;
+  var BG_CLEAR, BG_COLOR, CANVAS_HEIGHT, CANVAS_WIDTH, COLOR_METHOD, LastMouseX, LastMouseY, MOUSEDOWN, PALETTE, PI, abs, add, adjustXYZ, ambo, animateShape, antiprism, atan, canonicalXYZ, canonicalize, centroid, clear, colorassign, convexarea, copyVecArray, cos, cross, ctx, ctx_linewidth, cube, def_palette, dodecahedron, dot, drawShape, drawpoly, dual, edgeDist, enumerate, extrudeN, faceCenters, faceNormals, faceToEdges, floor, generatePoly, getOps, globPolys, globphi, globtheta, globtime, gyro, hextofloats, icosahedron, init, insetN, intersect, kisN, mag, mag2, midName, midpoint, mm3, mult, mv3, normal, octahedron, oneThird, orthogonal, paintPolyhedron, palette, parseurl, perspT, persp_ratio, persp_z_max, persp_z_min, perspective_scale, planarize, polyflag, polyhedron, pow, prism, propellor, pyramid, random, randomchoice, recenter, reciprocal, reciprocalC, reciprocalN, reflect, rotm, round, rwb_palette, rwbg_palette, sin, sortfaces, specreplacements, sqrt, stellaN, sub, tan, tangentPoint, tangentify, testrig, tetrahedron, topolog, tween, unit, _2d_x_offset, _2d_y_offset, _mult;
   var __bind = function(fn, me){ return function(){ return fn.apply(me, arguments); }; };
   random = Math.random;
   round = Math.round;
@@ -922,117 +922,7 @@
     }
     return poly.xyz;
   };
-  specreplacements = [[/P4$/g, "C"], [/e/g, "aa"], [/b/g, "ta"], [/o/g, "jj"], [/m/g, "kj"], [/t(\d*)/g, "dk$1d"], [/j/g, "dad"], [/s/g, "dgd"], [/dd/g, ""], [/ad/g, "a"], [/gd/g, "g"], [/aO/g, "aC"], [/aI/g, "aD"], [/gO/g, "gC"], [/gI/g, "gD"]];
-  getOps = function(notation) {
-    var equiv, expanded, orig, _i, _len, _ref;
-    expanded = notation;
-    for (_i = 0, _len = specreplacements.length; _i < _len; _i++) {
-      _ref = specreplacements[_i], orig = _ref[0], equiv = _ref[1];
-      expanded = expanded.replace(orig, equiv);
-    }
-    console.log("" + notation + " executed as " + expanded);
-    return expanded;
-  };
-  generatePoly = function(notation) {
-    var n, ops, poly;
-    poly = new polyhedron();
-    n = 0;
-    ops = getOps(notation);
-    if (ops.search(/([0-9]+)$/) !== -1) {
-      n = 1 * RegExp.lastParen;
-      ops = ops.slice(0, -RegExp.lastParen.length);
-    }
-    switch (ops.slice(-1)) {
-      case "T":
-        poly = tetrahedron();
-        break;
-      case "O":
-        poly = octahedron();
-        break;
-      case "C":
-        poly = cube();
-        break;
-      case "I":
-        poly = icosahedron();
-        break;
-      case "D":
-        poly = dodecahedron();
-        break;
-      case "P":
-        poly = prism(n);
-        break;
-      case "A":
-        poly = antiprism(n);
-        break;
-      case "Y":
-        poly = pyramid(n);
-        break;
-      default:
-        return;
-    }
-    while (ops !== "") {
-      n = 0;
-      if (ops.search(/([0-9]+)$/) !== -1) {
-        n = 1 * RegExp.lastParen;
-        ops = ops.slice(0, -RegExp.lastParen.length);
-      }
-      switch (ops.slice(-1)) {
-        case "d":
-          poly = dual(poly);
-          break;
-        case "k":
-          poly = kisN(poly, n);
-          break;
-        case "a":
-          poly = ambo(poly);
-          break;
-        case "g":
-          poly = gyro(poly);
-          break;
-        case "p":
-          poly = propellor(poly);
-          break;
-        case "r":
-          poly = reflect(poly);
-          break;
-        case ".":
-          poly.xyz = canonicalXYZ(poly, n === 0 ? 5 : n * 5);
-          break;
-        case "!":
-          poly.xyz = canonicalize(poly, n === 0 ? 5 : n * 80);
-          break;
-        case "_":
-          poly.xyz = adjustXYZ(poly, n === 0 ? 5 : n * 3);
-          break;
-        case "n":
-          poly = insetN(poly, n);
-          break;
-        case "x":
-          poly = extrudeN(poly, n);
-          break;
-        case "*":
-          poly = stellaN(poly, n);
-      }
-      ops = ops.slice(0, -1);
-    }
-    poly = paintPolyhedron(poly);
-    return poly;
-  };
-  parseurl = function() {
-    var a, d, e, q, r, urlParams;
-    urlParams = {};
-    a = /\+/g;
-    r = /([^&=]+)=?([^&]*)/g;
-    d = function(s) {
-      return decodeURIComponent(s.replace(a, " "));
-    };
-    q = window.location.search.substring(1);
-    while (e = r.exec(q)) {
-      urlParams[d(e[1])] = d(e[2]);
-    }
-    return urlParams;
-  };
-  window.topolog = function(poly) {
+  topolog = function(poly) {
     var f, str, v, _i, _j, _len, _len2, _ref;
     str = "";
     _ref = poly.face;
@@ -1143,6 +1033,116 @@
       poly.face_colors.push(clr);
     }
     return poly;
+  };
+  specreplacements = [[/P4$/g, "C"], [/e/g, "aa"], [/b/g, "ta"], [/o/g, "jj"], [/m/g, "kj"], [/t(\d*)/g, "dk$1d"], [/j/g, "dad"], [/s/g, "dgd"], [/dd/g, ""], [/ad/g, "a"], [/gd/g, "g"], [/aO/g, "aC"], [/aI/g, "aD"], [/gO/g, "gC"], [/gI/g, "gD"]];
+  getOps = function(notation) {
+    var equiv, expanded, orig, _i, _len, _ref;
+    expanded = notation;
+    for (_i = 0, _len = specreplacements.length; _i < _len; _i++) {
+      _ref = specreplacements[_i], orig = _ref[0], equiv = _ref[1];
+      expanded = expanded.replace(orig, equiv);
+    }
+    console.log("" + notation + " executed as " + expanded);
+    return expanded;
+  };
+  generatePoly = function(notation) {
+    var n, ops, poly;
+    poly = new polyhedron();
+    n = 0;
+    ops = getOps(notation);
+    if (ops.search(/([0-9]+)$/) !== -1) {
+      n = 1 * RegExp.lastParen;
+      ops = ops.slice(0, -RegExp.lastParen.length);
+    }
+    switch (ops.slice(-1)) {
+      case "T":
+        poly = tetrahedron();
+        break;
+      case "O":
+        poly = octahedron();
+        break;
+      case "C":
+        poly = cube();
+        break;
+      case "I":
+        poly = icosahedron();
+        break;
+      case "D":
+        poly = dodecahedron();
+        break;
+      case "P":
+        poly = prism(n);
+        break;
+      case "A":
+        poly = antiprism(n);
+        break;
+      case "Y":
+        poly = pyramid(n);
+        break;
+      default:
+        return;
+    }
+    while (ops !== "") {
+      n = 0;
+      if (ops.search(/([0-9]+)$/) !== -1) {
+        n = 1 * RegExp.lastParen;
+        ops = ops.slice(0, -RegExp.lastParen.length);
+      }
+      switch (ops.slice(-1)) {
+        case "d":
+          poly = dual(poly);
+          break;
+        case "k":
+          poly = kisN(poly, n);
+          break;
+        case "a":
+          poly = ambo(poly);
+          break;
+        case "g":
+          poly = gyro(poly);
+          break;
+        case "p":
+          poly = propellor(poly);
+          break;
+        case "r":
+          poly = reflect(poly);
+          break;
+        case ".":
+          poly.xyz = canonicalXYZ(poly, n === 0 ? 5 : n * 5);
+          break;
+        case "!":
+          poly.xyz = canonicalize(poly, n === 0 ? 5 : n * 80);
+          break;
+        case "_":
+          poly.xyz = adjustXYZ(poly, n === 0 ? 5 : n * 3);
+          break;
+        case "n":
+          poly = insetN(poly, n);
+          break;
+        case "x":
+          poly = extrudeN(poly, n);
+          break;
+        case "*":
+          poly = stellaN(poly, n);
+      }
+      ops = ops.slice(0, -1);
+    }
+    poly = paintPolyhedron(poly);
+    return poly;
+  };
+  parseurl = function() {
+    var a, d, e, q, r, urlParams;
+    urlParams = {};
+    a = /\+/g;
+    r = /([^&=]+)=?([^&]*)/g;
+    d = function(s) {
+      return decodeURIComponent(s.replace(a, " "));
+    };
+    q = window.location.search.substring(1);
+    while (e = r.exec(q)) {
+      urlParams[d(e[1])] = d(e[2]);
+    }
+    return urlParams;
   };
   init = function() {
     var canvas;
