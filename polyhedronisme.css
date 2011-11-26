@@ -1,0 +1,52 @@
+/*
+* Polyhédronisme Styles
+*
+* Copyright 2011, Anselm Levskaya
+* Released under the MIT License
+*/
+
+body {
+    font-size: 16px;
+    line-height: 24px;
+    background: #f0f0e5;
+    color: #252519;
+    font-family: "Palatino Linotype", "Book Antiqua", Palatino, FreeSerif, serif;
+}
+
+ul { list-style:none; }
+
+div.container {
+    width: 720px;
+    display: block;
+    margin-left: auto;
+    margin-right: auto;
+}
+
+#poly {
+    margin-left: auto;
+    margin-right: auto;
+}
+
+#spec {
+    margin-left: auto;
+    margin-right: auto;
+    width: 300px;
+}
+
+.canvaswrapper {
+    text-align:   center;
+    margin-right: auto;
+    margin-left:  auto;
+}
+
+.specwrapper {
+    text-align:   center;
+    margin-right: auto;
+    margin-left:  auto;
+}
+
+/* used for title shading */
+.fadey {color:rgba(255, 0, 0, 0.4); }
+
+.footer { text-align: center; font-size: 12px; }
+
