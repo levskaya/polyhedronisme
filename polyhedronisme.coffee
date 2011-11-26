@@ -1,5 +1,5 @@
+# Polyhédronisme
 #===================================================================================================
-# Polyhedronisme
 #
 # A toy for constructing and manipulating polyhedra and other meshes
 #
@@ -10,7 +10,7 @@
 # Copyright 2011, Anselm Levskaya
 # Released under the MIT License
 
-#===================================================================================================
+
 # Math / Vector / Matrix Functions
 #===================================================================================================
 
@@ -23,11 +23,13 @@ sqrt  = Math.sqrt
 sin   = Math.sin
 cos   = Math.cos
 tan   = Math.tan
+atan  = Math.atan
 pow   = Math.pow
 abs   = Math.abs
 PI    = Math.PI
 
 # for python-style enumerated for-in loops
+# --should use "for [i,x] in AR then do (i,x)->" idiom instead
 enumerate = (ar) ->  [i,ar[i]] for i in [0..ar.length-1]
 
 # often useful
@@ -201,27 +203,75 @@ class polyhedron
     #return edges
     uniqedges
 
-# produces vanilla OBJ files for import into 3d apps
-toOBJ = (poly) ->
-  objstr="#Produced by polyHédronisme http://levskaya.github.com/polyhedronisme\n"
-  objstr+="group poly\n"
-  objstr+="#vertices\n"
-  for v in poly.xyz
-    objstr += "v #{v[0]} #{v[1]} #{v[2]}\n"
+  # produces vanilla OBJ files for import into 3d apps
+  toOBJ: () ->
+    objstr="#Produced by polyHédronisme http://levskaya.github.com/polyhedronisme\n"
+    objstr+="group #{@name}\n"
+    objstr+="#vertices\n"
+    for v in @xyz
+      objstr += "v #{v[0]} #{v[1]} #{v[2]}\n"
 
-  objstr += "#normal vector defs \n"
+    objstr += "#normal vector defs \n"
+    for f in @face
+      norm = normal(@xyz[v] for v in f)
+      objstr += "vn #{norm[0]} #{norm[1]} #{norm[2]}\n"
+
+    objstr += "#face defs \n"
+    for [i,f] in enumerate(@face)
+      objstr += "f "
+      for v in f
+        objstr += "#{v+1}//#{i+1} "
+      objstr += "\n"
+
+    objstr
+
+
+# get array of face centers
+faceCenters = (poly) ->
+  centers = []
+  for i in [0..poly.face.length-1]
+    centers[i] = [0,0,0]
+    for j in [0..poly.face[i].length-1] #avg vertex coords
+      centers[i] = add(centers[i], poly.xyz[poly.face[i][j]]) # add
+    centers[i] = mult(1.0/poly.face[i].length, centers[i]) # div by n
+
+  centers
+
+# get array of face centers
+faceNormals = (poly) ->
+  normals = []
   for f in poly.face
-    norm = normal(poly.xyz[v] for v in f)
-    objstr += "vn #{norm[0]} #{norm[1]} #{norm[2]}\n"
+    normals.push normal(poly.xyz[v] for v in f)
 
-  objstr += "#face defs \n"
-  for [i,f] in enumerate(poly.face)
-    objstr += "f "
-    for v in f
-      objstr += "#{v+1}//#{i+1} "
-    objstr += "\n"
+  normals
 
-  objstr
+# calculate centroid of array of vertices
+centroid = (xyzs) ->
+    centroidV = [0,0,0] # running sum of vertex coords
+    for v in xyzs
+      centroidV = add(centroidV, v)
+    mult(1 / xyzs.length, centroidV )
+
+# calculate average normal vector for array of vertices
+normal = (xyzs) ->
+    normalV = [0,0,0] # running sum of normal vectors
+    [v1,v2] = xyzs[-2..-1]
+    for v3 in xyzs
+      normalV = add(normalV, orthogonal(v1, v2, v3))
+      [v1,v2] = [v2,v3] # shift over one
+    unit(normalV)
+
+# calculates area planar face by summing over subtriangle areas
+#  _Assumes_ Convexity!
+convexarea = (xyzs) ->
+    area = 0.0
+    [v1,v2] = xyzs[0..1]
+    for v3 in xyzs[2..]
+      #area of sub-triangle
+      area += mag( cross(sub(v2,v1), sub(v3,v1)) )
+      v2 = v3 # shift over one
+    area
+
 
 #===================================================================================================
 # Primitive Polyhedra Seeds
@@ -349,12 +399,16 @@ pyramid = (n) ->
 
 
 #===================================================================================================
-# Flag Construct
+# Polyhedron Flagset Construct
 #
 # A Flag is an associative triple of a face index and two adjacent vertex indices,
-# listed in clockwise order
+# listed in geometric clockwise order (staring into the normal)
 #
-# FaceID -> {Vi -> Vj}
+# Face_i -> V_i -> V_j
+#
+# They are a useful abstraction for defining topological transformations of the polyhedral mesh, as
+# one can refer to vertices and faces that don't yet exist or haven't been traversed yet in the
+# transformation code.
 #
 class polyflag
   constructor: ->
@@ -397,7 +451,7 @@ class polyflag
         poly.face[ctr].push @verts[v]
         v = @flags[i][v]
         faceCTR++
-        if faceCTR>200
+        if faceCTR>1000 # necessary to prevent browser hangs on badly formed flagsets!
           console.log "Bad flag spec, have a neverending face:", i, @flags[i]
           break
       ctr++
@@ -410,15 +464,25 @@ class polyflag
 # Polyhedron Operators
 #===================================================================================================
 #          for each vertex of new polyhedron:
-#              call newV(Vname, xyz) with symbolic name and approx location
+#              call newV(Vname, xyz) with a symbolic name and coordinates
 #          for each flag of new polyhedron:
-#              call newFlag(Fname, Vname1, Vname2)  with symbolic names
-#          call topoly() to assemble flags into polyhedron structure
-#          canonicalize vertex locations
+#              call newFlag(Fname, Vname1, Vname2) with a symbolic name for the new face
+#              and the symbolic name for two vertices forming an oriented edge
+#          ORIENTATION -must- be dealt with properly to make a manifold (correct) mesh.
+#          Specifically, no edge v1->v2 can ever be crossed in the -same direction- by
+#          two different faces
+#
+#          call topoly() to assemble flags into polyhedron structure by following the orbits
+#          of the vertex mapping stored in the flagset for each new face
+#
 #          set name as appropriate
 
-# Kis(N) ------------------------------------------------------------------------------------------
+# Kis(N)
+# ------------------------------------------------------------------------------------------
+# Kis (abbreviated from triakis) transforms an N-sided face into an N-pyramid rooted at the
+# same base vertices.
 # only kis n-sided faces, but n==0 means kiss all.
+#
 kisN = (poly, n)->
   console.log "Taking kis of #{if n==0 then "" else n}-sided faces of #{poly.name}..."
 
@@ -455,7 +519,170 @@ kisN = (poly, n)->
   newpoly
 
 
-# insetN ------------------------------------------------------------------------------------------
+# Ambo
+# ------------------------------------------------------------------------------------------
+# The best way to think of the ambo operator is as a topological "tween" between a polyhedron
+# and its dual polyhedron.  Thus the ambo of a dual polyhedron is the same as the ambo of the
+# original. Also called "Rectify".
+#
+midName = (v1, v2) -> if v1<v2 then v1+"_"+v2 else v2+"_"+v1
+ambo = (poly)->
+  console.log "Taking ambo of #{poly.name}..."
+
+  flag = new polyflag()
+
+  for [i,f] in enumerate(poly.face)
+    [v1, v2] = f[-2..-1]
+    for v3 in f
+      if v1 < v2
+        flag.newV(midName(v1,v2), midpoint(poly.xyz[v1], poly.xyz[v2]))
+      # two new flags
+      flag.newFlag("f"+i,  midName(v1,v2), midName(v2,v3))
+      flag.newFlag("v"+v2, midName(v2,v3), midName(v1,v2))
+
+      # shift over one
+      [v1, v2] = [v2, v3]
+
+  newpoly = flag.topoly()
+  newpoly.name = "a" + poly.name
+  newpoly.xyz = adjustXYZ(newpoly, 2)
+  newpoly
+
+
+# Gyro
+# ----------------------------------------------------------------------------------------------
+gyro = (poly)->
+  console.log "Taking gyro of #{poly.name}..."
+
+  flag = new polyflag()
+
+  for [i,v] in enumerate(poly.xyz)
+    flag.newV "v"+i, unit(v)  # each old vertex is a new vertex
+
+  centers = faceCenters(poly) # new vertices in center of each face
+  for [i,f] in enumerate(poly.face)
+    flag.newV "f"+i, unit(centers[i])
+
+  for [i,f] in enumerate(poly.face)
+    [v1, v2] = f[-2..-1]
+    for [j,v] in enumerate(f)
+      v3 = v
+      flag.newV(v1+"~"+v2, oneThird(poly.xyz[v1],poly.xyz[v2]))  # new v in face
+      fname = i + "f" + v1
+      flag.newFlag(fname, "f"+i,      v1+"~"+v2) # five new flags
+      flag.newFlag(fname, v1+"~"+v2,  v2+"~"+v1)
+      flag.newFlag(fname, v2+"~"+v1,  "v"+v2)
+      flag.newFlag(fname, "v"+v2,     v2+"~"+v3)
+      flag.newFlag(fname, v2+"~"+v3,  "f"+i)
+      [v1, v2] = [v2, v3]                       # shift over one
+
+  newpoly = flag.topoly()
+  newpoly.name = "g" + poly.name
+  newpoly.xyz = adjustXYZ(newpoly, 3)
+  newpoly
+
+
+# Propellor
+# ------------------------------------------------------------------------------------------
+# builds a new 'skew face' by making new points along edges, 1/3rd the distance from v1->v2,
+# then connecting these into a new inset face.  This breaks rotational symmetry about the
+# faces, whirling them into gyres
+#
+propellor = (poly) ->
+  console.log "Taking propellor of #{poly.name}..."
+
+  flag = new polyflag()
+
+  for [i,v] in enumerate(poly.xyz)
+    flag.newV("v"+i, unit(v))  # each old vertex is a new vertex
+
+  for [i,f] in enumerate(poly.face)
+    [v1, v2] = f[-2..-1]
+    for v in f
+      v3 = "#{v}"
+      flag.newV(v1+"~"+v2, oneThird(poly.xyz[v1], poly.xyz[v2]))  # new v in face, 1/3rd along edge
+      fname = "#{i}f#{v2}"
+      flag.newFlag("v#{i}", v1+"~"+v2,  v2+"~"+v3) # five new flags
+      flag.newFlag(fname,   v1+"~"+v2,  v2+"~"+v1)
+      flag.newFlag(fname,   v2+"~"+v1,     "v"+v2)
+      flag.newFlag(fname,      "v"+v2,  v2+"~"+v3)
+      flag.newFlag(fname,   v2+"~"+v3,  v1+"~"+v2)
+      [v1, v2] = [v2, v3]                       # shift over one
+
+  newpoly = flag.topoly()
+  newpoly.name = "p" + poly.name
+  newpoly.xyz  = adjustXYZ(newpoly, 3)
+  newpoly
+
+
+# Reflection
+# ------------------------------------------------------------------------------------------
+# geometric reflection through origin
+reflect = (poly) ->
+  console.log "Taking reflection of #{poly.name}..."
+  for i in [0..poly.xyz.length-1]
+       poly.xyz[i] = mult(-1, poly.xyz[i])         # reflect each point
+  for i in [0..poly.face.length-1]
+       poly.face[i] = poly.face[i].reverse()       # repair clockwise-ness
+  poly.name = "r" + poly.name
+  poly.xyz = adjustXYZ(poly, 1)                    # build dual
+  poly
+
+
+# Dual
+# ------------------------------------------------------------------------------------------------
+# The dual of a polyhedron is another mesh wherein every face in the original becomes a vertex
+# in the dual and where every face a vertex becomes a face in the dual.
+#
+# So N_faces, N_vertices = N_dualfaces, N_dualvertices
+#
+# The new vertex coordinates are convenient to set to the original face centroids.
+#
+dual = (poly) ->
+  console.log "Taking dual of #{poly.name}..."
+
+  flag = new polyflag()
+
+  face = [] # make table of face as fn of edge
+  for i in [0..poly.xyz.length-1]
+    face[i] = {} # create empty associative table
+
+  for [i,f] in enumerate(poly.face)
+    v1 = f[f.length-1] #previous vertex
+    for v2 in f
+      # THIS ASSUMES that no 2 faces that share an edge share it in the same orientation!
+      # which of course never happens for proper manifold meshes, so get your meshes right.
+      face[v1]["v#{v2}"] = "#{i}" # fill it. 2nd index is associative
+      v1=v2 # current becomes previous
+
+  centers = faceCenters(poly)
+  for i in [0..poly.face.length-1]
+    flag.newV("#{i}",centers[i])
+
+  for [i,f] in enumerate(poly.face)
+    v1 = f[f.length-1] #previous vertex
+    for v2 in f
+      flag.newFlag(v1, face[v2]["v#{v1}"], "#{i}")
+      v1=v2 # current becomes previous
+
+  dpoly = flag.topoly() # build topological dual from flags
+
+  # match F index ordering to V index ordering on dual
+  #sortF = []
+  #for f in dpoly.face
+  #  k = intersect(poly.face[f[0]],poly.face[f[1]],poly.face[f[2]])
+  #  sortF[k] = f
+  #dpoly.face = sortF
+
+  if poly.name[0] isnt "d"
+    dpoly.name = "d"+poly.name
+  else
+    dpoly.name = poly.name[1..]
+
+  dpoly
+
+# insetN
+# ------------------------------------------------------------------------------------------
 insetN = (poly, n)->
   console.log "Taking inset of #{if n==0 then "" else n}-sided faces of #{poly.name}..."
 
@@ -500,7 +727,8 @@ insetN = (poly, n)->
   newpoly
 
 
-# ExtrudeN ------------------------------------------------------------------------------------------
+# ExtrudeN
+# ------------------------------------------------------------------------------------------
 extrudeN = (poly, n)->
   console.log "Taking extrusion of #{if n==0 then "" else n}-sided faces of #{poly.name}..."
 
@@ -546,7 +774,8 @@ extrudeN = (poly, n)->
   newpoly
 
 
-# StellaN ------------------------------------------------------------------------------------------
+# StellaN
+# ------------------------------------------------------------------------------------------
 stellaN = (poly)->
   console.log "Taking stella of #{poly.name}..."
 
@@ -590,169 +819,17 @@ stellaN = (poly)->
 
   newpoly = flag.topoly()
   newpoly.name = "*" + poly.name
-  #console.log "stellaN", newpoly
   #newpoly.xyz = adjustXYZ(newpoly, 3)
   #newpoly.xyz = canonicalXYZ(newpoly, 3)  # this tends to make results look like shit
   newpoly
-
-
-# Ambo ------------------------------------------------------------------------------------------
-midName = (v1, v2) -> if v1<v2 then v1+"_"+v2 else v2+"_"+v1
-ambo = (poly)->
-  console.log "Taking ambo of #{poly.name}..."
-
-  flag = new polyflag()
-
-  for [i,f] in enumerate(poly.face)
-    [v1, v2] = f[-2..-1]
-    for v3 in f
-      if v1 < v2
-        flag.newV(midName(v1,v2), midpoint(poly.xyz[v1], poly.xyz[v2]))
-      # two new flags
-      flag.newFlag("f"+i,  midName(v1,v2), midName(v2,v3))
-      flag.newFlag("v"+v2, midName(v2,v3), midName(v1,v2))
-
-      # shift over one
-      [v1, v2] = [v2, v3]
-
-  newpoly = flag.topoly()
-  newpoly.name = "a" + poly.name
-  newpoly.xyz = adjustXYZ(newpoly, 2)
-  newpoly
-
-
-# Gyro ----------------------------------------------------------------------------------------------
-gyro = (poly)->
-  console.log "Taking gyro of #{poly.name}..."
-
-  flag = new polyflag()
-
-  for [i,v] in enumerate(poly.xyz)
-    flag.newV "v"+i, unit(v)  # each old vertex is a new vertex
-
-  centers = faceCenters(poly) # new vertices in center of each face
-  for [i,f] in enumerate(poly.face)
-    flag.newV "f"+i, unit(centers[i])
-
-  for [i,f] in enumerate(poly.face)
-    [v1, v2] = f[-2..-1]
-    for [j,v] in enumerate(f)
-      v3 = v
-      flag.newV(v1+"~"+v2, oneThird(poly.xyz[v1],poly.xyz[v2]))  # new v in face
-      fname = i + "f" + v1
-      flag.newFlag(fname, "f"+i,      v1+"~"+v2) # five new flags
-      flag.newFlag(fname, v1+"~"+v2,  v2+"~"+v1)
-      flag.newFlag(fname, v2+"~"+v1,  "v"+v2)
-      flag.newFlag(fname, "v"+v2,     v2+"~"+v3)
-      flag.newFlag(fname, v2+"~"+v3,  "f"+i)
-      [v1, v2] = [v2, v3]                       # shift over one
-
-  newpoly = flag.topoly()
-  newpoly.name = "g" + poly.name
-  newpoly.xyz = adjustXYZ(newpoly, 3)
-  newpoly
-
-
-# Propellor ------------------------------------------------------------------------------------------
-propellor = (poly) ->
-  console.log "Taking propellor of #{poly.name}..."
-
-  flag = new polyflag()
-
-  for [i,v] in enumerate(poly.xyz)
-    flag.newV("v"+i, unit(v))  # each old vertex is a new vertex
-
-  for [i,f] in enumerate(poly.face)
-    [v1, v2] = f[-2..-1]
-    for v in f
-      v3 = "#{v}"
-      flag.newV(v1+"~"+v2, oneThird(poly.xyz[v1], poly.xyz[v2]))  # new v in face, 1/3rd along edge
-      fname = "#{i}f#{v2}"
-      flag.newFlag("v#{i}", v1+"~"+v2,  v2+"~"+v3) # five new flags
-      flag.newFlag(fname,   v1+"~"+v2,  v2+"~"+v1)
-      flag.newFlag(fname,   v2+"~"+v1,     "v"+v2)
-      flag.newFlag(fname,      "v"+v2,  v2+"~"+v3)
-      flag.newFlag(fname,   v2+"~"+v3,  v1+"~"+v2)
-      [v1, v2] = [v2, v3]                       # shift over one
-
-  newpoly = flag.topoly()
-  newpoly.name = "p" + poly.name
-  newpoly.xyz  = adjustXYZ(newpoly, 3)
-  newpoly
-
-
-# Reflection ------------------------------------------------------------------------------------------
-# compute reflection through origin
-reflect = (poly) ->
-  console.log "Taking reflection of #{poly.name}..."
-  for i in [0..poly.xyz.length-1]
-       poly.xyz[i] = mult(-1, poly.xyz[i])         # reflect each point
-  for i in [0..poly.face.length-1]
-       poly.face[i] = poly.face[i].reverse()       # repair clockwise-ness
-  poly.name = "r" + poly.name
-  poly.xyz = adjustXYZ(poly, 1)                    # build dual
-  poly
-
-
-# Dual ------------------------------------------------------------------------------------------------
-# the dual function computes the dual's topology, matching F and V indices, and invokes simple
-# canonicalization for the determination of xyz coordinates
-dual = (poly) ->
-  console.log "Taking dual of #{poly.name}...", poly
-
-  flag = new polyflag()
-
-  face = [] # make table of face as fn of edge
-  for i in [0..poly.xyz.length-1]
-    face[i] = {} # create empty associative table
-
-  for [i,f] in enumerate(poly.face)
-    v1 = f[f.length-1] #previous vertex
-    for v2 in f
-      console.log v1,v2,i
-      # THIS ASSUMES that no 2 faces that share an edge share it in the same orientation!
-      # which of course never happens for proper manifold meshes, so get your meshes right.
-      face[v1]["v#{v2}"] = "#{i}" # fill it. 2nd index is associative
-      v1=v2 # current becomes previous
-
-  centers = faceCenters(poly)
-  for i in [0..poly.face.length-1]
-    flag.newV("#{i}",centers[i])
-
-  for [i,f] in enumerate(poly.face)
-    v1 = f[f.length-1] #previous vertex
-    for v2 in f
-      flag.newFlag(v1, face[v2]["v#{v1}"], "#{i}")
-      v1=v2 # current becomes previous
-
-  #console.log face, flag
-  dpoly = flag.topoly() # build topological dual from flags
-  #console.log dpoly
-
-  # match F index ordering to V index ordering on dual
-  #sortF = []
-  #for f in dpoly.face
-  #  k = intersect(poly.face[f[0]],poly.face[f[1]],poly.face[f[2]])
-  #  sortF[k] = f
-  #dpoly.face = sortF
-
-  # compute coordinates as dual to those of original poly
-  #dpoly.xyz = reciprocalN(poly)
-
-  if poly.name[0] isnt "d"
-    dpoly.name = "d"+poly.name
-  else
-    dpoly.name = poly.name[1..]
-
-  dpoly
-
 
 
 #===================================================================================================
 # Canonicalization Algorithms
 #===================================================================================================
 
-# SLOW Canonicalization Algorithm ----------------------------------------------------------------
+# Slow Canonicalization Algorithm
+# ----------------------------------------------------------------
 #
 # This algorithm has some convergence problems, what really needs to be done is to
 # sum the three forcing factors together as a conherent force and to use a half-decent
@@ -760,10 +837,13 @@ dual = (poly) ->
 # ad-hoc stability multipliers.  Ideally one would implement a conjugate gradient
 # descent or similar pretty thing.
 #
+# Only try to use this on convex polyhedra that have a chance of being canonicalized,
+# otherwise it will probably blow up the geometry.  A much trickier / smarter seed-symmetry
+# based geometrical regularizer should be used for fancier/weirder polyhedra.
 
 # adjusts vertices on edges such that each edge is tangent to an origin sphere
 tangentify = (xyzs, edges) ->
-  STABILITY_FACTOR = 0.1
+  STABILITY_FACTOR = 0.1 # Hack to improve convergence
   newVs = copyVecArray(xyzs) #copy vertices
   for e in edges
     t = tangentPoint( newVs[e[0]], newVs[e[1]] ) #the point closest to origin
@@ -783,7 +863,7 @@ recenter = (xyzs, edges) ->
 
 # adjusts vertices in each face to improve its planarity
 planarize = (xyzs, faces) ->
-  STABILITY_FACTOR = 0.1
+  STABILITY_FACTOR = 0.1 # Hack to improve convergence
   newVs = copyVecArray(xyzs) # copy vertices
   for f in faces
     coords = (xyzs[v] for v in f)
@@ -814,7 +894,8 @@ canonicalize = (poly, Niter) ->
   newVs
 
 
-# Hacky Canonicalization Algorithm--------------------------------------------------------
+# Hacky Canonicalization Algorithm
+# --------------------------------------------------------------------
 # Using center of gravity of vertices for each face to planarize faces
 
 # get the spherical reciprocals of face centers
@@ -823,17 +904,6 @@ reciprocalC = (poly) ->
   for c in centers
     c = mult(1/dot(c,c), c)
   centers
-
-canonicalXYZ = (poly, nIterations) ->
-  dpoly = dual(poly)
-  console.log "Pseudo-canonicalizing #{poly.name}..."
-
-  # iteratively reciprocate face normals
-  for count in [0..nIterations-1]
-    dpoly.xyz = reciprocalN(poly)
-    poly.xyz  = reciprocalN(dpoly)
-
-  poly.xyz
 
 # make array of vertices reciprocal to given planes
 reciprocalN = (poly) ->
@@ -858,6 +928,17 @@ reciprocalN = (poly) ->
 
   ans
 
+canonicalXYZ = (poly, nIterations) ->
+  dpoly = dual(poly)
+  console.log "Pseudo-canonicalizing #{poly.name}..."
+
+  # iteratively reciprocate face normals
+  for count in [0..nIterations-1]
+    dpoly.xyz = reciprocalN(poly)
+    poly.xyz  = reciprocalN(dpoly)
+
+  poly.xyz
+
 # quick planarization
 adjustXYZ = (poly, nIterations) ->
   dpoly = dual(poly) # v's of dual are in order of arg's f's
@@ -870,51 +951,6 @@ adjustXYZ = (poly, nIterations) ->
 
   poly.xyz
 
-# get array of face centers
-faceCenters = (poly) ->
-  centers = []
-  for i in [0..poly.face.length-1]
-    centers[i] = [0,0,0]
-    for j in [0..poly.face[i].length-1] #avg vertex coords
-      centers[i] = add(centers[i], poly.xyz[poly.face[i][j]]) # add
-    centers[i] = mult(1.0/poly.face[i].length, centers[i]) # div by n
-
-  centers
-
-# get array of face centers
-faceNormals = (poly) ->
-  normals = []
-  for f in poly.face
-    normals.push normal(poly.xyz[v] for v in f)
-
-  normals
-
-# calculate centroid of array of vertices
-centroid = (xyzs) ->
-    centroidV = [0,0,0] # running sum of vertex coords
-    for v in xyzs
-      centroidV = add(centroidV, v)
-    mult(1 / xyzs.length, centroidV )
-
-# calculate average normal vector for array of vertices
-normal = (xyzs) ->
-    normalV = [0,0,0] # running sum of normal vectors
-    [v1,v2] = xyzs[-2..-1]
-    for v3 in xyzs
-      normalV = add(normalV, orthogonal(v1, v2, v3))
-      [v1,v2] = [v2,v3] # shift over one
-    unit(normalV)
-
-# calculates area planar face by summing over subtriangle areas
-#  _Assumes_ Convexity!
-convexarea = (xyzs) ->
-    area = 0.0
-    [v1,v2] = xyzs[0..1]
-    for v3 in xyzs[2..]
-      #area of sub-triangle
-      area += mag( cross(sub(v2,v1), sub(v3,v1)) )
-      v2 = v3 # shift over one
-    area
 
 
 #===================================================================================================
@@ -1018,7 +1054,7 @@ parseurl = () ->
 #===================================================================================================
 
 #report on face topology
-topolog = (poly) ->
+window.topolog = (poly) ->
   str=""
   for f in poly.face
     for v in f
@@ -1026,31 +1062,15 @@ topolog = (poly) ->
     str+="\n"
   console.log str
 
-
 testrig = ->
-  tests=["T","O","C","I","D","P3","P4","A4","A5","Y3","Y4"]
+  seeds=["T","O","C","I","D","P3","P4","A4","A5","Y3","Y4"]
+  ops = ["k","a","g","p","d","n","x","*"]
   console.log "===== Test Basic Ops ====="
-  console.log "--- primitives ----------------------------------------------------------------------------- "
-  for t in tests
-    console.log generatePoly t
-  console.log "--- kis ----------------------------------------------------------------------------- "
-  for t in tests
-    console.log generatePoly "k"+t
-  console.log "--- ambo ----------------------------------------------------------------------------- "
-  for t in tests
-    console.log generatePoly "a"+t
-  console.log "--- gyro ----------------------------------------------------------------------------- "
-  for t in tests
-    console.log generatePoly "g"+t
-  console.log "--- propellor ----------------------------------------------------------------------------- "
-  for t in tests
-    console.log generatePoly "p"+t
-  console.log "--- dual ----------------------------------------------------------------------------- "
-  for t in tests
-    console.log generatePoly "d"+t
+  for op in ops
+    console.log "Operator #{op}"
+    for seed in seeds
+      console.log op+seed+":", generatePoly op+seed
   console.log "===== Done Testing Basic Ops ====="
-#test basic stuff
-#testrig()
 
 
 #===================================================================================================
@@ -1124,7 +1144,6 @@ paintPolyhedron = (poly) ->
     if COLOR_METHOD is "area"
       # color by face area (quick proxy for different kinds of faces) convexarea
       face_verts = (poly.xyz[v] for v in f)
-      #console.log (v for v in f)
       clr = colorassign(convexarea(face_verts), colormemory)
     else
       # color by face-sidedness
@@ -1284,7 +1303,6 @@ $( -> #wait for page to load
   $("#poly").mousemove( (e)->
     event.preventDefault()
     if MOUSEDOWN
-      #console.log e.clientX-$(this).offset().left-LastMouseX, e.clientY-$(this).offset().top-LastMouseY
       globtheta += -( e.clientX-$(this).offset().left-LastMouseX)*(Math.PI/180)
       globphi   += -( e.clientY-$(this).offset().top-LastMouseY)*(Math.PI/180)
 

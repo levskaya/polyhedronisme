@@ -1,5 +1,5 @@
 (function() {
-  var BG_CLEAR, BG_COLOR, CANVAS_HEIGHT, CANVAS_WIDTH, COLOR_METHOD, LastMouseX, LastMouseY, MOUSEDOWN, PALETTE, PI, abs, add, adjustXYZ, ambo, animateShape, antiprism, canonicalXYZ, canonicalize, centroid, clear, colorassign, convexarea, copyVecArray, cos, cross, ctx, ctx_linewidth, cube, def_palette, dodecahedron, dot, drawShape, drawpoly, dual, edgeDist, enumerate, extrudeN, faceCenters, faceNormals, faceToEdges, floor, generatePoly, getOps, globPolys, globphi, globtheta, globtime, gyro, hextofloats, icosahedron, init, insetN, intersect, kisN, mag, mag2, midName, midpoint, mm3, mult, mv3, normal, octahedron, oneThird, orthogonal, paintPolyhedron, palette, parseurl, perspT, persp_ratio, persp_z_max, persp_z_min, perspective_scale, planarize, polyflag, polyhedron, pow, prism, propellor, pyramid, random, randomchoice, recenter, reciprocal, reciprocalC, reciprocalN, reflect, rotm, round, rwb_palette, rwbg_palette, sin, sortfaces, specreplacements, sqrt, stellaN, sub, tan, tangentPoint, tangentify, testrig, tetrahedron, toOBJ, topolog, tween, unit, _2d_x_offset, _2d_y_offset, _mult;
+  var BG_CLEAR, BG_COLOR, CANVAS_HEIGHT, CANVAS_WIDTH, COLOR_METHOD, LastMouseX, LastMouseY, MOUSEDOWN, PALETTE, PI, abs, add, adjustXYZ, ambo, animateShape, antiprism, atan, canonicalXYZ, canonicalize, centroid, clear, colorassign, convexarea, copyVecArray, cos, cross, ctx, ctx_linewidth, cube, def_palette, dodecahedron, dot, drawShape, drawpoly, dual, edgeDist, enumerate, extrudeN, faceCenters, faceNormals, faceToEdges, floor, generatePoly, getOps, globPolys, globphi, globtheta, globtime, gyro, hextofloats, icosahedron, init, insetN, intersect, kisN, mag, mag2, midName, midpoint, mm3, mult, mv3, normal, octahedron, oneThird, orthogonal, paintPolyhedron, palette, parseurl, perspT, persp_ratio, persp_z_max, persp_z_min, perspective_scale, planarize, polyflag, polyhedron, pow, prism, propellor, pyramid, random, randomchoice, recenter, reciprocal, reciprocalC, reciprocalN, reflect, rotm, round, rwb_palette, rwbg_palette, sin, sortfaces, specreplacements, sqrt, stellaN, sub, tan, tangentPoint, tangentify, testrig, tetrahedron, tween, unit, _2d_x_offset, _2d_y_offset, _mult;
   var __bind = function(fn, me){ return function(){ return fn.apply(me, arguments); }; };
   random = Math.random;
   round = Math.round;
@@ -8,6 +8,7 @@
   sin = Math.sin;
   cos = Math.cos;
   tan = Math.tan;
+  atan = Math.atan;
   pow = Math.pow;
   abs = Math.abs;
   PI = Math.PI;
@@ -167,45 +168,107 @@
       }
       return uniqedges;
     };
+    polyhedron.prototype.toOBJ = function() {
+      var f, i, norm, objstr, v, _i, _j, _k, _l, _len, _len2, _len3, _len4, _ref, _ref2, _ref3, _ref4;
+      objstr = "#Produced by polyHédronisme http://levskaya.github.com/polyhedronisme\n";
+      objstr += "group " + this.name + "\n";
+      objstr += "#vertices\n";
+      _ref = this.xyz;
+      for (_i = 0, _len = _ref.length; _i < _len; _i++) {
+        v = _ref[_i];
+        objstr += "v " + v[0] + " " + v[1] + " " + v[2] + "\n";
+      }
+      objstr += "#normal vector defs \n";
+      _ref2 = this.face;
+      for (_j = 0, _len2 = _ref2.length; _j < _len2; _j++) {
+        f = _ref2[_j];
+        norm = normal((function() {
+          var _k, _len3, _results;
+          _results = [];
+          for (_k = 0, _len3 = f.length; _k < _len3; _k++) {
+            v = f[_k];
+            _results.push(this.xyz[v]);
+          }
+          return _results;
+        }).call(this));
+        objstr += "vn " + norm[0] + " " + norm[1] + " " + norm[2] + "\n";
+      }
+      objstr += "#face defs \n";
+      _ref3 = enumerate(this.face);
+      for (_k = 0, _len3 = _ref3.length; _k < _len3; _k++) {
+        _ref4 = _ref3[_k], i = _ref4[0], f = _ref4[1];
+        objstr += "f ";
+        for (_l = 0, _len4 = f.length; _l < _len4; _l++) {
+          v = f[_l];
+          objstr += "" + (v + 1) + "//" + (i + 1) + " ";
+        }
+        objstr += "\n";
+      }
+      return objstr;
+    };
     return polyhedron;
   })();
-  toOBJ = function(poly) {
-    var f, i, norm, objstr, v, _i, _j, _k, _l, _len, _len2, _len3, _len4, _ref, _ref2, _ref3, _ref4;
-    objstr = "#Produced by polyHédronisme http://levskaya.github.com/polyhedronisme\n";
-    objstr += "group poly\n";
-    objstr += "#vertices\n";
-    _ref = poly.xyz;
-    for (_i = 0, _len = _ref.length; _i < _len; _i++) {
-      v = _ref[_i];
-      objstr += "v " + v[0] + " " + v[1] + " " + v[2] + "\n";
+  faceCenters = function(poly) {
+    var centers, i, j, _ref, _ref2;
+    centers = [];
+    for (i = 0, _ref = poly.face.length - 1; 0 <= _ref ? i <= _ref : i >= _ref; 0 <= _ref ? i++ : i--) {
+      centers[i] = [0, 0, 0];
+      for (j = 0, _ref2 = poly.face[i].length - 1; 0 <= _ref2 ? j <= _ref2 : j >= _ref2; 0 <= _ref2 ? j++ : j--) {
+        centers[i] = add(centers[i], poly.xyz[poly.face[i][j]]);
+      }
+      centers[i] = mult(1.0 / poly.face[i].length, centers[i]);
     }
-    objstr += "#normal vector defs \n";
-    _ref2 = poly.face;
-    for (_j = 0, _len2 = _ref2.length; _j < _len2; _j++) {
-      f = _ref2[_j];
-      norm = normal((function() {
-        var _k, _len3, _results;
+    return centers;
+  };
+  faceNormals = function(poly) {
+    var f, normals, v, _i, _len, _ref;
+    normals = [];
+    _ref = poly.face;
+    for (_i = 0, _len = _ref.length; _i < _len; _i++) {
+      f = _ref[_i];
+      normals.push(normal((function() {
+        var _j, _len2, _results;
         _results = [];
-        for (_k = 0, _len3 = f.length; _k < _len3; _k++) {
-          v = f[_k];
+        for (_j = 0, _len2 = f.length; _j < _len2; _j++) {
+          v = f[_j];
           _results.push(poly.xyz[v]);
         }
         return _results;
-      })());
-      objstr += "vn " + norm[0] + " " + norm[1] + " " + norm[2] + "\n";
+      })()));
     }
-    objstr += "#face defs \n";
-    _ref3 = enumerate(poly.face);
-    for (_k = 0, _len3 = _ref3.length; _k < _len3; _k++) {
-      _ref4 = _ref3[_k], i = _ref4[0], f = _ref4[1];
-      objstr += "f ";
-      for (_l = 0, _len4 = f.length; _l < _len4; _l++) {
-        v = f[_l];
-        objstr += "" + (v + 1) + "//" + (i + 1) + " ";
-      }
-      objstr += "\n";
+    return normals;
+  };
+  centroid = function(xyzs) {
+    var centroidV, v, _i, _len;
+    centroidV = [0, 0, 0];
+    for (_i = 0, _len = xyzs.length; _i < _len; _i++) {
+      v = xyzs[_i];
+      centroidV = add(centroidV, v);
     }
-    return objstr;
+    return mult(1 / xyzs.length, centroidV);
+  };
+  normal = function(xyzs) {
+    var normalV, v1, v2, v3, _i, _len, _ref, _ref2;
+    normalV = [0, 0, 0];
+    _ref = xyzs.slice(-2), v1 = _ref[0], v2 = _ref[1];
+    for (_i = 0, _len = xyzs.length; _i < _len; _i++) {
+      v3 = xyzs[_i];
+      normalV = add(normalV, orthogonal(v1, v2, v3));
+      _ref2 = [v2, v3], v1 = _ref2[0], v2 = _ref2[1];
+    }
+    return unit(normalV);
+  };
+  convexarea = function(xyzs) {
+    var area, v1, v2, v3, _i, _len, _ref, _ref2;
+    area = 0.0;
+    _ref = xyzs.slice(0, 2), v1 = _ref[0], v2 = _ref[1];
+    _ref2 = xyzs.slice(2);
+    for (_i = 0, _len = _ref2.length; _i < _len; _i++) {
+      v3 = _ref2[_i];
+      area += mag(cross(sub(v2, v1), sub(v3, v1)));
+      v2 = v3;
+    }
+    return area;
   };
   tetrahedron = function() {
     var poly;
@@ -376,7 +439,7 @@
           poly.face[ctr].push(this.verts[v]);
           v = this.flags[i][v];
           faceCTR++;
-          if (faceCTR > 200) {
+          if (faceCTR > 1000) {
             console.log("Bad flag spec, have a neverending face:", i, this.flags[i]);
             break;
           }
@@ -426,6 +489,158 @@
     newpoly = flag.topoly();
     newpoly.name = "k" + (n === 0 ? "" : n) + poly.name;
     return newpoly;
+  };
+  midName = function(v1, v2) {
+    if (v1 < v2) {
+      return v1 + "_" + v2;
+    } else {
+      return v2 + "_" + v1;
+    }
+  };
+  ambo = function(poly) {
+    var f, flag, i, newpoly, v1, v2, v3, _i, _j, _len, _len2, _ref, _ref2, _ref3, _ref4;
+    console.log("Taking ambo of " + poly.name + "...");
+    flag = new polyflag();
+    _ref = enumerate(poly.face);
+    for (_i = 0, _len = _ref.length; _i < _len; _i++) {
+      _ref2 = _ref[_i], i = _ref2[0], f = _ref2[1];
+      _ref3 = f.slice(-2), v1 = _ref3[0], v2 = _ref3[1];
+      for (_j = 0, _len2 = f.length; _j < _len2; _j++) {
+        v3 = f[_j];
+        if (v1 < v2) {
+          flag.newV(midName(v1, v2), midpoint(poly.xyz[v1], poly.xyz[v2]));
+        }
+        flag.newFlag("f" + i, midName(v1, v2), midName(v2, v3));
+        flag.newFlag("v" + v2, midName(v2, v3), midName(v1, v2));
+        _ref4 = [v2, v3], v1 = _ref4[0], v2 = _ref4[1];
+      }
+    }
+    newpoly = flag.topoly();
+    newpoly.name = "a" + poly.name;
+    newpoly.xyz = adjustXYZ(newpoly, 2);
+    return newpoly;
+  };
+  gyro = function(poly) {
+    var centers, f, flag, fname, i, j, newpoly, v, v1, v2, v3, _i, _j, _k, _l, _len, _len2, _len3, _len4, _ref, _ref10, _ref2, _ref3, _ref4, _ref5, _ref6, _ref7, _ref8, _ref9;
+    console.log("Taking gyro of " + poly.name + "...");
+    flag = new polyflag();
+    _ref = enumerate(poly.xyz);
+    for (_i = 0, _len = _ref.length; _i < _len; _i++) {
+      _ref2 = _ref[_i], i = _ref2[0], v = _ref2[1];
+      flag.newV("v" + i, unit(v));
+    }
+    centers = faceCenters(poly);
+    _ref3 = enumerate(poly.face);
+    for (_j = 0, _len2 = _ref3.length; _j < _len2; _j++) {
+      _ref4 = _ref3[_j], i = _ref4[0], f = _ref4[1];
+      flag.newV("f" + i, unit(centers[i]));
+    }
+    _ref5 = enumerate(poly.face);
+    for (_k = 0, _len3 = _ref5.length; _k < _len3; _k++) {
+      _ref6 = _ref5[_k], i = _ref6[0], f = _ref6[1];
+      _ref7 = f.slice(-2), v1 = _ref7[0], v2 = _ref7[1];
+      _ref8 = enumerate(f);
+      for (_l = 0, _len4 = _ref8.length; _l < _len4; _l++) {
+        _ref9 = _ref8[_l], j = _ref9[0], v = _ref9[1];
+        v3 = v;
+        flag.newV(v1 + "~" + v2, oneThird(poly.xyz[v1], poly.xyz[v2]));
+        fname = i + "f" + v1;
+        flag.newFlag(fname, "f" + i, v1 + "~" + v2);
+        flag.newFlag(fname, v1 + "~" + v2, v2 + "~" + v1);
+        flag.newFlag(fname, v2 + "~" + v1, "v" + v2);
+        flag.newFlag(fname, "v" + v2, v2 + "~" + v3);
+        flag.newFlag(fname, v2 + "~" + v3, "f" + i);
+        _ref10 = [v2, v3], v1 = _ref10[0], v2 = _ref10[1];
+      }
+    }
+    newpoly = flag.topoly();
+    newpoly.name = "g" + poly.name;
+    newpoly.xyz = adjustXYZ(newpoly, 3);
+    return newpoly;
+  };
+  propellor = function(poly) {
+    var f, flag, fname, i, newpoly, v, v1, v2, v3, _i, _j, _k, _len, _len2, _len3, _ref, _ref2, _ref3, _ref4, _ref5, _ref6;
+    console.log("Taking propellor of " + poly.name + "...");
+    flag = new polyflag();
+    _ref = enumerate(poly.xyz);
+    for (_i = 0, _len = _ref.length; _i < _len; _i++) {
+      _ref2 = _ref[_i], i = _ref2[0], v = _ref2[1];
+      flag.newV("v" + i, unit(v));
+    }
+    _ref3 = enumerate(poly.face);
+    for (_j = 0, _len2 = _ref3.length; _j < _len2; _j++) {
+      _ref4 = _ref3[_j], i = _ref4[0], f = _ref4[1];
+      _ref5 = f.slice(-2), v1 = _ref5[0], v2 = _ref5[1];
+      for (_k = 0, _len3 = f.length; _k < _len3; _k++) {
+        v = f[_k];
+        v3 = "" + v;
+        flag.newV(v1 + "~" + v2, oneThird(poly.xyz[v1], poly.xyz[v2]));
+        fname = "" + i + "f" + v2;
+        flag.newFlag("v" + i, v1 + "~" + v2, v2 + "~" + v3);
+        flag.newFlag(fname, v1 + "~" + v2, v2 + "~" + v1);
+        flag.newFlag(fname, v2 + "~" + v1, "v" + v2);
+        flag.newFlag(fname, "v" + v2, v2 + "~" + v3);
+        flag.newFlag(fname, v2 + "~" + v3, v1 + "~" + v2);
+        _ref6 = [v2, v3], v1 = _ref6[0], v2 = _ref6[1];
+      }
+    }
+    newpoly = flag.topoly();
+    newpoly.name = "p" + poly.name;
+    newpoly.xyz = adjustXYZ(newpoly, 3);
+    return newpoly;
+  };
+  reflect = function(poly) {
+    var i, _ref, _ref2;
+    console.log("Taking reflection of " + poly.name + "...");
+    for (i = 0, _ref = poly.xyz.length - 1; 0 <= _ref ? i <= _ref : i >= _ref; 0 <= _ref ? i++ : i--) {
+      poly.xyz[i] = mult(-1, poly.xyz[i]);
+    }
+    for (i = 0, _ref2 = poly.face.length - 1; 0 <= _ref2 ? i <= _ref2 : i >= _ref2; 0 <= _ref2 ? i++ : i--) {
+      poly.face[i] = poly.face[i].reverse();
+    }
+    poly.name = "r" + poly.name;
+    poly.xyz = adjustXYZ(poly, 1);
+    return poly;
+  };
+  dual = function(poly) {
+    var centers, dpoly, f, face, flag, i, v1, v2, _i, _j, _k, _l, _len, _len2, _len3, _len4, _ref, _ref2, _ref3, _ref4, _ref5, _ref6;
+    console.log("Taking dual of " + poly.name + "...");
+    flag = new polyflag();
+    face = [];
+    for (i = 0, _ref = poly.xyz.length - 1; 0 <= _ref ? i <= _ref : i >= _ref; 0 <= _ref ? i++ : i--) {
+      face[i] = {};
+    }
+    _ref2 = enumerate(poly.face);
+    for (_i = 0, _len = _ref2.length; _i < _len; _i++) {
+      _ref3 = _ref2[_i], i = _ref3[0], f = _ref3[1];
+      v1 = f[f.length - 1];
+      for (_j = 0, _len2 = f.length; _j < _len2; _j++) {
+        v2 = f[_j];
+        face[v1]["v" + v2] = "" + i;
+        v1 = v2;
+      }
+    }
+    centers = faceCenters(poly);
+    for (i = 0, _ref4 = poly.face.length - 1; 0 <= _ref4 ? i <= _ref4 : i >= _ref4; 0 <= _ref4 ? i++ : i--) {
+      flag.newV("" + i, centers[i]);
+    }
+    _ref5 = enumerate(poly.face);
+    for (_k = 0, _len3 = _ref5.length; _k < _len3; _k++) {
+      _ref6 = _ref5[_k], i = _ref6[0], f = _ref6[1];
+      v1 = f[f.length - 1];
+      for (_l = 0, _len4 = f.length; _l < _len4; _l++) {
+        v2 = f[_l];
+        flag.newFlag(v1, face[v2]["v" + v1], "" + i);
+        v1 = v2;
+      }
+    }
+    dpoly = flag.topoly();
+    if (poly.name[0] !== "d") {
+      dpoly.name = "d" + poly.name;
+    } else {
+      dpoly.name = poly.name.slice(1);
+    }
+    return dpoly;
   };
   insetN = function(poly, n) {
     var centers, f, flag, fname, foundAny, i, newpoly, normals, p, v, v1, v2, _i, _j, _k, _l, _len, _len2, _len3, _len4, _len5, _m, _ref, _ref2, _ref3, _ref4, _ref5, _ref6;
@@ -568,159 +783,6 @@
     newpoly.name = "*" + poly.name;
     return newpoly;
   };
-  midName = function(v1, v2) {
-    if (v1 < v2) {
-      return v1 + "_" + v2;
-    } else {
-      return v2 + "_" + v1;
-    }
-  };
-  ambo = function(poly) {
-    var f, flag, i, newpoly, v1, v2, v3, _i, _j, _len, _len2, _ref, _ref2, _ref3, _ref4;
-    console.log("Taking ambo of " + poly.name + "...");
-    flag = new polyflag();
-    _ref = enumerate(poly.face);
-    for (_i = 0, _len = _ref.length; _i < _len; _i++) {
-      _ref2 = _ref[_i], i = _ref2[0], f = _ref2[1];
-      _ref3 = f.slice(-2), v1 = _ref3[0], v2 = _ref3[1];
-      for (_j = 0, _len2 = f.length; _j < _len2; _j++) {
-        v3 = f[_j];
-        if (v1 < v2) {
-          flag.newV(midName(v1, v2), midpoint(poly.xyz[v1], poly.xyz[v2]));
-        }
-        flag.newFlag("f" + i, midName(v1, v2), midName(v2, v3));
-        flag.newFlag("v" + v2, midName(v2, v3), midName(v1, v2));
-        _ref4 = [v2, v3], v1 = _ref4[0], v2 = _ref4[1];
-      }
-    }
-    newpoly = flag.topoly();
-    newpoly.name = "a" + poly.name;
-    newpoly.xyz = adjustXYZ(newpoly, 2);
-    return newpoly;
-  };
-  gyro = function(poly) {
-    var centers, f, flag, fname, i, j, newpoly, v, v1, v2, v3, _i, _j, _k, _l, _len, _len2, _len3, _len4, _ref, _ref10, _ref2, _ref3, _ref4, _ref5, _ref6, _ref7, _ref8, _ref9;
-    console.log("Taking gyro of " + poly.name + "...");
-    flag = new polyflag();
-    _ref = enumerate(poly.xyz);
-    for (_i = 0, _len = _ref.length; _i < _len; _i++) {
-      _ref2 = _ref[_i], i = _ref2[0], v = _ref2[1];
-      flag.newV("v" + i, unit(v));
-    }
-    centers = faceCenters(poly);
-    _ref3 = enumerate(poly.face);
-    for (_j = 0, _len2 = _ref3.length; _j < _len2; _j++) {
-      _ref4 = _ref3[_j], i = _ref4[0], f = _ref4[1];
-      flag.newV("f" + i, unit(centers[i]));
-    }
-    _ref5 = enumerate(poly.face);
-    for (_k = 0, _len3 = _ref5.length; _k < _len3; _k++) {
-      _ref6 = _ref5[_k], i = _ref6[0], f = _ref6[1];
-      _ref7 = f.slice(-2), v1 = _ref7[0], v2 = _ref7[1];
-      _ref8 = enumerate(f);
-      for (_l = 0, _len4 = _ref8.length; _l < _len4; _l++) {
-        _ref9 = _ref8[_l], j = _ref9[0], v = _ref9[1];
-        v3 = v;
-        flag.newV(v1 + "~" + v2, oneThird(poly.xyz[v1], poly.xyz[v2]));
-        fname = i + "f" + v1;
-        flag.newFlag(fname, "f" + i, v1 + "~" + v2);
-        flag.newFlag(fname, v1 + "~" + v2, v2 + "~" + v1);
-        flag.newFlag(fname, v2 + "~" + v1, "v" + v2);
-        flag.newFlag(fname, "v" + v2, v2 + "~" + v3);
-        flag.newFlag(fname, v2 + "~" + v3, "f" + i);
-        _ref10 = [v2, v3], v1 = _ref10[0], v2 = _ref10[1];
-      }
-    }
-    newpoly = flag.topoly();
-    newpoly.name = "g" + poly.name;
-    newpoly.xyz = adjustXYZ(newpoly, 3);
-    return newpoly;
-  };
-  propellor = function(poly) {
-    var f, flag, fname, i, newpoly, v, v1, v2, v3, _i, _j, _k, _len, _len2, _len3, _ref, _ref2, _ref3, _ref4, _ref5, _ref6;
-    console.log("Taking propellor of " + poly.name + "...");
-    flag = new polyflag();
-    _ref = enumerate(poly.xyz);
-    for (_i = 0, _len = _ref.length; _i < _len; _i++) {
-      _ref2 = _ref[_i], i = _ref2[0], v = _ref2[1];
-      flag.newV("v" + i, unit(v));
-    }
-    _ref3 = enumerate(poly.face);
-    for (_j = 0, _len2 = _ref3.length; _j < _len2; _j++) {
-      _ref4 = _ref3[_j], i = _ref4[0], f = _ref4[1];
-      _ref5 = f.slice(-2), v1 = _ref5[0], v2 = _ref5[1];
-      for (_k = 0, _len3 = f.length; _k < _len3; _k++) {
-        v = f[_k];
-        v3 = "" + v;
-        flag.newV(v1 + "~" + v2, oneThird(poly.xyz[v1], poly.xyz[v2]));
-        fname = "" + i + "f" + v2;
-        flag.newFlag("v" + i, v1 + "~" + v2, v2 + "~" + v3);
-        flag.newFlag(fname, v1 + "~" + v2, v2 + "~" + v1);
-        flag.newFlag(fname, v2 + "~" + v1, "v" + v2);
-        flag.newFlag(fname, "v" + v2, v2 + "~" + v3);
-        flag.newFlag(fname, v2 + "~" + v3, v1 + "~" + v2);
-        _ref6 = [v2, v3], v1 = _ref6[0], v2 = _ref6[1];
-      }
-    }
-    newpoly = flag.topoly();
-    newpoly.name = "p" + poly.name;
-    newpoly.xyz = adjustXYZ(newpoly, 3);
-    return newpoly;
-  };
-  reflect = function(poly) {
-    var i, _ref, _ref2;
-    console.log("Taking reflection of " + poly.name + "...");
-    for (i = 0, _ref = poly.xyz.length - 1; 0 <= _ref ? i <= _ref : i >= _ref; 0 <= _ref ? i++ : i--) {
-      poly.xyz[i] = mult(-1, poly.xyz[i]);
-    }
-    for (i = 0, _ref2 = poly.face.length - 1; 0 <= _ref2 ? i <= _ref2 : i >= _ref2; 0 <= _ref2 ? i++ : i--) {
-      poly.face[i] = poly.face[i].reverse();
-    }
-    poly.name = "r" + poly.name;
-    poly.xyz = adjustXYZ(poly, 1);
-    return poly;
-  };
-  dual = function(poly) {
-    var centers, dpoly, f, face, flag, i, v1, v2, _i, _j, _k, _l, _len, _len2, _len3, _len4, _ref, _ref2, _ref3, _ref4, _ref5, _ref6;
-    console.log("Taking dual of " + poly.name + "...", poly);
-    flag = new polyflag();
-    face = [];
-    for (i = 0, _ref = poly.xyz.length - 1; 0 <= _ref ? i <= _ref : i >= _ref; 0 <= _ref ? i++ : i--) {
-      face[i] = {};
-    }
-    _ref2 = enumerate(poly.face);
-    for (_i = 0, _len = _ref2.length; _i < _len; _i++) {
-      _ref3 = _ref2[_i], i = _ref3[0], f = _ref3[1];
-      v1 = f[f.length - 1];
-      for (_j = 0, _len2 = f.length; _j < _len2; _j++) {
-        v2 = f[_j];
-        console.log(v1, v2, i);
-        face[v1]["v" + v2] = "" + i;
-        v1 = v2;
-      }
-    }
-    centers = faceCenters(poly);
-    for (i = 0, _ref4 = poly.face.length - 1; 0 <= _ref4 ? i <= _ref4 : i >= _ref4; 0 <= _ref4 ? i++ : i--) {
-      flag.newV("" + i, centers[i]);
-    }
-    _ref5 = enumerate(poly.face);
-    for (_k = 0, _len3 = _ref5.length; _k < _len3; _k++) {
-      _ref6 = _ref5[_k], i = _ref6[0], f = _ref6[1];
-      v1 = f[f.length - 1];
-      for (_l = 0, _len4 = f.length; _l < _len4; _l++) {
-        v2 = f[_l];
-        flag.newFlag(v1, face[v2]["v" + v1], "" + i);
-        v1 = v2;
-      }
-    }
-    dpoly = flag.topoly();
-    if (poly.name[0] !== "d") {
-      dpoly.name = "d" + poly.name;
-    } else {
-      dpoly.name = poly.name.slice(1);
-    }
-    return dpoly;
-  };
   tangentify = function(xyzs, edges) {
     var STABILITY_FACTOR, c, e, newVs, t, _i, _len;
     STABILITY_FACTOR = 0.1;
@@ -815,18 +877,8 @@
     }
     return centers;
   };
-  canonicalXYZ = function(poly, nIterations) {
-    var count, dpoly, _ref;
-    dpoly = dual(poly);
-    console.log("Pseudo-canonicalizing " + poly.name + "...");
-    for (count = 0, _ref = nIterations - 1; 0 <= _ref ? count <= _ref : count >= _ref; 0 <= _ref ? count++ : count--) {
-      dpoly.xyz = reciprocalN(poly);
-      poly.xyz = reciprocalN(dpoly);
-    }
-    return poly.xyz;
-  };
   reciprocalN = function(poly) {
-    var ans, avgEdgeDist, centroid, f, normal, tmp, v1, v2, v3, _i, _j, _len, _len2, _ref, _ref2, _ref3;
+    var ans, avgEdgeDist, f, tmp, v1, v2, v3, _i, _j, _len, _len2, _ref, _ref2, _ref3;
     ans = [];
     _ref = poly.face;
     for (_i = 0, _len = _ref.length; _i < _len; _i++) {
@@ -850,6 +902,16 @@
     }
     return ans;
   };
+  canonicalXYZ = function(poly, nIterations) {
+    var count, dpoly, _ref;
+    dpoly = dual(poly);
+    console.log("Pseudo-canonicalizing " + poly.name + "...");
+    for (count = 0, _ref = nIterations - 1; 0 <= _ref ? count <= _ref : count >= _ref; 0 <= _ref ? count++ : count--) {
+      dpoly.xyz = reciprocalN(poly);
+      poly.xyz = reciprocalN(dpoly);
+    }
+    return poly.xyz;
+  };
   adjustXYZ = function(poly, nIterations) {
     var count, dpoly, _ref;
     dpoly = dual(poly);
@@ -859,68 +921,6 @@
       poly.xyz = reciprocalC(dpoly);
     }
     return poly.xyz;
-  };
-  faceCenters = function(poly) {
-    var centers, i, j, _ref, _ref2;
-    centers = [];
-    for (i = 0, _ref = poly.face.length - 1; 0 <= _ref ? i <= _ref : i >= _ref; 0 <= _ref ? i++ : i--) {
-      centers[i] = [0, 0, 0];
-      for (j = 0, _ref2 = poly.face[i].length - 1; 0 <= _ref2 ? j <= _ref2 : j >= _ref2; 0 <= _ref2 ? j++ : j--) {
-        centers[i] = add(centers[i], poly.xyz[poly.face[i][j]]);
-      }
-      centers[i] = mult(1.0 / poly.face[i].length, centers[i]);
-    }
-    return centers;
-  };
-  faceNormals = function(poly) {
-    var f, normals, v, _i, _len, _ref;
-    normals = [];
-    _ref = poly.face;
-    for (_i = 0, _len = _ref.length; _i < _len; _i++) {
-      f = _ref[_i];
-      normals.push(normal((function() {
-        var _j, _len2, _results;
-        _results = [];
-        for (_j = 0, _len2 = f.length; _j < _len2; _j++) {
-          v = f[_j];
-          _results.push(poly.xyz[v]);
-        }
-        return _results;
-      })()));
-    }
-    return normals;
-  };
-  centroid = function(xyzs) {
-    var centroidV, v, _i, _len;
-    centroidV = [0, 0, 0];
-    for (_i = 0, _len = xyzs.length; _i < _len; _i++) {
-      v = xyzs[_i];
-      centroidV = add(centroidV, v);
-    }
-    return mult(1 / xyzs.length, centroidV);
-  };
-  normal = function(xyzs) {
-    var normalV, v1, v2, v3, _i, _len, _ref, _ref2;
-    normalV = [0, 0, 0];
-    _ref = xyzs.slice(-2), v1 = _ref[0], v2 = _ref[1];
-    for (_i = 0, _len = xyzs.length; _i < _len; _i++) {
-      v3 = xyzs[_i];
-      normalV = add(normalV, orthogonal(v1, v2, v3));
-      _ref2 = [v2, v3], v1 = _ref2[0], v2 = _ref2[1];
-    }
-    return unit(normalV);
-  };
-  convexarea = function(xyzs) {
-    var area, v1, v2, v3, _i, _len, _ref, _ref2;
-    area = 0.0;
-    _ref = xyzs.slice(0, 2), v1 = _ref[0], v2 = _ref[1];
-    _ref2 = xyzs.slice(2);
-    for (_i = 0, _len = _ref2.length; _i < _len; _i++) {
-      v3 = _ref2[_i];
-      area += mag(cross(sub(v2, v1), sub(v3, v1)));
-      v2 = v3;
-    }
-    return area;
   };
   specreplacements = [[/P4$/g, "C"], [/e/g, "aa"], [/b/g, "ta"], [/o/g, "jj"], [/m/g, "kj"], [/t(\d*)/g, "dk$1d"], [/j/g, "dad"], [/s/g, "dgd"], [/dd/g, ""], [/aO/g, "aC"], [/aI/g, "aD"], [/gO/g, "gC"], [/gI/g, "gD"]];
   getOps = function(notation) {
@@ -1032,7 +1032,7 @@
     }
     return urlParams;
   };
-  topolog = function(poly) {
+  window.topolog = function(poly) {
     var f, str, v, _i, _j, _len, _len2, _ref;
     str = "";
     _ref = poly.face;
@@ -1047,38 +1047,17 @@
     return console.log(str);
   };
   testrig = function() {
-    var t, tests, _i, _j, _k, _l, _len, _len2, _len3, _len4, _len5, _len6, _m, _n;
-    tests = ["T", "O", "C", "I", "D", "P3", "P4", "A4", "A5", "Y3", "Y4"];
+    var op, ops, seed, seeds, _i, _j, _len, _len2;
+    seeds = ["T", "O", "C", "I", "D", "P3", "P4", "A4", "A5", "Y3", "Y4"];
+    ops = ["k", "a", "g", "p", "d", "n", "x", "*"];
     console.log("===== Test Basic Ops =====");
-    console.log("--- primitives ----------------------------------------------------------------------------- ");
-    for (_i = 0, _len = tests.length; _i < _len; _i++) {
-      t = tests[_i];
-      console.log(generatePoly(t));
-    }
-    console.log("--- kis ----------------------------------------------------------------------------- ");
-    for (_j = 0, _len2 = tests.length; _j < _len2; _j++) {
-      t = tests[_j];
-      console.log(generatePoly("k" + t));
-    }
-    console.log("--- ambo ----------------------------------------------------------------------------- ");
-    for (_k = 0, _len3 = tests.length; _k < _len3; _k++) {
-      t = tests[_k];
-      console.log(generatePoly("a" + t));
-    }
-    console.log("--- gyro ----------------------------------------------------------------------------- ");
-    for (_l = 0, _len4 = tests.length; _l < _len4; _l++) {
-      t = tests[_l];
-      console.log(generatePoly("g" + t));
-    }
-    console.log("--- propellor ----------------------------------------------------------------------------- ");
-    for (_m = 0, _len5 = tests.length; _m < _len5; _m++) {
-      t = tests[_m];
-      console.log(generatePoly("p" + t));
-    }
-    console.log("--- dual ----------------------------------------------------------------------------- ");
-    for (_n = 0, _len6 = tests.length; _n < _len6; _n++) {
-      t = tests[_n];
-      console.log(generatePoly("d" + t));
+    for (_i = 0, _len = ops.length; _i < _len; _i++) {
+      op = ops[_i];
+      console.log("Operator " + op);
+      for (_j = 0, _len2 = seeds.length; _j < _len2; _j++) {
+        seed = seeds[_j];
+        console.log(op + seed + ":", generatePoly(op + seed));
+      }
     }
     return console.log("===== Done Testing Basic Ops =====");
   };
