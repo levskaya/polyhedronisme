@@ -96,7 +96,7 @@ faceNormals = (poly) ->
   normals
 
 # calculate centroid of array of vertices
-centroid = (xyzs) ->
+calcCentroid = (xyzs) ->
     centroidV = [0,0,0] # running sum of vertex coords
     for v in xyzs
       centroidV = add(centroidV, v)

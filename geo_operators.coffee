@@ -48,6 +48,13 @@ recenter = (xyzs, edges) ->
   polycenter = mult(1/edges.length, polycenter)
   _.map(xyzs, (x)->sub(x, polycenter) ) # subtract off any deviation from center
 
+# rescales maximum radius of polyhedron to 1
+rescale = (xyzs) ->
+  polycenter = [0,0,0]
+  maxExtent = _.max(_.map(xyzs,(x)->mag(x)))
+  s = 1/maxExtent
+  _.map(xyzs,(x)->[s*x[0],s*x[1],s*x[2]])
+
 # adjusts vertices in each face to improve its planarity
 planarize = (xyzs, faces) ->
   STABILITY_FACTOR = 0.1 # Hack to improve convergence
@@ -55,8 +62,8 @@ planarize = (xyzs, faces) ->
   for f in faces
     coords = (xyzs[v] for v in f)
     n = normal(coords) # find avg of normals for each vertex triplet
-    c = centroid(coords) # find planar centroid
-    if dot(n,centroid) < 0 # correct sign if needed
+    c = calcCentroid(coords) # find planar centroid
+    if dot(n,c) < 0 # correct sign if needed
       n = mult(-1.0,n)
     for v in f  # project (vertex - centroid) onto normal, subtract off this component
       newVs[v] = add(newVs[v], mult(dot(mult(STABILITY_FACTOR, n), sub(c, xyzs[v])), n) )
@@ -77,6 +84,10 @@ canonicalize = (poly, Niter) ->
     maxChange=_.max(_.map(_.zip(newVs,oldVs), ([x,y])->mag(sub(x,y)) ))
     if maxChange < 1e-8
       break
+  # one should now rescale, but not rescaling here makes for very interesting numerical
+  # instabilities that make interesting mutants on multiple applications...
+  # more experience will tell what to do
+  #newVs = rescale(newVs)
   console.log "[canonicalization done, last |deltaV|="+maxChange+"]"
   newVs
 

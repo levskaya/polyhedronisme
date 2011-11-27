@@ -280,6 +280,7 @@ dual = (poly) ->
 
   dpoly = flag.topoly() # build topological dual from flags
 
+  # _this seems less than useful_
   # match F index ordering to V index ordering on dual
   #sortF = []
   #for f in dpoly.face
@@ -334,7 +335,6 @@ insetN = (poly, n)->
 
   newpoly = flag.topoly()
   newpoly.name = "n" + (if n is 0 then "" else n) + poly.name
-  console.log newpoly
   #newpoly.xyz = adjustXYZ(newpoly, 3)
   #newpoly.xyz = canonicalXYZ(newpoly, 3)  # this tends to make results look like shit
   newpoly

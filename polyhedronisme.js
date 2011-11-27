@@ -1,5 +1,5 @@
 (function() {
-  var BG_CLEAR, BG_COLOR, CANVAS_HEIGHT, CANVAS_WIDTH, COLOR_METHOD, LastMouseX, LastMouseY, MOUSEDOWN, PALETTE, PI, abs, add, adjustXYZ, ambo, animateShape, antiprism, atan, canonicalXYZ, canonicalize, centroid, clear, colorassign, convexarea, copyVecArray, cos, cross, ctx, ctx_linewidth, cube, def_palette, dodecahedron, dot, drawShape, drawpoly, dual, edgeDist, enumerate, extrudeN, faceCenters, faceNormals, faceToEdges, floor, generatePoly, getOps, globPolys, globphi, globtheta, globtime, gyro, hextofloats, icosahedron, init, insetN, intersect, kisN, mag, mag2, midName, midpoint, mm3, mult, mv3, normal, octahedron, oneThird, orthogonal, paintPolyhedron, palette, parseurl, perspT, persp_ratio, persp_z_max, persp_z_min, perspective_scale, planarize, polyflag, polyhedron, pow, prism, propellor, pyramid, random, randomchoice, recenter, reciprocal, reciprocalC, reciprocalN, reflect, rotm, round, rwb_palette, rwbg_palette, sin, sortfaces, specreplacements, sqrt, stellaN, sub, tan, tangentPoint, tangentify, testrig, tetrahedron, topolog, tween, unit, _2d_x_offset, _2d_y_offset, _mult;
+  var BG_CLEAR, BG_COLOR, CANVAS_HEIGHT, CANVAS_WIDTH, COLOR_METHOD, DEFAULT_RECIPES, LastMouseX, LastMouseY, LastSphVec, MOUSEDOWN, PALETTE, PI, abs, acos, add, adjustXYZ, ambo, animateShape, antiprism, asin, atan, calcCentroid, canonicalXYZ, canonicalize, clear, clone, colorassign, convexarea, copyVecArray, cos, cross, ctx, ctx_linewidth, cube, def_palette, dodecahedron, dot, drawShape, drawpoly, dual, edgeDist, enumerate, extrudeN, eye3, faceCenters, faceNormals, faceToEdges, floor, generatePoly, getOps, getVec2VecRotM, globPolys, globRotM, globlastRotM, globtime, gyro, hextofloats, icosahedron, init, insetN, intersect, invperspT, kisN, mag, mag2, midName, midpoint, mm3, mult, mv3, normal, octahedron, oneThird, orthogonal, paintPolyhedron, palette, parseurl, perspT, persp_ratio, persp_z_max, persp_z_min, perspective_scale, planarize, polyflag, polyhedron, pow, prism, propellor, pyramid, random, randomchoice, recenter, reciprocal, reciprocalC, reciprocalN, reflect, rescale, rotm, round, rwb_palette, rwbg_palette, sin, sortfaces, specreplacements, sqrt, stellaN, sub, tan, tangentPoint, tangentify, testrig, tetrahedron, topolog, tween, unit, vec_rotm, _2d_x_offset, _2d_y_offset, _mult;
   var __bind = function(fn, me){ return function(){ return fn.apply(me, arguments); }; };
   random = Math.random;
   round = Math.round;
@@ -8,6 +8,8 @@
   sin = Math.sin;
   cos = Math.cos;
   tan = Math.tan;
+  asin = Math.asin;
+  acos = Math.acos;
   atan = Math.atan;
   pow = Math.pow;
   abs = Math.abs;
@@ -19,6 +21,17 @@
       _results.push([i, ar[i]]);
     }
     return _results;
+  };
+  clone = function(obj) {
+    var key, newInstance;
+    if (!(obj != null) || typeof obj !== 'object') {
+      return obj;
+    }
+    newInstance = new obj.constructor();
+    for (key in obj) {
+      newInstance[key] = clone(obj[key]);
+    }
+    return newInstance;
   };
   randomchoice = function(array) {
     var n;
@@ -40,6 +53,9 @@
   dot = function(vec1, vec2) {
     return vec1[0] * vec2[0] + vec1[1] * vec2[1] + vec1[2] * vec2[2];
   };
+  cross = function(d1, d2) {
+    return [d1[1] * d2[2] - d1[2] * d2[1], d1[2] * d2[0] - d1[0] * d2[2], d1[0] * d2[1] - d1[1] * d2[0]];
+  };
   mag = function(vec) {
     return sqrt(dot(vec, vec));
   };
@@ -48,9 +64,6 @@
   };
   unit = function(vec) {
     return mult(1 / sqrt(mag2(vec)), vec);
-  };
-  cross = function(d1, d2) {
-    return [d1[1] * d2[2] - d1[2] * d2[1], d1[2] * d2[0] - d1[0] * d2[2], d1[0] * d2[1] - d1[1] * d2[0]];
   };
   midpoint = function(vec1, vec2) {
     return mult(1 / 2.0, add(vec1, vec2));
@@ -110,6 +123,7 @@
   mm3 = function(A, B) {
     return [[A[0][0] * B[0][0] + A[0][1] * B[1][0] + A[0][2] * B[2][0], A[0][0] * B[0][1] + A[0][1] * B[1][1] + A[0][2] * B[2][1], A[0][0] * B[0][2] + A[0][1] * B[1][2] + A[0][2] * B[2][2]], [A[1][0] * B[0][0] + A[1][1] * B[1][0] + A[1][2] * B[2][0], A[1][0] * B[0][1] + A[1][1] * B[1][1] + A[1][2] * B[2][1], A[1][0] * B[0][2] + A[1][1] * B[1][2] + A[1][2] * B[2][2]], [A[2][0] * B[0][0] + A[2][1] * B[1][0] + A[2][2] * B[2][0], A[2][0] * B[0][1] + A[2][1] * B[1][1] + A[2][2] * B[2][1], A[2][0] * B[0][2] + A[2][1] * B[1][2] + A[2][2] * B[2][2]]];
   };
+  eye3 = [[1, 0, 0], [0, 1, 0], [0, 0, 1]];
   rotm = function(phi, theta, psi) {
     var xy_mat, xz_mat, yz_mat;
     xy_mat = [[cos(phi), -1.0 * sin(phi), 0.0], [sin(phi), cos(phi), 0.0], [0.0, 0.0, 1.0]];
@@ -117,11 +131,59 @@
     xz_mat = [[1.0, 0, 0], [0, cos(psi), -1.0 * sin(psi)], [0, sin(psi), cos(psi)]];
     return mm3(xz_mat, mm3(yz_mat, xy_mat));
   };
+  vec_rotm = function(angle, x, y, z) {
+    var cosA, length, m, sinA, sinA2, x2, y2, z2, _ref, _ref2;
+    angle /= 2;
+    sinA = sin(angle);
+    cosA = cos(angle);
+    sinA2 = sinA * sinA;
+    length = mag([x, y, z]);
+    if (length === 0) {
+      _ref = [0, 0, 1], x = _ref[0], y = _ref[1], z = _ref[2];
+    }
+    if (length !== 1) {
+      _ref2 = unit([x, y, z]), x = _ref2[0], y = _ref2[1], z = _ref2[2];
+    }
+    if (x === 1 && y === 0 && z === 0) {
+      m = [[1, 0, 0], [0, 1 - 2 * sinA2, 2 * sinA * cosA], [0, -2 * sinA * cosA, 1 - 2 * sinA2]];
+    } else if (x === 0 && y === 1 && z === 0) {
+      m = [[1 - 2 * sinA2, 0, -2 * sinA * cosA], [0, 1, 0], [2 * sinA * cosA, 0, 1 - 2 * sinA2]];
+    } else if (x === 0 && y === 0 && z === 1) {
+      m = [[1 - 2 * sinA2, 2 * sinA * cosA, 0], [-2 * sinA * cosA, 1 - 2 * sinA2, 0], [0, 0, 1]];
+    } else {
+      x2 = x * x;
+      y2 = y * y;
+      z2 = z * z;
+      m = [[1 - 2 * (y2 + z2) * sinA2, 2 * (x * y * sinA2 + z * sinA * cosA), 2 * (x * z * sinA2 - y * sinA * cosA)], [2 * (y * x * sinA2 - z * sinA * cosA), 1 - 2 * (z2 + x2) * sinA2, 2 * (y * z * sinA2 + x * sinA * cosA)], [2 * (z * x * sinA2 + y * sinA * cosA), 2 * (z * y * sinA2 - x * sinA * cosA), 1 - 2 * (x2 + y2) * sinA2]];
+    }
+    return m;
+  };
   perspT = function(vec3, max_real_depth, min_real_depth, desired_ratio, desired_length) {
     var scalefactor, z0;
     z0 = (max_real_depth * desired_ratio - min_real_depth) / (1 - desired_ratio);
     scalefactor = desired_length * desired_ratio / (1 - desired_ratio);
     return [scalefactor * vec3[0] / (vec3[2] + z0), scalefactor * vec3[1] / (vec3[2] + z0)];
+  };
+  invperspT = function(x, y, dx, dy, max_real_depth, min_real_depth, desired_ratio, desired_length) {
+    var s, s2, xp, xp2, xsphere, yp, yp2, ysphere, z0, z02, zsphere;
+    z0 = (max_real_depth * desired_ratio - min_real_depth) / (1 - desired_ratio);
+    s = desired_length * desired_ratio / (1 - desired_ratio);
+    xp = x - dx;
+    yp = y - dy;
+    s2 = s * s;
+    z02 = z0 * z0;
+    xp2 = xp * xp;
+    yp2 = yp * yp;
+    xsphere = (2 * s * xp * z0 + sqrt(4 * s2 * xp2 * z02 + 4 * xp2 * (s2 + xp2 + yp2) * (1 - z02))) / (2.0 * (s2 + xp2 + yp2));
+    ysphere = (s * yp * z0) / (s2 + xp2 + yp2) + (yp * sqrt(4 * s2 * z02 + 4 * (s2 + xp2 + yp2) * (1 - z02))) / (2.0 * (s2 + xp2 + yp2));
+    zsphere = sqrt(1 - xsphere * xsphere - ysphere * ysphere);
+    return [xsphere, ysphere, zsphere];
+  };
+  getVec2VecRotM = function(vec1, vec2) {
+    var angle, axis;
+    axis = cross(vec1, vec2);
+    angle = acos(dot(vec1, vec2));
+    return vec_rotm(-1 * angle, axis[0], axis[1], axis[2]);
   };
   faceToEdges = function(face) {
     var edges, v1, v2, _i, _len;
@@ -238,7 +300,7 @@
     }
     return normals;
   };
-  centroid = function(xyzs) {
+  calcCentroid = function(xyzs) {
     var centroidV, v, _i, _len;
     centroidV = [0, 0, 0];
     for (_i = 0, _len = xyzs.length; _i < _len; _i++) {
@@ -690,7 +752,6 @@
     }
     newpoly = flag.topoly();
     newpoly.name = "n" + (n === 0 ? "" : n) + poly.name;
-    console.log(newpoly);
     return newpoly;
   };
   extrudeN = function(poly, n) {
@@ -817,6 +878,17 @@
       return sub(x, polycenter);
     });
   };
+  rescale = function(xyzs) {
+    var maxExtent, polycenter, s;
+    polycenter = [0, 0, 0];
+    maxExtent = _.max(_.map(xyzs, function(x) {
+      return mag(x);
+    }));
+    s = 1 / maxExtent;
+    return _.map(xyzs, function(x) {
+      return [s * x[0], s * x[1], s * x[2]];
+    });
+  };
   planarize = function(xyzs, faces) {
     var STABILITY_FACTOR, c, coords, f, n, newVs, v, _i, _j, _len, _len2;
     STABILITY_FACTOR = 0.1;
@@ -833,8 +905,8 @@
         return _results;
       })();
       n = normal(coords);
-      c = centroid(coords);
-      if (dot(n, centroid) < 0) {
+      c = calcCentroid(coords);
+      if (dot(n, c) < 0) {
         n = mult(-1.0, n);
       }
       for (_j = 0, _len2 = f.length; _j < _len2; _j++) {
@@ -878,7 +950,7 @@
     return centers;
   };
   reciprocalN = function(poly) {
-    var ans, avgEdgeDist, f, normalV, tmp, v1, v2, v3, _i, _j, _len, _len2, _ref, _ref2, _ref3;
+    var ans, avgEdgeDist, centroid, f, normalV, tmp, v1, v2, v3, _i, _j, _len, _len2, _ref, _ref2, _ref3;
     ans = [];
     _ref = poly.face;
     for (_i = 0, _len = _ref.length; _i < _len; _i++) {
@@ -955,8 +1027,8 @@
   CANVAS_WIDTH = 600;
   CANVAS_HEIGHT = 300;
   globPolys = {};
-  globtheta = 0;
-  globphi = 0;
+  globRotM = clone(eye3);
+  globlastRotM = clone(eye3);
   perspective_scale = 500;
   persp_z_max = 5;
   persp_z_min = 0;
@@ -971,6 +1043,8 @@
   MOUSEDOWN = false;
   LastMouseX = 0;
   LastMouseY = 0;
+  LastSphVec = [1, 0, 0];
+  DEFAULT_RECIPES = ["dakD", "opD", "*T", "*.oC", "knD", "dn6x4.bT"];
   def_palette = ["#ff3333", "#33ff33", "#3333ff", "#ffff33", "#ff33ff", "#33ffff", "#dddddd", "#555555", "#dd0000", "#00dd00", "#0000dd"];
   rwb_palette = ["#ff8888", "#dddddd", "#777777", "#aa3333", "#ff0000", "#ffffff", "#aaaaaa"];
   rwbg_palette = ["#ff8888", "#ffeeee", "#88ff88", "#dd7777", "#ff2222", "#22ff22", "#ee4422", "#aaaaaa"];
@@ -1127,6 +1201,8 @@
       }
       ops = ops.slice(0, -1);
     }
+    poly.xyz = recenter(poly.xyz, poly.getEdges());
+    poly.xyz = rescale(poly.xyz);
     poly = paintPolyhedron(poly);
     return poly;
   };
@@ -1207,7 +1283,7 @@
       return x;
     });
     poly.xyz = _.map(poly.xyz, function(x) {
-      return mv3(rotm(rot[0], rot[1], rot[2]), x);
+      return mv3(globRotM, x);
     });
     sortfaces(poly);
     _ref = enumerate(poly.face);
@@ -1241,15 +1317,14 @@
     return poly.xyz = oldxyz;
   };
   $(function() {
-    var defspecs, specs, urlParams;
+    var specs, urlParams;
     init();
-    defspecs = ["dakD", "oopD", "ajI", ".akY5", ".ooC", "bT"];
     urlParams = parseurl();
     if ("recipe" in urlParams) {
       specs = [urlParams["recipe"]];
       $("#spec").val(specs);
     } else {
-      specs = [randomchoice(defspecs)];
+      specs = [randomchoice(DEFAULT_RECIPES)];
       $("#spec").val(specs);
     }
     globPolys = _.map(specs, function(x) {
@@ -1269,10 +1344,16 @@
       return drawShape();
     });
     $("#poly").mousedown(function(e) {
+      var tmpvec;
       event.preventDefault();
       MOUSEDOWN = true;
       LastMouseX = e.clientX - $(this).offset().left;
-      return LastMouseY = e.clientY - $(this).offset().top;
+      LastMouseY = e.clientY - $(this).offset().top;
+      tmpvec = invperspT(LastMouseX, LastMouseY, _2d_x_offset, _2d_y_offset, persp_z_max, persp_z_min, persp_ratio, perspective_scale);
+      if (tmpvec[0] * tmpvec[1] * tmpvec[2] * 0 === 0) {
+        LastSphVec = tmpvec;
+      }
+      return globlastRotM = clone(globRotM);
     });
     $("#poly").mouseup(function(e) {
       event.preventDefault();
@@ -1283,18 +1364,21 @@
       return MOUSEDOWN = false;
     });
     return $("#poly").mousemove(function(e) {
+      var MouseX, MouseY, SphVec;
       event.preventDefault();
       if (MOUSEDOWN) {
-        globtheta += -(e.clientX - $(this).offset().left - LastMouseX) * (Math.PI / 180);
-        globphi += -(e.clientY - $(this).offset().top - LastMouseY) * (Math.PI / 180);
-        LastMouseX = e.clientX - $(this).offset().left;
-        LastMouseY = e.clientY - $(this).offset().top;
+        MouseX = e.clientX - $(this).offset().left;
+        MouseY = e.clientY - $(this).offset().top;
+        SphVec = invperspT(MouseX, MouseY, _2d_x_offset, _2d_y_offset, persp_z_max, persp_z_min, persp_ratio, perspective_scale);
+        if (SphVec[0] * SphVec[1] * SphVec[2] * 0 === 0 && LastSphVec[0] * LastSphVec[1] * LastSphVec[2] * 0 === 0) {
+          globRotM = mm3(getVec2VecRotM(LastSphVec, SphVec), globlastRotM);
+        }
         return drawShape();
       }
     });
   });
   animateShape = function() {
-    var i, p, _i, _len, _ref, _ref2;
+    var globtheta, i, p, _i, _len, _ref, _ref2;
     clear();
     globtheta = (2 * Math.PI) / 180.0 * globtime.getSeconds() * 0.1;
     _ref = enumerate(globPolys);
@@ -1311,7 +1395,7 @@
     _results = [];
     for (_i = 0, _len = _ref.length; _i < _len; _i++) {
       _ref2 = _ref[_i], i = _ref2[0], p = _ref2[1];
-      _results.push(drawpoly(p, [0 + 3 * i, 0, 3], [0, globtheta, globphi]));
+      _results.push(drawpoly(p, [0 + 3 * i, 0, 3], [0, 0, 0]));
     }
     return _results;
   };

@@ -18,8 +18,10 @@ CANVAS_WIDTH  = 600 #canvas dims
 CANVAS_HEIGHT = 300 #canvas dims
 globPolys={} # constructed polyhedras
 
-globtheta = 0 # rotation and projective mapping parameters
-globphi   = 0
+globRotM = clone eye3
+globlastRotM = clone eye3
+#globtheta = 0 # rotation and projective mapping parameters
+#globphi   = 0
 perspective_scale = 500
 persp_z_max = 5
 persp_z_min = 0
@@ -28,7 +30,6 @@ _2d_x_offset = CANVAS_WIDTH/2 #300
 _2d_y_offset = CANVAS_HEIGHT/2 #140
 
 globtime = new Date() # for animation
-
 
 BG_CLEAR = true # clear background or colored?
 BG_COLOR = "rgba(255,255,255,1.0)" # background color
@@ -40,6 +41,9 @@ ctx_linewidth = 0.5 # for outline of faces
 MOUSEDOWN=false
 LastMouseX=0
 LastMouseY=0
+LastSphVec=[1,0,0] #for 3d trackball
+
+DEFAULT_RECIPES = ["dakD","opD","*T","*.oC","knD","dn6x4.bT"]  # random grabbag of polyhedra
 
 
 # Polyhedra Coloring Functions
@@ -163,7 +167,8 @@ generatePoly = (notation) ->
     ops = ops.slice(0,-1);  # remove last character
 
   # Recenter polyhedra at origin (rarely needed)
-  #poly.xyz = recenter(poly.xyz, poly.getEdges())
+  poly.xyz = recenter(poly.xyz, poly.getEdges())
+  poly.xyz = rescale(poly.xyz)
 
   # Color the faces of the polyhedra for display
   poly = paintPolyhedron(poly)
@@ -245,7 +250,8 @@ drawpoly = (poly,tvec,rot) ->
 
   # rotate poly in 3d
   oldxyz = _.map(poly.xyz, (x)->x)
-  poly.xyz = _.map(poly.xyz, (x)->mv3(rotm(rot[0],rot[1],rot[2]),x))
+  #poly.xyz = _.map(poly.xyz, (x)->mv3(rotm(rot[0],rot[1],rot[2]),x))
+  poly.xyz = _.map(poly.xyz, (x)->mv3(globRotM,x))
 
   # z sort faces
   sortfaces(poly)
@@ -291,14 +297,12 @@ $( -> #wait for page to load
 
   init() #init canvas
 
-  defspecs = ["dakD","oopD","ajI",".akY5",".ooC","bT"]   # random grabbag of polyhedra
-
   urlParams = parseurl() #see if recipe is spec'd in URL
   if "recipe" of urlParams
     specs=[urlParams["recipe"]]
     $("#spec").val(specs)
   else
-    specs=[randomchoice(defspecs)]
+    specs=[randomchoice(DEFAULT_RECIPES)]
     $("#spec").val(specs)
 
   # construct the polyhedra from spec
@@ -313,6 +317,7 @@ $( -> #wait for page to load
     specs = $("#spec").val().split(/\s+/g)
     globPolys = _.map(specs, (x)->generatePoly(x) )
     #animateShape()
+    #window.location
     drawShape()
   )
 
@@ -331,8 +336,15 @@ $( -> #wait for page to load
   $("#poly").mousedown( (e)->
     event.preventDefault()
     MOUSEDOWN=true
-    LastMouseX=e.clientX-$(this).offset().left
+    LastMouseX=e.clientX-$(this).offset().left #relative mouse coords
     LastMouseY=e.clientY-$(this).offset().top
+
+    #calculate inverse projection of point to sphere
+    tmpvec=invperspT(LastMouseX,LastMouseY,_2d_x_offset,_2d_y_offset,persp_z_max,persp_z_min,persp_ratio,perspective_scale)
+    if tmpvec[0]*tmpvec[1]*tmpvec[2]*0 is 0  #quick NaN check
+      LastSphVec=tmpvec
+    globlastRotM = clone globRotM #copy last transform state
+    #console.log LastSphVec[0],LastSphVec[1],LastSphVec[2]
   )
   $("#poly").mouseup( (e)->
     event.preventDefault()
@@ -345,11 +357,16 @@ $( -> #wait for page to load
   $("#poly").mousemove( (e)->
     event.preventDefault()
     if MOUSEDOWN
-      globtheta += -( e.clientX-$(this).offset().left-LastMouseX)*(Math.PI/180)
-      globphi   += -( e.clientY-$(this).offset().top-LastMouseY)*(Math.PI/180)
-
-      LastMouseX=e.clientX-$(this).offset().left
-      LastMouseY=e.clientY-$(this).offset().top
+      #globtheta += -( e.clientX-$(this).offset().left-LastMouseX)*(Math.PI/180)
+      #globphi   += -( e.clientY-$(this).offset().top-LastMouseY)*(Math.PI/180)
+      #LastMouseX=e.clientX-$(this).offset().left
+      #LastMouseY=e.clientY-$(this).offset().top
+      MouseX=e.clientX-$(this).offset().left
+      MouseY=e.clientY-$(this).offset().top
+      SphVec=invperspT(MouseX,MouseY,_2d_x_offset,_2d_y_offset,persp_z_max,persp_z_min,persp_ratio,perspective_scale)
+      #quick NaN check
+      if SphVec[0]*SphVec[1]*SphVec[2]*0 is 0 and LastSphVec[0]*LastSphVec[1]*LastSphVec[2]*0 is 0
+        globRotM = mm3(getVec2VecRotM(LastSphVec,SphVec),globlastRotM)
       drawShape()
   )
 
@@ -368,4 +385,4 @@ animateShape = ->
 drawShape = ->
   clear()
   for [i,p] in enumerate(globPolys)
-    drawpoly(p,[0+3*i,0,3],[0,globtheta,globphi])
+    drawpoly(p,[0+3*i,0,3],[0,0,0])

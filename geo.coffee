@@ -23,6 +23,8 @@ sqrt  = Math.sqrt
 sin   = Math.sin
 cos   = Math.cos
 tan   = Math.tan
+asin  = Math.asin
+acos  = Math.acos
 atan  = Math.atan
 pow   = Math.pow
 abs   = Math.abs
@@ -32,15 +34,24 @@ PI    = Math.PI
 # --should use "for [i,x] in AR then do (i,x)->" idiom instead
 enumerate = (ar) ->  [i,ar[i]] for i in [0..ar.length-1]
 
+# general recursive deep-copy function
+clone = (obj) ->
+  if not obj? or typeof obj isnt 'object'
+    return obj
+  newInstance = new obj.constructor()
+  for key of obj
+    newInstance[key] = clone obj[key]
+  newInstance
+
 # often useful
 randomchoice = (array)->
   n = floor(random()*array.length)
   array[n]
 
-# scalar multiplication
+# 3d scalar multiplication
 mult = (c,vec) -> [c*vec[0],c*vec[1],c*vec[2]]
 
-# element-wise multiply
+# 3d element-wise multiply
 _mult = (vec1, vec2) -> [vec1[0]*vec2[0],vec1[1]*vec2[1],vec1[2]*vec2[2]]
 
 # 3d vector addition
@@ -52,6 +63,9 @@ sub = (vec1, vec2) -> [vec1[0]-vec2[0],vec1[1]-vec2[1],vec1[2]-vec2[2]]
 # 3d dot product
 dot = (vec1, vec2) -> vec1[0]*vec2[0] + vec1[1]*vec2[1] + vec1[2]*vec2[2]
 
+# 3d cross product d1 x d2
+cross = (d1, d2) -> [ d1[1]*d2[2]-d1[2]*d2[1], d1[2]*d2[0]-d1[0]*d2[2],  d1[0]*d2[1]-d1[1]*d2[0] ]
+
 # vector norm
 mag = (vec) -> sqrt(dot(vec,vec))
 
@@ -61,9 +75,7 @@ mag2 = (vec) -> dot(vec,vec)
 # makes vector unit length
 unit = (vec) -> mult( 1/sqrt(mag2(vec)), vec)
 
-# cross product d1 x d2
-cross = (d1, d2) -> [ d1[1]*d2[2]-d1[2]*d2[1], d1[2]*d2[0]-d1[0]*d2[2],  d1[0]*d2[1]-d1[1]*d2[0] ]
-
+# midpoint between vec1, vec2
 midpoint = (vec1, vec2) -> mult(1/2.0,add(vec1,vec2))
 
 # parametric segment between vec1, vec2 w. parameter t ranging from 0 to 1
@@ -115,20 +127,22 @@ mv3 = (mat,vec) ->
   #Ghetto custom def of matrix-vector mult
   #example matrix: [[a,b,c],[d,e,f],[g,h,i]]
   [mat[0][0]*vec[0]+mat[0][1]*vec[1]+mat[0][2]*vec[2],
-  mat[1][0]*vec[0]+mat[1][1]*vec[1]+mat[1][2]*vec[2],
-  mat[2][0]*vec[0]+mat[2][1]*vec[1]+mat[2][2]*vec[2]]
+   mat[1][0]*vec[0]+mat[1][1]*vec[1]+mat[1][2]*vec[2],
+   mat[2][0]*vec[0]+mat[2][1]*vec[1]+mat[2][2]*vec[2]]
 
 # 3d matrix matrix multiply
 mm3 = (A,B) ->
   [[A[0][0]*B[0][0]+A[0][1]*B[1][0]+A[0][2]*B[2][0],
-  A[0][0]*B[0][1]+A[0][1]*B[1][1]+A[0][2]*B[2][1],
-  A[0][0]*B[0][2]+A[0][1]*B[1][2]+A[0][2]*B[2][2]],
+   A[0][0]*B[0][1]+A[0][1]*B[1][1]+A[0][2]*B[2][1],
+   A[0][0]*B[0][2]+A[0][1]*B[1][2]+A[0][2]*B[2][2]],
   [A[1][0]*B[0][0]+A[1][1]*B[1][0]+A[1][2]*B[2][0],
-  A[1][0]*B[0][1]+A[1][1]*B[1][1]+A[1][2]*B[2][1],
-  A[1][0]*B[0][2]+A[1][1]*B[1][2]+A[1][2]*B[2][2]],
+   A[1][0]*B[0][1]+A[1][1]*B[1][1]+A[1][2]*B[2][1],
+   A[1][0]*B[0][2]+A[1][1]*B[1][2]+A[1][2]*B[2][2]],
   [A[2][0]*B[0][0]+A[2][1]*B[1][0]+A[2][2]*B[2][0],
-  A[2][0]*B[0][1]+A[2][1]*B[1][1]+A[2][2]*B[2][1],
-  A[2][0]*B[0][2]+A[2][1]*B[1][2]+A[2][2]*B[2][2]]]
+   A[2][0]*B[0][1]+A[2][1]*B[1][1]+A[2][2]*B[2][1],
+   A[2][0]*B[0][2]+A[2][1]*B[1][2]+A[2][2]*B[2][2]]]
+
+eye3 = [[1,0,0],[0,1,0],[0,0,1]]
 
 # Rotation Matrix
 # Totally ghetto, not at all in agreement with euler angles!
@@ -149,6 +163,45 @@ rotm = (phi,theta,psi)->
 
     mm3(xz_mat, mm3(yz_mat,xy_mat))
 
+
+# Rotation Matrix defined by rotation about (unit) axis [x,y,z] for angle radians
+vec_rotm = (angle, x, y, z) ->
+  angle /= 2
+  sinA = sin(angle)
+  cosA = cos(angle)
+  sinA2 = sinA*sinA
+  length = mag([x,y,z])
+  if length is 0
+    [x,y,z] = [0,0,1]
+  if length isnt 1
+    [x,y,z] = unit([x,y,z])
+
+  #console.log "vec_rotm args",angle,x,y,z,"vars",sinA,cosA
+
+  if (x is 1 and y is 0 and z is 0)
+      m=[[1,            0,           0],\
+         [0,    1-2*sinA2, 2*sinA*cosA],\
+         [0, -2*sinA*cosA,   1-2*sinA2]]
+  else if (x is 0 and y is 1 and z is 0)
+      m=[[  1-2*sinA2, 0,  -2*sinA*cosA],\
+         [          0, 1,             0],\
+         [2*sinA*cosA, 0,     1-2*sinA2]]
+  else if (x is 0 and y is 0 and z is 1)
+      m=[[   1-2*sinA2, 2*sinA*cosA, 0],\
+         [-2*sinA*cosA,   1-2*sinA2, 0],\
+         [           0,           0, 1]]
+  else
+      x2 = x*x
+      y2 = y*y
+      z2 = z*z
+      m=[[1-2*(y2+z2)*sinA2,         2*(x*y*sinA2+z*sinA*cosA), 2*(x*z*sinA2-y*sinA*cosA)],\
+         [2*(y*x*sinA2-z*sinA*cosA),         1-2*(z2+x2)*sinA2, 2*(y*z*sinA2+x*sinA*cosA)],\
+         [2*(z*x*sinA2+y*sinA*cosA), 2*(z*y*sinA2-x*sinA*cosA),         1-2*(x2+y2)*sinA2]]
+
+  #console.log "vec_rotm m", m[0],m[1],m[2],m[3],m[4],m[5],m[6],m[7],m[8]
+  #return matrix
+  m
+
 # Perspective Transform
 # assumes world's been rotated appropriately such that Z is depth
 # scales perspective such that inside depth regions min_real_depth <--> max_real_depth
@@ -160,4 +213,33 @@ perspT = (vec3, max_real_depth, min_real_depth, desired_ratio, desired_length) -
 
   # projected [X, Y]
   [scalefactor*vec3[0]/(vec3[2]+z0), scalefactor*vec3[1]/(vec3[2]+z0)]
+
+# Inverses perspective transform by projecting plane onto a unit sphere at origin
+invperspT = (x, y, dx, dy, max_real_depth, min_real_depth, desired_ratio, desired_length) ->
+  z0          = (max_real_depth * desired_ratio - min_real_depth)/(1-desired_ratio)
+  s           =  desired_length * desired_ratio/(1-desired_ratio)
+  xp = x-dx
+  yp = y-dy
+  s2 = s*s
+  z02 = z0*z0
+  xp2 = xp*xp
+  yp2 = yp*yp
+
+  xsphere = (2*s*xp*z0 + sqrt(4*s2*xp2*z02 + 4*xp2*(s2+xp2+yp2)*(1-z02) ) )/(2.0*(s2+xp2+yp2))
+  ysphere = ((s*yp*z0)/(s2+xp2+yp2) + (yp*sqrt(4*s2*z02 + 4*(s2+xp2+yp2)*(1-z02)))/(2.0*(s2+xp2+yp2)))
+  zsphere = sqrt(1-xsphere*xsphere-ysphere*ysphere)
+
+  #console.log  "invperspT", xsphere, ysphere, zsphere, mag([xsphere, ysphere, zsphere])
+  [xsphere, ysphere, zsphere]
+
+# Returns rotation matrix that takes vec1 to vec2
+getVec2VecRotM = (vec1, vec2)->
+  axis    = cross(vec1,vec2)
+  angle   = acos(dot(vec1,vec2))
+
+  #console.log  "getVec2VecRotM", angle, axis[0],axis[1],axis[2]
+  vec_rotm(-1*angle,axis[0],axis[1],axis[2])
+
+
+
 
