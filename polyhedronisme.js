@@ -1,5 +1,5 @@
 (function() {
-  var BG_CLEAR, BG_COLOR, CANVAS_HEIGHT, CANVAS_WIDTH, COLOR_METHOD, DEFAULT_RECIPES, LastMouseX, LastMouseY, LastSphVec, MOUSEDOWN, PALETTE, PI, abs, acos, add, adjustXYZ, ambo, animateShape, antiprism, asin, atan, calcCentroid, canonicalXYZ, canonicalize, clear, clone, colorassign, convexarea, copyVecArray, cos, cross, ctx, ctx_linewidth, cube, def_palette, dodecahedron, dot, drawShape, drawpoly, dual, edgeDist, enumerate, extrudeN, eye3, faceCenters, faceNormals, faceToEdges, floor, generatePoly, getOps, getVec2VecRotM, globPolys, globRotM, globlastRotM, globtime, gyro, hextofloats, icosahedron, init, insetN, intersect, invperspT, kisN, mag, mag2, midName, midpoint, mm3, mult, mv3, normal, octahedron, oneThird, orthogonal, paintPolyhedron, palette, parseurl, perspT, persp_ratio, persp_z_max, persp_z_min, perspective_scale, planarize, polyflag, polyhedron, pow, prism, propellor, pyramid, random, randomchoice, recenter, reciprocal, reciprocalC, reciprocalN, reflect, rescale, rotm, round, rwb_palette, rwbg_palette, saveText, sin, sortfaces, specreplacements, sqrt, stellaN, sub, tan, tangentPoint, tangentify, testrig, tetrahedron, topolog, tween, unit, vec_rotm, _2d_x_offset, _2d_y_offset, _mult;
+  var BG_CLEAR, BG_COLOR, CANVAS_HEIGHT, CANVAS_WIDTH, COLOR_METHOD, DEFAULT_RECIPES, LastMouseX, LastMouseY, LastSphVec, MOUSEDOWN, PALETTE, PI, abs, acos, add, adjustXYZ, ambo, animateShape, antiprism, asin, atan, calcCentroid, canonicalXYZ, canonicalize, clear, clone, colorassign, convexarea, copyVecArray, cos, cross, ctx, ctx_linewidth, cube, def_palette, dodecahedron, dot, drawShape, drawpoly, dual, edgeDist, enumerate, extrudeN, eye3, faceCenters, faceNormals, faceToEdges, floor, generatePoly, getOps, getVec2VecRotM, globPolys, globRotM, globlastRotM, globtime, gyro, hextofloats, icosahedron, init, insetN, intersect, invperspT, kisN, mag, mag2, midName, midpoint, mm3, mult, mv3, normal, octahedron, oneThird, orthogonal, paintPolyhedron, palette, parseurl, perspT, persp_ratio, persp_z_max, persp_z_min, perspective_scale, planarize, polyflag, polyhedron, pow, prism, project2dface, propellor, pyramid, random, randomchoice, recenter, reciprocal, reciprocalC, reciprocalN, reflect, rescale, rotm, round, rwb_palette, rwbg_palette, saveText, sin, sortfaces, specreplacements, sqrt, stellaN, sub, tan, tangentPoint, tangentify, testrig, tetrahedron, topolog, tween, unit, vec_rotm, _2d_x_offset, _2d_y_offset, _mult;
   random = Math.random;
   round = Math.round;
   floor = Math.floor;
@@ -107,6 +107,55 @@
       }
     }
     return null;
+  };
+  calcCentroid = function(xyzs) {
+    var centroidV, v, _i, _len;
+    centroidV = [0, 0, 0];
+    for (_i = 0, _len = xyzs.length; _i < _len; _i++) {
+      v = xyzs[_i];
+      centroidV = add(centroidV, v);
+    }
+    return mult(1 / xyzs.length, centroidV);
+  };
+  normal = function(xyzs) {
+    var normalV, v1, v2, v3, _i, _len, _ref, _ref2;
+    normalV = [0, 0, 0];
+    _ref = xyzs.slice(-2), v1 = _ref[0], v2 = _ref[1];
+    for (_i = 0, _len = xyzs.length; _i < _len; _i++) {
+      v3 = xyzs[_i];
+      normalV = add(normalV, orthogonal(v1, v2, v3));
+      _ref2 = [v2, v3], v1 = _ref2[0], v2 = _ref2[1];
+    }
+    return unit(normalV);
+  };
+  convexarea = function(xyzs) {
+    var area, v1, v2, v3, _i, _len, _ref, _ref2;
+    area = 0.0;
+    _ref = xyzs.slice(0, 2), v1 = _ref[0], v2 = _ref[1];
+    _ref2 = xyzs.slice(2);
+    for (_i = 0, _len = _ref2.length; _i < _len; _i++) {
+      v3 = _ref2[_i];
+      area += mag(cross(sub(v2, v1), sub(v3, v1)));
+      v2 = v3;
+    }
+    return area;
+  };
+  project2dface = function(verts) {
+    var c, n, p, tmpverts, v, v0, _i, _len, _results;
+    tmpverts = clone(verts);
+    v0 = verts[0];
+    tmpverts = _.map(tmpverts, function(x) {
+      return x - v0;
+    });
+    n = normal(verts);
+    c = unit(calcCentroid(verts));
+    p = cross(n, c);
+    _results = [];
+    for (_i = 0, _len = tmpverts.length; _i < _len; _i++) {
+      v = tmpverts[_i];
+      _results.push([dot(n, v), dot(p, v)]);
+    }
+    return _results;
   };
   copyVecArray = function(vecArray) {
     var i, newVecArray, _ref;
@@ -329,38 +378,6 @@
       })()));
     }
     return normals;
-  };
-  calcCentroid = function(xyzs) {
-    var centroidV, v, _i, _len;
-    centroidV = [0, 0, 0];
-    for (_i = 0, _len = xyzs.length; _i < _len; _i++) {
-      v = xyzs[_i];
-      centroidV = add(centroidV, v);
-    }
-    return mult(1 / xyzs.length, centroidV);
-  };
-  normal = function(xyzs) {
-    var normalV, v1, v2, v3, _i, _len, _ref, _ref2;
-    normalV = [0, 0, 0];
-    _ref = xyzs.slice(-2), v1 = _ref[0], v2 = _ref[1];
-    for (_i = 0, _len = xyzs.length; _i < _len; _i++) {
-      v3 = xyzs[_i];
-      normalV = add(normalV, orthogonal(v1, v2, v3));
-      _ref2 = [v2, v3], v1 = _ref2[0], v2 = _ref2[1];
-    }
-    return unit(normalV);
-  };
-  convexarea = function(xyzs) {
-    var area, v1, v2, v3, _i, _len, _ref, _ref2;
-    area = 0.0;
-    _ref = xyzs.slice(0, 2), v1 = _ref[0], v2 = _ref[1];
-    _ref2 = xyzs.slice(2);
-    for (_i = 0, _len = _ref2.length; _i < _len; _i++) {
-      v3 = _ref2[_i];
-      area += mag(cross(sub(v2, v1), sub(v3, v1)));
-      v2 = v3;
-    }
-    return area;
   };
   tetrahedron = function() {
     var poly;
@@ -1074,7 +1091,7 @@
   LastMouseX = 0;
   LastMouseY = 0;
   LastSphVec = [1, 0, 0];
-  DEFAULT_RECIPES = ["dakD", "opD", "*T", "*.oC", "knD", "dn6x4.bT"];
+  DEFAULT_RECIPES = ["dakD", "opD", "lT", "lQ5oC", "knD", "dn6x4Q5bT"];
   saveText = function(text, filename) {
     var BB, bb;
     BB = window.BlobBuilder || window.WebKitBlobBuilder || window.MozBlobBuilder;
@@ -1145,7 +1162,7 @@
     }
     return poly;
   };
-  specreplacements = [[/P4$/g, "C"], [/e/g, "aa"], [/b/g, "ta"], [/o/g, "jj"], [/m/g, "kj"], [/t(\d*)/g, "dk$1d"], [/j/g, "dad"], [/s/g, "dgd"], [/dd/g, ""], [/ad/g, "a"], [/gd/g, "g"], [/aO/g, "aC"], [/aI/g, "aD"], [/gO/g, "gC"], [/gI/g, "gD"]];
+  specreplacements = [[/e/g, "aa"], [/b/g, "ta"], [/o/g, "jj"], [/m/g, "kj"], [/t(\d*)/g, "dk$1d"], [/j/g, "dad"], [/s/g, "dgd"], [/dd/g, ""], [/ad/g, "a"], [/gd/g, "g"], [/aO/g, "aC"], [/aI/g, "aD"], [/gO/g, "gC"], [/gI/g, "gD"]];
   getOps = function(notation) {
     var equiv, expanded, orig, _i, _len, _ref;
     expanded = notation;
@@ -1218,14 +1235,14 @@
         case "r":
           poly = reflect(poly);
           break;
-        case ".":
-          poly.xyz = canonicalXYZ(poly, n === 0 ? 5 : n * 5);
+        case "K":
+          poly.xyz = canonicalXYZ(poly, n === 0 ? 1 : n);
           break;
-        case "!":
-          poly.xyz = canonicalize(poly, n === 0 ? 5 : n * 80);
+        case "C":
+          poly.xyz = canonicalize(poly, n === 0 ? 1 : n);
           break;
-        case "_":
-          poly.xyz = adjustXYZ(poly, n === 0 ? 5 : n * 3);
+        case "A":
+          poly.xyz = adjustXYZ(poly, n === 0 ? 1 : n);
           break;
         case "n":
           poly = insetN(poly, n);
@@ -1233,7 +1250,7 @@
         case "x":
           poly = extrudeN(poly, n);
           break;
-        case "*":
+        case "l":
           poly = stellaN(poly, n);
       }
       ops = ops.slice(0, -1);
@@ -1312,10 +1329,9 @@
       return _results2;
     })();
   };
-  drawpoly = function(poly, tvec, rot) {
+  drawpoly = function(poly, tvec) {
     var clr, face, face_verts, fno, illum, oldxyz, v, v0, x, y, _i, _j, _len, _len2, _ref, _ref2, _ref3, _ref4;
     tvec || (tvec = [3, 3, 3]);
-    rot || (rot = [1, 0, 1]);
     oldxyz = _.map(poly.xyz, function(x) {
       return x;
     });
@@ -1426,21 +1442,27 @@
       return drawShape();
     });
     $("#pngsavebutton").click(function(e) {
-      var canvas;
+      var canvas, filename, spec;
       canvas = $("#poly")[0];
+      spec = $("#spec").val().split(/\s+/g)[0];
+      filename = "polyhedronisme-" + spec + ".png";
       return canvas.toBlob(function(blob) {
-        return saveAs(blob, "polyhedronisme.png");
+        return saveAs(blob, filename);
       });
     });
     $("#objsavebutton").click(function(e) {
-      var objtxt;
+      var filename, objtxt, spec;
       objtxt = globPolys[0].toOBJ();
-      return saveText(objtxt, "polyhedronisme.obj");
+      spec = $("#spec").val().split(/\s+/g)[0];
+      filename = "polyhedronisme-" + spec + ".obj";
+      return saveText(objtxt, filename);
     });
     return $("#x3dsavebutton").click(function(e) {
-      var x3dtxt;
+      var filename, spec, x3dtxt;
       x3dtxt = globPolys[0].toX3D();
-      return saveText(x3dtxt, "polyhedronisme.x3d");
+      spec = $("#spec").val().split(/\s+/g)[0];
+      filename = "polyhedronisme-" + spec + ".x3d";
+      return saveText(x3dtxt, filename);
     });
   });
   animateShape = function() {
@@ -1450,7 +1472,7 @@
     _ref = enumerate(globPolys);
     for (_i = 0, _len = _ref.length; _i < _len; _i++) {
       _ref2 = _ref[_i], i = _ref2[0], p = _ref2[1];
-      drawpoly(p, [0 + 3 * i, 0, 3], [0, globtheta, globphi]);
+      drawpoly(p, [0 + 3 * i, 0, 3]);
     }
     return setTimeout(animateShape, 100);
   };
@@ -1461,7 +1483,7 @@
     _results = [];
     for (_i = 0, _len = _ref.length; _i < _len; _i++) {
       _ref2 = _ref[_i], i = _ref2[0], p = _ref2[1];
-      _results.push(drawpoly(p, [0 + 3 * i, 0, 3], [0, 0, 0]));
+      _results.push(drawpoly(p, [0 + 3 * i, 0, 3]));
     }
     return _results;
   };
