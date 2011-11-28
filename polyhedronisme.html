@@ -26,15 +26,20 @@
 </h2>
 
 <div class="canvaswrapper">
+  <canvas id="poly" width="600" height="300"></canvas>
+</div>
+<div class="controlswrapper">
+  <img id="frontrot" src="media/frontrot.png" style="vertical-align:middle;position:relative;top:-1px;">
   <img id="siderot"  src="media/siderot.png"  style="vertical-align:middle;">
   <img id="toprot"   src="media/toprot.png"   style="vertical-align:middle;">
-  <img id="frontrot" src="media/frontrot.png" style="vertical-align:middle;">
+  <span style="width:100px;">&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;</span>
   <span id="pngsavebutton" style="font-size:12px;cursor:pointer;">PNG</span>
   <span id="objsavebutton" style="font-size:12px;cursor:pointer;">OBJ</span>
   <span id="x3dsavebutton" style="font-size:12px;cursor:pointer;">X3D</span>
-  <br>
-<canvas id="poly" width="600" height="300"></canvas></div><br>
-<div class="specwrapper"><label>recipe <input id="spec"></input></label></div>
+ </div>
+<div class="specwrapper">
+  <label>recipe <input id="spec"></input></label>
+</div>
 
 <p>The specification consists of a space-delimited series of polyhedral recipes.  Each recipe looks like: </p>
 
@@ -75,19 +80,20 @@
 <p> also, some newer, experimental operators </p>
 
 <ul>
-  <li><b>*</b> - stellation</li>
-  <li><b>n<i>N</i></b> - insetN </li>
-  <li><b>x<i>N</i></b> - extrudeN </li>
+  <li><b>l</b> - ste<b>l</b>lation</li>
+  <li><b>n<i>N</i></b> - i<b>n</b>setN </li>
+  <li><b>x<i>N</i></b> - e<b>x</b>trudeN </li>
 </ul>
 
   <p>there are also two "refinement" operators for the
   canonicalization of the polyhedral shape, mainly intended for making
   the more traditional, convex polyhedra more symmetric</p>
 <ul>
-  <li><b>.<i>N</i></b> - quick and dirty canonicalization, it can blow
-  up, iteratively refines shape 5*N times.</li>
-  <li><b>!<i>N</i></b> - proper canonicalization, intensive, slow
-  convergence,  iteratively refines shape 80*N times.</li>
+  <li><b>K<i>N</i></b> - quic<b>K</b> and dirty canonicalization, it can blow
+  up, iteratively refines shape N times.</li>
+  <li><b>C<i>N</i></b> - proper <b>C</b>anonicalization, intensive, slow
+  convergence,  iteratively refines shape N times.</li>
+  <li><b>A<i>N</i></b> - convex spherical <b>A</b>djustment. Iterates N times.</li>
 </ul>
 
 <p>these can blow up the geometry of the weirder polyhedra, which can be interesting too!</p>

@@ -137,32 +137,6 @@ faceNormals = (poly) ->
 
   normals
 
-# calculate centroid of array of vertices
-calcCentroid = (xyzs) ->
-    centroidV = [0,0,0] # running sum of vertex coords
-    for v in xyzs
-      centroidV = add(centroidV, v)
-    mult(1 / xyzs.length, centroidV )
-
-# calculate average normal vector for array of vertices
-normal = (xyzs) ->
-    normalV = [0,0,0] # running sum of normal vectors
-    [v1,v2] = xyzs[-2..-1]
-    for v3 in xyzs
-      normalV = add(normalV, orthogonal(v1, v2, v3))
-      [v1,v2] = [v2,v3] # shift over one
-    unit(normalV)
-
-# calculates area planar face by summing over subtriangle areas
-#  _Assumes_ Convexity!
-convexarea = (xyzs) ->
-    area = 0.0
-    [v1,v2] = xyzs[0..1]
-    for v3 in xyzs[2..]
-      #area of sub-triangle
-      area += mag( cross(sub(v2,v1), sub(v3,v1)) )
-      v2 = v3 # shift over one
-    area
 
 
 #===================================================================================================

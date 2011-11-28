@@ -115,6 +115,46 @@ intersect = (set1, set2, set3) ->
             return s1
   return null # oh noes!
 
+# calculate centroid of array of vertices
+calcCentroid = (xyzs) ->
+    centroidV = [0,0,0] # running sum of vertex coords
+    for v in xyzs
+      centroidV = add(centroidV, v)
+    mult(1 / xyzs.length, centroidV )
+
+# calculate average normal vector for array of vertices
+normal = (xyzs) ->
+    normalV = [0,0,0] # running sum of normal vectors
+    [v1,v2] = xyzs[-2..-1]
+    for v3 in xyzs
+      normalV = add(normalV, orthogonal(v1, v2, v3))
+      [v1,v2] = [v2,v3] # shift over one
+    unit(normalV)
+
+# calculates area planar face by summing over subtriangle areas
+#  _Assumes_ Convexity!
+convexarea = (xyzs) ->
+    area = 0.0
+    [v1,v2] = xyzs[0..1]
+    for v3 in xyzs[2..]
+      #area of sub-triangle
+      area += mag( cross(sub(v2,v1), sub(v3,v1)) )
+      v2 = v3 # shift over one
+    area
+
+# projects 3d polyhedral face to 2d polygon
+# for triangulation and face display
+project2dface = (verts)->
+  tmpverts = clone verts
+  v0=verts[0]
+  tmpverts = _.map tmpverts, (x)->x-v0
+
+  n = normal(verts)
+  c = unit(calcCentroid(verts))
+  p = cross(n,c)
+
+  [dot(n,v),dot(p,v)] for v in tmpverts
+
 # copies array of arrays by value (deep copy)
 copyVecArray = (vecArray)->
   newVecArray = new Array(vecArray.length)

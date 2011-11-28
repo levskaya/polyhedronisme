@@ -43,7 +43,7 @@ LastMouseX=0
 LastMouseY=0
 LastSphVec=[1,0,0] #for 3d trackball
 
-DEFAULT_RECIPES = ["dakD","opD","*T","*.oC","knD","dn6x4.bT"]  # random grabbag of polyhedra
+DEFAULT_RECIPES = ["dakD","opD","lT","lQ5oC","knD","dn6x4Q5bT"]  # random grabbag of polyhedra
 
 
 #get_blob_builder = ->	view.BlobBuilder || view.WebKitBlobBuilder || view.MozBlobBuilder
@@ -106,7 +106,7 @@ paintPolyhedron = (poly) ->
 # Parser Routines
 #===================================================================================================
 
-specreplacements = [[/P4$/g, "C"],  # P4 --> C   (C is prism)
+specreplacements = [
   [/e/g, "aa"],   # e --> aa   (abbr. for explode)
   [/b/g, "ta"],   # b --> ta   (abbr. for bevel)
   [/o/g, "jj"],   # o --> jj   (abbr. for ortho)
@@ -164,13 +164,13 @@ generatePoly = (notation) ->
       when "p" then poly     = propellor(poly)
       when "r" then poly     = reflect(poly)
       # canonicalization operators
-      when "." then poly.xyz = canonicalXYZ(poly, if n is 0 then 5 else n*5)
-      when "!" then poly.xyz = canonicalize(poly, if n is 0 then 5 else n*80)
-      when "_" then poly.xyz =    adjustXYZ(poly, if n is 0 then 5 else n*3)
+      when "K" then poly.xyz = canonicalXYZ(poly, if n is 0 then 1 else n)
+      when "C" then poly.xyz = canonicalize(poly, if n is 0 then 1 else n)
+      when "A" then poly.xyz =    adjustXYZ(poly, if n is 0 then 1 else n)
       # experimental
       when "n" then poly     = insetN(poly, n)
       when "x" then poly     = extrudeN(poly, n)
-      when "*" then poly     = stellaN(poly, n)
+      when "l" then poly     = stellaN(poly, n)
 
     ops = ops.slice(0,-1);  # remove last character
 
@@ -249,9 +249,8 @@ sortfaces = (poly) ->
 
 # main drawing routine for polyhedra
 #===================================================================================================
-drawpoly = (poly,tvec,rot) ->
+drawpoly = (poly,tvec) ->
   tvec ||= [3,3,3]
-  rot  ||= [1,0,1]
 
   #centers = _.map(faceCenters(poly), (x)->mv3(rotm(rot[0],rot[1],rot[2]),x))
   #oldfaces = ("#{fno}" for fno in [0..centers.length-1])
@@ -396,15 +395,21 @@ $( -> #wait for page to load
     canvas=$("#poly")[0]
     #this works, but is janky
     #window.location = canvas.toDataURL("image/png")
-    canvas.toBlob( (blob)->saveAs(blob, "polyhedronisme.png") )
+    spec = $("#spec").val().split(/\s+/g)[0]
+    filename = "polyhedronisme-"+spec+".png"
+    canvas.toBlob( (blob)->saveAs(blob, filename) )
   )
   $("#objsavebutton").click((e)->
     objtxt = globPolys[0].toOBJ()
-    saveText(objtxt,"polyhedronisme.obj")
+    spec = $("#spec").val().split(/\s+/g)[0]
+    filename = "polyhedronisme-"+spec+".obj"
+    saveText(objtxt,filename)
   )
   $("#x3dsavebutton").click((e)->
     x3dtxt = globPolys[0].toX3D()
-    saveText(x3dtxt,"polyhedronisme.x3d")
+    spec = $("#spec").val().split(/\s+/g)[0]
+    filename = "polyhedronisme-"+spec+".x3d"
+    saveText(x3dtxt,filename)
   )
 
 )
@@ -415,12 +420,12 @@ animateShape = ->
   clear()
   globtheta=(2*Math.PI)/180.0*globtime.getSeconds()*0.1
   for [i,p] in enumerate(globPolys)
-    drawpoly(p,[0+3*i,0,3],[0,globtheta,globphi])
+    drawpoly(p,[0+3*i,0,3])
   setTimeout(animateShape, 100)
 
 # just draw polys once
 drawShape = ->
   clear()
   for [i,p] in enumerate(globPolys)
-    drawpoly(p,[0+3*i,0,3],[0,0,0])
+    drawpoly(p,[0+3*i,0,3])
 
