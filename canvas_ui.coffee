@@ -391,16 +391,20 @@ $( -> #wait for page to load
     globRotM = rotm(0,0,0)
     drawShape()
   )
+
   $("#pngsavebutton").click((e)->
     canvas=$("#poly")[0]
     #this works, but is janky
     #window.location = canvas.toDataURL("image/png")
     canvas.toBlob( (blob)->saveAs(blob, "polyhedronisme.png") )
   )
-
   $("#objsavebutton").click((e)->
     objtxt = globPolys[0].toOBJ()
     saveText(objtxt,"polyhedronisme.obj")
+  )
+  $("#x3dsavebutton").click((e)->
+    x3dtxt = globPolys[0].toX3D()
+    saveText(x3dtxt,"polyhedronisme.x3d")
   )
 
 )

@@ -75,6 +75,48 @@ class polyhedron
 
     objstr
 
+  toX3D: () ->
+    SCALE_FACTOR = .01 #ShapeWays uses 1unit = 1meter, so reduce to 1cm scale
+    # opening cruft
+    x3dstr='''
+      <?xml version="1.0" encoding ="UTF-8"?>
+      <X3D profile="Interchange" version="3.0">
+      <head>
+      <component name="Rendering" level="3"/>
+      <meta name="generator" content="Polyhedronisme"/>
+      <meta name="version" content="0.1.0"/>
+      </head>
+      <Scene>
+      <Shape>
+      <IndexedFaceSet normalPerVertex="false" coordIndex="
+      '''
+    # face indices
+    for f in @face
+      for v in f
+        x3dstr+="#{v} "
+      x3dstr+='-1\n'
+    x3dstr+='">\n'
+
+    # per-face Color
+    x3dstr+='<Color color="'
+    for clr in @face_colors
+      x3dstr+="#{clr[0]} #{clr[1]} #{clr[2]} "
+    x3dstr+='"/>'
+
+    # re-scaled xyz coordinates
+    x3dstr+='<Coordinate point="'
+    for v in @xyz
+      x3dstr+="#{v[0]*SCALE_FACTOR} #{v[1]*SCALE_FACTOR} #{v[2]*SCALE_FACTOR} "
+    x3dstr+='"/>\n'
+
+      # end cruft
+    x3dstr+='''
+      </IndexedFaceSet>
+      </Shape>
+      </Scene>
+      </X3D>'''
+
+    x3dstr
 
 # get array of face centers
 faceCenters = (poly) ->

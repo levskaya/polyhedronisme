@@ -267,6 +267,37 @@
       }
       return objstr;
     };
+    polyhedron.prototype.toX3D = function() {
+      var SCALE_FACTOR, clr, f, v, x3dstr, _i, _j, _k, _l, _len, _len2, _len3, _len4, _ref, _ref2, _ref3;
+      SCALE_FACTOR = .01;
+      x3dstr = '<?xml version="1.0" encoding ="UTF-8"?>\n<X3D profile="Interchange" version="3.0">\n<head>\n<component name="Rendering" level="3"/>\n<meta name="generator" content="Polyhedronisme"/>\n<meta name="version" content="0.1.0"/>\n</head>\n<Scene>\n<Shape>\n<IndexedFaceSet normalPerVertex="false" coordIndex="';
+      _ref = this.face;
+      for (_i = 0, _len = _ref.length; _i < _len; _i++) {
+        f = _ref[_i];
+        for (_j = 0, _len2 = f.length; _j < _len2; _j++) {
+          v = f[_j];
+          x3dstr += "" + v + " ";
+        }
+        x3dstr += '-1\n';
+      }
+      x3dstr += '">\n';
+      x3dstr += '<Color color="';
+      _ref2 = this.face_colors;
+      for (_k = 0, _len3 = _ref2.length; _k < _len3; _k++) {
+        clr = _ref2[_k];
+        x3dstr += "" + clr[0] + " " + clr[1] + " " + clr[2] + " ";
+      }
+      x3dstr += '"/>';
+      x3dstr += '<Coordinate point="';
+      _ref3 = this.xyz;
+      for (_l = 0, _len4 = _ref3.length; _l < _len4; _l++) {
+        v = _ref3[_l];
+        x3dstr += "" + (v[0] * SCALE_FACTOR) + " " + (v[1] * SCALE_FACTOR) + " " + (v[2] * SCALE_FACTOR) + " ";
+      }
+      x3dstr += '"/>\n';
+      x3dstr += '</IndexedFaceSet>\n</Shape>\n</Scene>\n</X3D>';
+      return x3dstr;
+    };
     return polyhedron;
   })();
   faceCenters = function(poly) {
@@ -1401,10 +1432,15 @@
         return saveAs(blob, "polyhedronisme.png");
       });
     });
-    return $("#objsavebutton").click(function(e) {
+    $("#objsavebutton").click(function(e) {
       var objtxt;
       objtxt = globPolys[0].toOBJ();
       return saveText(objtxt, "polyhedronisme.obj");
+    });
+    return $("#x3dsavebutton").click(function(e) {
+      var x3dtxt;
+      x3dtxt = globPolys[0].toX3D();
+      return saveText(x3dtxt, "polyhedronisme.x3d");
     });
   });
   animateShape = function() {
