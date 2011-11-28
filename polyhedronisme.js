@@ -1,6 +1,5 @@
 (function() {
-  var BG_CLEAR, BG_COLOR, CANVAS_HEIGHT, CANVAS_WIDTH, COLOR_METHOD, DEFAULT_RECIPES, LastMouseX, LastMouseY, LastSphVec, MOUSEDOWN, PALETTE, PI, abs, acos, add, adjustXYZ, ambo, animateShape, antiprism, asin, atan, calcCentroid, canonicalXYZ, canonicalize, clear, clone, colorassign, convexarea, copyVecArray, cos, cross, ctx, ctx_linewidth, cube, def_palette, dodecahedron, dot, drawShape, drawpoly, dual, edgeDist, enumerate, extrudeN, eye3, faceCenters, faceNormals, faceToEdges, floor, generatePoly, getOps, getVec2VecRotM, globPolys, globRotM, globlastRotM, globtime, gyro, hextofloats, icosahedron, init, insetN, intersect, invperspT, kisN, mag, mag2, midName, midpoint, mm3, mult, mv3, normal, octahedron, oneThird, orthogonal, paintPolyhedron, palette, parseurl, perspT, persp_ratio, persp_z_max, persp_z_min, perspective_scale, planarize, polyflag, polyhedron, pow, prism, propellor, pyramid, random, randomchoice, recenter, reciprocal, reciprocalC, reciprocalN, reflect, rescale, rotm, round, rwb_palette, rwbg_palette, sin, sortfaces, specreplacements, sqrt, stellaN, sub, tan, tangentPoint, tangentify, testrig, tetrahedron, topolog, tween, unit, vec_rotm, _2d_x_offset, _2d_y_offset, _mult;
-  var __bind = function(fn, me){ return function(){ return fn.apply(me, arguments); }; };
+  var BG_CLEAR, BG_COLOR, CANVAS_HEIGHT, CANVAS_WIDTH, COLOR_METHOD, DEFAULT_RECIPES, LastMouseX, LastMouseY, LastSphVec, MOUSEDOWN, PALETTE, PI, abs, acos, add, adjustXYZ, ambo, animateShape, antiprism, asin, atan, calcCentroid, canonicalXYZ, canonicalize, clear, clone, colorassign, convexarea, copyVecArray, cos, cross, ctx, ctx_linewidth, cube, def_palette, dodecahedron, dot, drawShape, drawpoly, dual, edgeDist, enumerate, extrudeN, eye3, faceCenters, faceNormals, faceToEdges, floor, generatePoly, getOps, getVec2VecRotM, globPolys, globRotM, globlastRotM, globtime, gyro, hextofloats, icosahedron, init, insetN, intersect, invperspT, kisN, mag, mag2, midName, midpoint, mm3, mult, mv3, normal, octahedron, oneThird, orthogonal, paintPolyhedron, palette, parseurl, perspT, persp_ratio, persp_z_max, persp_z_min, perspective_scale, planarize, polyflag, polyhedron, pow, prism, propellor, pyramid, random, randomchoice, recenter, reciprocal, reciprocalC, reciprocalN, reflect, rescale, rotm, round, rwb_palette, rwbg_palette, saveText, sin, sortfaces, specreplacements, sqrt, stellaN, sub, tan, tangentPoint, tangentify, testrig, tetrahedron, topolog, tween, unit, vec_rotm, _2d_x_offset, _2d_y_offset, _mult;
   random = Math.random;
   round = Math.round;
   floor = Math.floor;
@@ -1045,6 +1044,13 @@
   LastMouseY = 0;
   LastSphVec = [1, 0, 0];
   DEFAULT_RECIPES = ["dakD", "opD", "*T", "*.oC", "knD", "dn6x4.bT"];
+  saveText = function(text, filename) {
+    var BB, bb;
+    BB = window.BlobBuilder || window.WebKitBlobBuilder || window.MozBlobBuilder;
+    bb = new BB();
+    bb.append(text);
+    return saveAs(bb.getBlob("text/plain;charset=" + document.characterSet), filename);
+  };
   def_palette = ["#ff3333", "#33ff33", "#3333ff", "#ffff33", "#ff33ff", "#33ffff", "#dddddd", "#555555", "#dd0000", "#00dd00", "#0000dd"];
   rwb_palette = ["#ff8888", "#dddddd", "#777777", "#aa3333", "#ff0000", "#ffffff", "#aaaaaa"];
   rwbg_palette = ["#ff8888", "#ffeeee", "#88ff88", "#dd7777", "#ff2222", "#22ff22", "#ee4422", "#aaaaaa"];
@@ -1308,7 +1314,7 @@
         }
         return _results;
       })();
-      illum = dot(normal(face_verts), unit([-1, 1, 0]));
+      illum = dot(normal(face_verts), unit([1, -1, 0]));
       clr = mult((illum / 2.0 + .5) * 0.7 + 0.3, clr);
       ctx.fillStyle = "rgba(" + (round(clr[0] * 255)) + ", " + (round(clr[1] * 255)) + ", " + (round(clr[2] * 255)) + ", " + 1.0 + ")";
       ctx.fill();
@@ -1331,13 +1337,13 @@
       return generatePoly(x);
     });
     drawShape();
-    $("#spec").change(__bind(function(e) {
-      specs = $("#spec").val().split(/\s+/g);
+    $("#spec").change(function(e) {
+      specs = $("#spec").val().split(/\s+/g).slice(0, 2);
       globPolys = _.map(specs, function(x) {
         return generatePoly(x);
       });
       return drawShape();
-    }, this));
+    });
     $("#poly").mousewheel(function(e, delta, deltaX, deltaY) {
       event.preventDefault();
       perspective_scale *= (10 + delta) / 10;
@@ -1363,7 +1369,7 @@
       event.preventDefault();
       return MOUSEDOWN = false;
     });
-    return $("#poly").mousemove(function(e) {
+    $("#poly").mousemove(function(e) {
       var MouseX, MouseY, SphVec;
       event.preventDefault();
       if (MOUSEDOWN) {
@@ -1375,6 +1381,30 @@
         }
         return drawShape();
       }
+    });
+    $("#siderot").click(function(e) {
+      globRotM = vec_rotm(PI / 2, 0, 1, 0);
+      return drawShape();
+    });
+    $("#toprot").click(function(e) {
+      globRotM = vec_rotm(PI / 2, 1, 0, 0);
+      return drawShape();
+    });
+    $("#frontrot").click(function(e) {
+      globRotM = rotm(0, 0, 0);
+      return drawShape();
+    });
+    $("#pngsavebutton").click(function(e) {
+      var canvas;
+      canvas = $("#poly")[0];
+      return canvas.toBlob(function(blob) {
+        return saveAs(blob, "polyhedronisme.png");
+      });
+    });
+    return $("#objsavebutton").click(function(e) {
+      var objtxt;
+      objtxt = globPolys[0].toOBJ();
+      return saveText(objtxt, "polyhedronisme.obj");
     });
   });
   animateShape = function() {

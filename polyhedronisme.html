@@ -7,10 +7,10 @@
 <script type="text/javascript" src="libs/jquery-1.7.min.js"></script>
 <script type="text/javascript" src="libs/jquery.mousewheel.js"></script>
 <script type="text/javascript" src="libs/underscore-min.js"></script>
-<!--
-<script type="text/javascript" src="libs/coffee-script.js"></script>
-<script type="text/coffeescript" src="polyhedronisme.coffee"></script>
--->
+<script type="text/javascript" src="libs/BlobBuilder.min.js"></script>
+<script type="text/javascript" src="libs/canvas-toBlob.min.js"></script>
+<script type="text/javascript" src="libs/FileSaver.min.js"></script>
+
 <script type="text/javascript" src="polyhedronisme.js"></script>
 
 <link rel="stylesheet" type="text/css" href="polyhedronisme.css">
@@ -25,7 +25,14 @@
   <span class="fadey">poly</span>Héd<span class="fadey">r</span>onisme<span style="font-size:10px;">v0.1<span>
 </h2>
 
-<div class="canvaswrapper"><canvas id="poly" width="600" height="300"></canvas></div><br>
+<div class="canvaswrapper">
+  <img id="siderot"  src="media/siderot.png"  style="vertical-align:middle;">
+  <img id="toprot"   src="media/toprot.png"   style="vertical-align:middle;">
+  <img id="frontrot" src="media/frontrot.png" style="vertical-align:middle;">
+  <span id="pngsavebutton" style="font-size:12px;cursor:pointer;">PNG</span>
+  <span id="objsavebutton" style="font-size:12px;cursor:pointer;">OBJ</span>
+  <br>
+<canvas id="poly" width="600" height="300"></canvas></div><br>
 <div class="specwrapper"><label>recipe <input id="spec"></input></label></div>
 
 <p>The specification consists of a space-delimited series of polyhedral recipes.  Each recipe looks like: </p>

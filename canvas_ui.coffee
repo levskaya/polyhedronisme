@@ -46,6 +46,14 @@ LastSphVec=[1,0,0] #for 3d trackball
 DEFAULT_RECIPES = ["dakD","opD","*T","*.oC","knD","dn6x4.bT"]  # random grabbag of polyhedra
 
 
+#get_blob_builder = ->	view.BlobBuilder || view.WebKitBlobBuilder || view.MozBlobBuilder
+saveText = (text, filename) ->
+  BB = window.BlobBuilder || window.WebKitBlobBuilder || window.MozBlobBuilder
+  bb = new BB()
+  bb.append(text)
+  saveAs(bb.getBlob("text/plain;charset="+document.characterSet), filename)
+
+
 # Polyhedra Coloring Functions
 #===================================================================================================
 
@@ -272,11 +280,13 @@ drawpoly = (poly,tvec,rot) ->
 
     # shade based on simple cosine illumination factor
     face_verts = (poly.xyz[v] for v in face)
-    illum = dot(normal(face_verts), unit([-1,1,0]))
+    illum = dot(normal(face_verts), unit([1,-1,0]))
     clr   = mult((illum/2.0+.5)*0.7+0.3,clr)
 
     ctx.fillStyle = "rgba(#{round(clr[0]*255)}, #{round(clr[1]*255)}, #{round(clr[2]*255)}, #{1.0})"
     ctx.fill()
+    # make cartoon stroke (=black) / realistic stroke an option (=below)
+    #ctx.strokeStyle = "rgba(#{round(clr[0]*255)}, #{round(clr[1]*255)}, #{round(clr[2]*255)}, #{1.0})"
     ctx.stroke()
 
   #for [fno,face] in enumerate(poly.face)
@@ -287,7 +297,6 @@ drawpoly = (poly,tvec,rot) ->
 
   # reset coords, for setting absolute rotation, as poly is passed by ref
   poly.xyz = oldxyz
-
 
 
 # Initialization and Basic UI
@@ -313,8 +322,8 @@ $( -> #wait for page to load
   drawShape()
 
   # when spec changes in input, parse and draw new polyhedra
-  $("#spec").change((e) =>
-    specs = $("#spec").val().split(/\s+/g)
+  $("#spec").change((e) ->
+    specs = $("#spec").val().split(/\s+/g)[0..1] #only allow one recipe for now
     globPolys = _.map(specs, (x)->generatePoly(x) )
     #animateShape()
     #window.location
@@ -370,6 +379,30 @@ $( -> #wait for page to load
       drawShape()
   )
 
+  $("#siderot").click((e) ->
+    globRotM = vec_rotm(PI/2,0,1,0)
+    drawShape()
+  )
+  $("#toprot").click((e) ->
+    globRotM = vec_rotm(PI/2,1,0,0)
+    drawShape()
+  )
+  $("#frontrot").click((e) ->
+    globRotM = rotm(0,0,0)
+    drawShape()
+  )
+  $("#pngsavebutton").click((e)->
+    canvas=$("#poly")[0]
+    #this works, but is janky
+    #window.location = canvas.toDataURL("image/png")
+    canvas.toBlob( (blob)->saveAs(blob, "polyhedronisme.png") )
+  )
+
+  $("#objsavebutton").click((e)->
+    objtxt = globPolys[0].toOBJ()
+    saveText(objtxt,"polyhedronisme.obj")
+  )
+
 )
 
 # loop for animation
@@ -386,3 +419,4 @@ drawShape = ->
   clear()
   for [i,p] in enumerate(globPolys)
     drawpoly(p,[0+3*i,0,3],[0,0,0])
+
