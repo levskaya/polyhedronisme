@@ -1389,6 +1389,7 @@
       globPolys = _.map(specs, function(x) {
         return generatePoly(x);
       });
+      window.location.replace("?recipe=" + specs[0]);
       return drawShape();
     });
     $("#poly").mousewheel(function(e, delta, deltaX, deltaY) {
