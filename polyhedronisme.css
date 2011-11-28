@@ -39,6 +39,12 @@ div.container {
     margin-left:  auto;
 }
 
+.controlswrapper {
+    text-align:   center;
+    margin-right: auto;
+    margin-left:  auto;
+}
+
 .specwrapper {
     text-align:   center;
     margin-right: auto;
