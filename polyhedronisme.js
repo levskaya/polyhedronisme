@@ -998,7 +998,6 @@
       c = centers[_i];
       c = mult(1.0 / dot(c, c), c);
     }
-    console.log(centers);
     return centers;
   };
   reciprocalN = function(poly) {

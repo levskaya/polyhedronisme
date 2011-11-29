@@ -101,7 +101,6 @@ reciprocalC = (poly) ->
   centers = faceCenters(poly)
   for c in centers
     c = mult(1.0/dot(c,c), c)
-  console.log centers
   centers
 
 # make array of vertices reciprocal to given planes
