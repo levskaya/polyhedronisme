@@ -100,7 +100,8 @@ canonicalize = (poly, Niter) ->
 reciprocalC = (poly) ->
   centers = faceCenters(poly)
   for c in centers
-    c = mult(1/dot(c,c), c)
+    c = mult(1.0/dot(c,c), c)
+  console.log centers
   centers
 
 # make array of vertices reciprocal to given planes
@@ -118,8 +119,8 @@ reciprocalN = (poly) ->
       avgEdgeDist += edgeDist(poly.xyz[v1], poly.xyz[v2])
       [v1, v2] = [v2, v3] # shift over one
 
-    centroid    = mult(1/f.length, centroid)
-    normalV      = unit(normalV)
+    centroid    = mult(1.0/f.length, centroid)
+    normalV     = unit(normalV)
     avgEdgeDist = avgEdgeDist / f.length
     tmp         = reciprocal mult dot(centroid, normalV), normalV # based on face
     ans.push mult((1 + avgEdgeDist) / 2, tmp) # edge correction
@@ -148,4 +149,5 @@ adjustXYZ = (poly, nIterations) ->
     poly.xyz  = reciprocalC(dpoly)
 
   poly.xyz
+
 

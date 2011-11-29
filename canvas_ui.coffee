@@ -334,7 +334,7 @@ $( -> #wait for page to load
 
   # mousewheel changes scale of drawing
   $("#poly").mousewheel( (e,delta, deltaX, deltaY)->
-    event.preventDefault()
+    e.preventDefault()
     perspective_scale*=(10+delta)/10
     drawShape()
   )
@@ -342,7 +342,7 @@ $( -> #wait for page to load
   # implement standard trackball routines
   # ---------------------------------------
   $("#poly").mousedown( (e)->
-    event.preventDefault()
+    e.preventDefault()
     MOUSEDOWN=true
     LastMouseX=e.clientX-$(this).offset().left #relative mouse coords
     LastMouseY=e.clientY-$(this).offset().top
@@ -355,15 +355,15 @@ $( -> #wait for page to load
     #console.log LastSphVec[0],LastSphVec[1],LastSphVec[2]
   )
   $("#poly").mouseup( (e)->
-    event.preventDefault()
+    e.preventDefault()
     MOUSEDOWN=false
   )
   $("#poly").mouseleave( (e)->
-    event.preventDefault()
+    e.preventDefault()
     MOUSEDOWN=false
   )
   $("#poly").mousemove( (e)->
-    event.preventDefault()
+    e.preventDefault()
     if MOUSEDOWN
       #globtheta += -( e.clientX-$(this).offset().left-LastMouseX)*(Math.PI/180)
       #globphi   += -( e.clientY-$(this).offset().top-LastMouseY)*(Math.PI/180)

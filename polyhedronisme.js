@@ -626,7 +626,6 @@
     }
     newpoly = flag.topoly();
     newpoly.name = "a" + poly.name;
-    newpoly.xyz = adjustXYZ(newpoly, 2);
     return newpoly;
   };
   gyro = function(poly) {
@@ -664,7 +663,6 @@
     }
     newpoly = flag.topoly();
     newpoly.name = "g" + poly.name;
-    newpoly.xyz = adjustXYZ(newpoly, 3);
     return newpoly;
   };
   propellor = function(poly) {
@@ -695,7 +693,6 @@
     }
     newpoly = flag.topoly();
     newpoly.name = "p" + poly.name;
-    newpoly.xyz = adjustXYZ(newpoly, 3);
     return newpoly;
   };
   reflect = function(poly) {
@@ -708,11 +705,10 @@
       poly.face[i] = poly.face[i].reverse();
     }
     poly.name = "r" + poly.name;
-    poly.xyz = adjustXYZ(poly, 1);
     return poly;
   };
   dual = function(poly) {
-    var centers, dpoly, f, face, flag, i, v1, v2, _i, _j, _k, _l, _len, _len2, _len3, _len4, _ref, _ref2, _ref3, _ref4, _ref5, _ref6;
+    var centers, dpoly, f, face, flag, i, k, sortF, v1, v2, _i, _j, _k, _l, _len, _len2, _len3, _len4, _len5, _m, _ref, _ref2, _ref3, _ref4, _ref5, _ref6, _ref7;
     console.log("Taking dual of " + poly.name + "...");
     flag = new polyflag();
     face = [];
@@ -744,6 +740,14 @@
       }
     }
     dpoly = flag.topoly();
+    sortF = [];
+    _ref7 = dpoly.face;
+    for (_m = 0, _len5 = _ref7.length; _m < _len5; _m++) {
+      f = _ref7[_m];
+      k = intersect(poly.face[f[0]], poly.face[f[1]], poly.face[f[2]]);
+      sortF[k] = f;
+    }
+    dpoly.face = sortF;
     if (poly.name[0] !== "d") {
       dpoly.name = "d" + poly.name;
     } else {
@@ -992,8 +996,9 @@
     centers = faceCenters(poly);
     for (_i = 0, _len = centers.length; _i < _len; _i++) {
       c = centers[_i];
-      c = mult(1 / dot(c, c), c);
+      c = mult(1.0 / dot(c, c), c);
     }
+    console.log(centers);
     return centers;
   };
   reciprocalN = function(poly) {
@@ -1013,7 +1018,7 @@
         avgEdgeDist += edgeDist(poly.xyz[v1], poly.xyz[v2]);
         _ref3 = [v2, v3], v1 = _ref3[0], v2 = _ref3[1];
       }
-      centroid = mult(1 / f.length, centroid);
+      centroid = mult(1.0 / f.length, centroid);
       normalV = unit(normalV);
       avgEdgeDist = avgEdgeDist / f.length;
       tmp = reciprocal(mult(dot(centroid, normalV), normalV));
@@ -1393,13 +1398,13 @@
       return drawShape();
     });
     $("#poly").mousewheel(function(e, delta, deltaX, deltaY) {
-      event.preventDefault();
+      e.preventDefault();
       perspective_scale *= (10 + delta) / 10;
       return drawShape();
     });
     $("#poly").mousedown(function(e) {
       var tmpvec;
-      event.preventDefault();
+      e.preventDefault();
       MOUSEDOWN = true;
       LastMouseX = e.clientX - $(this).offset().left;
       LastMouseY = e.clientY - $(this).offset().top;
@@ -1410,16 +1415,16 @@
       return globlastRotM = clone(globRotM);
     });
     $("#poly").mouseup(function(e) {
-      event.preventDefault();
+      e.preventDefault();
       return MOUSEDOWN = false;
     });
     $("#poly").mouseleave(function(e) {
-      event.preventDefault();
+      e.preventDefault();
       return MOUSEDOWN = false;
     });
     $("#poly").mousemove(function(e) {
       var MouseX, MouseY, SphVec;
-      event.preventDefault();
+      e.preventDefault();
       if (MOUSEDOWN) {
         MouseX = e.clientX - $(this).offset().left;
         MouseY = e.clientY - $(this).offset().top;

@@ -158,7 +158,7 @@ ambo = (poly)->
 
   newpoly = flag.topoly()
   newpoly.name = "a" + poly.name
-  newpoly.xyz = adjustXYZ(newpoly, 2)
+  #newpoly.xyz = adjustXYZ(newpoly, 2)
   newpoly
 
 
@@ -191,7 +191,7 @@ gyro = (poly)->
 
   newpoly = flag.topoly()
   newpoly.name = "g" + poly.name
-  newpoly.xyz = adjustXYZ(newpoly, 3)
+  #newpoly.xyz = adjustXYZ(newpoly, 3)
   newpoly
 
 
@@ -224,7 +224,7 @@ propellor = (poly) ->
 
   newpoly = flag.topoly()
   newpoly.name = "p" + poly.name
-  newpoly.xyz  = adjustXYZ(newpoly, 3)
+  #newpoly.xyz  = adjustXYZ(newpoly, 3)
   newpoly
 
 
@@ -238,7 +238,7 @@ reflect = (poly) ->
   for i in [0..poly.face.length-1]
        poly.face[i] = poly.face[i].reverse()       # repair clockwise-ness
   poly.name = "r" + poly.name
-  poly.xyz = adjustXYZ(poly, 1)                    # build dual
+  #poly.xyz = adjustXYZ(poly, 1)                    # build dual
   poly
 
 
@@ -280,13 +280,12 @@ dual = (poly) ->
 
   dpoly = flag.topoly() # build topological dual from flags
 
-  # _this seems less than useful_
   # match F index ordering to V index ordering on dual
-  #sortF = []
-  #for f in dpoly.face
-  #  k = intersect(poly.face[f[0]],poly.face[f[1]],poly.face[f[2]])
-  #  sortF[k] = f
-  #dpoly.face = sortF
+  sortF = []
+  for f in dpoly.face
+    k = intersect(poly.face[f[0]],poly.face[f[1]],poly.face[f[2]])
+    sortF[k] = f
+  dpoly.face = sortF
 
   if poly.name[0] isnt "d"
     dpoly.name = "d"+poly.name
@@ -435,4 +434,3 @@ stellaN = (poly)->
   #newpoly.xyz = adjustXYZ(newpoly, 3)
   #newpoly.xyz = canonicalXYZ(newpoly, 3)  # this tends to make results look like shit
   newpoly
-
