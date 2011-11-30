@@ -105,21 +105,22 @@ kisN = (poly, n)->
     flag.newV "v#{i}", p
 
   normals = poly.normals()
-  centers = poly.centers()      # new vertices in centers of n-sided face
+  centers = poly.centers()
   foundAny = false                 # alert if don't find any
   for [i,f] in enumerate(poly.face)
-    v1 = "v"+f[-1..][0]
+    v1 = "v"+f[f.length-1]
     for v in f
-      v2 = "v" + v
+      v2 = "v"+v
       if f.length is n or n is 0
         foundAny = true
-        flag.newV "f#{i}", add(centers[i],mult(0.1,normals[i]))
-        fname = i + v1
-        flag.newFlag fname,      v1,      v2
-        flag.newFlag fname,      v2, "f#{i}"
-        flag.newFlag fname, "f#{i}",      v1
+        apex = "apex#{i}"
+        fname = "#{i}#{v1}"
+        flag.newV apex, add(centers[i],mult(0.2,normals[i])) # new vertices in centers of n-sided face
+        flag.newFlag fname,   v1,   v2 # the old edge of original face
+        flag.newFlag fname,   v2, apex # up to apex of pyramid
+        flag.newFlag fname, apex,   v1 # and back down again
       else
-        flag.newFlag i, v1, v2  # same old flag, if non-n
+        flag.newFlag "#{i}", v1, v2  # same old flag, if non-n
       v1=v2  # current becomes previous
 
   if not foundAny
@@ -138,21 +139,22 @@ kisN = (poly, n)->
 # and its dual polyhedron.  Thus the ambo of a dual polyhedron is the same as the ambo of the
 # original. Also called "Rectify".
 #
-midName = (v1, v2) -> if v1<v2 then v1+"_"+v2 else v2+"_"+v1
 ambo = (poly)->
   console.log "Taking ambo of #{poly.name}..."
+
+  # helper func to insure unique names of midpoints
+  midName = (v1, v2) -> if v1<v2 then v1+"_"+v2 else v2+"_"+v1
 
   flag = new polyflag()
 
   for [i,f] in enumerate(poly.face)
     [v1, v2] = f[-2..-1]
     for v3 in f
-      if v1 < v2
+      if v1 < v2 # vertices are the midpoints of all edges of original poly
         flag.newV(midName(v1,v2), midpoint(poly.xyz[v1], poly.xyz[v2]))
       # two new flags
-      flag.newFlag("f"+i,  midName(v1,v2), midName(v2,v3))
-      flag.newFlag("v"+v2, midName(v2,v3), midName(v1,v2))
-
+      flag.newFlag("orig"+i,  midName(v1,v2), midName(v2,v3))
+      flag.newFlag("dual"+v2, midName(v2,v3), midName(v1,v2))
       # shift over one
       [v1, v2] = [v2, v3]
 
@@ -164,6 +166,12 @@ ambo = (poly)->
 
 # Gyro
 # ----------------------------------------------------------------------------------------------
+# This is the dual operator to "snub", i.e dual*Gyro = Snub.  It is a bit easier to implement
+# this way.
+#
+# Snub creates at each vertex a new face, expands and twists it, and adds two new triangles to
+# replace each edge.
+#
 gyro = (poly)->
   console.log "Taking gyro of #{poly.name}..."
 
@@ -174,19 +182,19 @@ gyro = (poly)->
 
   centers = poly.centers() # new vertices in center of each face
   for [i,f] in enumerate(poly.face)
-    flag.newV "f"+i, unit(centers[i])
+    flag.newV "center"+i, unit(centers[i])
 
   for [i,f] in enumerate(poly.face)
     [v1, v2] = f[-2..-1]
     for [j,v] in enumerate(f)
       v3 = v
       flag.newV(v1+"~"+v2, oneThird(poly.xyz[v1],poly.xyz[v2]))  # new v in face
-      fname = i + "f" + v1
-      flag.newFlag(fname, "f"+i,      v1+"~"+v2) # five new flags
+      fname = i+"f"+v1
+      flag.newFlag(fname, "center"+i,      v1+"~"+v2) # five new flags
       flag.newFlag(fname, v1+"~"+v2,  v2+"~"+v1)
       flag.newFlag(fname, v2+"~"+v1,  "v"+v2)
       flag.newFlag(fname, "v"+v2,     v2+"~"+v3)
-      flag.newFlag(fname, v2+"~"+v3,  "f"+i)
+      flag.newFlag(fname, v2+"~"+v3,  "center"+i)
       [v1, v2] = [v2, v3]                       # shift over one
 
   newpoly = flag.topoly()
@@ -234,18 +242,18 @@ propellor = (poly) ->
 reflect = (poly) ->
   console.log "Taking reflection of #{poly.name}..."
   for i in [0..poly.xyz.length-1]
-       poly.xyz[i] = mult(-1, poly.xyz[i])         # reflect each point
+       poly.xyz[i] = mult(-1, poly.xyz[i])         # reflect each point through origin
   for i in [0..poly.face.length-1]
-       poly.face[i] = poly.face[i].reverse()       # repair clockwise-ness
+       poly.face[i] = poly.face[i].reverse()       # repair clockwise-ness of faces!
   poly.name = "r" + poly.name
-  #poly.xyz = adjustXYZ(poly, 1)                    # build dual
   poly
 
 
 # Dual
 # ------------------------------------------------------------------------------------------------
-# The dual of a polyhedron is another mesh wherein every face in the original becomes a vertex
-# in the dual and where every face a vertex becomes a face in the dual.
+# The dual of a polyhedron is another mesh wherein:
+# - every face in the original becomes a vertex in the dual
+# - every vertex in the original becomes a face in the dual
 #
 # So N_faces, N_vertices = N_dualfaces, N_dualvertices
 #
@@ -265,7 +273,7 @@ dual = (poly) ->
     for v2 in f
       # THIS ASSUMES that no 2 faces that share an edge share it in the same orientation!
       # which of course never happens for proper manifold meshes, so get your meshes right.
-      face[v1]["v#{v2}"] = "#{i}" # fill it. 2nd index is associative
+      face[v1]["v#{v2}"] = "#{i}"
       v1=v2 # current becomes previous
 
   centers = poly.centers()

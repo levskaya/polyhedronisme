@@ -286,6 +286,7 @@ drawpoly = (poly,tvec) ->
     ctx.fill()
     # make cartoon stroke (=black) / realistic stroke an option (=below)
     #ctx.strokeStyle = "rgba(#{round(clr[0]*255)}, #{round(clr[1]*255)}, #{round(clr[2]*255)}, #{1.0})"
+    ctx.strokeStyle = "rgba(0,0,0, .3)"  # light lines, less cartoony, more render-y
     ctx.stroke()
 
   #for [fno,face] in enumerate(poly.face)

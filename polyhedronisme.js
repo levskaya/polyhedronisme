@@ -1,5 +1,5 @@
 (function() {
-  var BG_CLEAR, BG_COLOR, CANVAS_HEIGHT, CANVAS_WIDTH, COLOR_METHOD, DEFAULT_RECIPES, LastMouseX, LastMouseY, LastSphVec, MOUSEDOWN, PALETTE, PI, abs, acos, add, adjustXYZ, ambo, animateShape, antiprism, asin, atan, calcCentroid, canonicalXYZ, canonicalize, clear, clone, colorassign, convexarea, copyVecArray, cos, cross, ctx, ctx_linewidth, cube, def_palette, dodecahedron, dot, drawShape, drawpoly, dual, edgeDist, enumerate, extrudeN, eye3, faceToEdges, floor, generatePoly, getOps, getVec2VecRotM, globPolys, globRotM, globlastRotM, globtime, gyro, hextofloats, icosahedron, init, insetN, intersect, invperspT, kisN, mag, mag2, midName, midpoint, mm3, mult, mv3, normal, octahedron, oneThird, orthogonal, paintPolyhedron, palette, parseurl, perspT, persp_ratio, persp_z_max, persp_z_min, perspective_scale, planarize, polyflag, polyhedron, pow, prism, project2dface, propellor, pyramid, random, randomchoice, recenter, reciprocal, reciprocalC, reciprocalN, reflect, rescale, rotm, round, rwb_palette, rwbg_palette, saveText, sin, sortfaces, specreplacements, sqrt, stellaN, sub, tan, tangentPoint, tangentify, testrig, tetrahedron, topolog, tween, unit, vec_rotm, _2d_x_offset, _2d_y_offset, _mult;
+  var BG_CLEAR, BG_COLOR, CANVAS_HEIGHT, CANVAS_WIDTH, COLOR_METHOD, DEFAULT_RECIPES, LastMouseX, LastMouseY, LastSphVec, MOUSEDOWN, PALETTE, PI, abs, acos, add, adjustXYZ, ambo, animateShape, antiprism, asin, atan, calcCentroid, canonicalXYZ, canonicalize, clear, clone, colorassign, convexarea, copyVecArray, cos, cross, ctx, ctx_linewidth, cube, def_palette, dodecahedron, dot, drawShape, drawpoly, dual, edgeDist, enumerate, extrudeN, eye3, faceToEdges, floor, generatePoly, getOps, getVec2VecRotM, globPolys, globRotM, globlastRotM, globtime, gyro, hextofloats, icosahedron, init, insetN, intersect, invperspT, kisN, mag, mag2, midpoint, mm3, mult, mv3, normal, octahedron, oneThird, orthogonal, paintPolyhedron, palette, parseurl, perspT, persp_ratio, persp_z_max, persp_z_min, perspective_scale, planarize, polyflag, polyhedron, pow, prism, project2dface, propellor, pyramid, random, randomchoice, recenter, reciprocal, reciprocalC, reciprocalN, reflect, rescale, rotm, round, rwb_palette, rwbg_palette, saveText, sin, sortfaces, specreplacements, sqrt, stellaN, sub, tan, tangentPoint, tangentify, testrig, tetrahedron, topolog, tween, unit, vec_rotm, _2d_x_offset, _2d_y_offset, _mult;
   random = Math.random;
   round = Math.round;
   floor = Math.floor;
@@ -564,7 +564,7 @@
     return polyflag;
   })();
   kisN = function(poly, n) {
-    var centers, f, flag, fname, foundAny, i, newpoly, normals, p, v, v1, v2, _i, _j, _k, _len, _len2, _len3, _ref, _ref2, _ref3, _ref4;
+    var apex, centers, f, flag, fname, foundAny, i, newpoly, normals, p, v, v1, v2, _i, _j, _k, _len, _len2, _len3, _ref, _ref2, _ref3, _ref4;
     console.log("Taking kis of " + (n === 0 ? "" : n) + "-sided faces of " + poly.name + "...");
     flag = new polyflag();
     _ref = enumerate(poly.xyz);
@@ -578,19 +578,20 @@
     _ref3 = enumerate(poly.face);
     for (_j = 0, _len2 = _ref3.length; _j < _len2; _j++) {
       _ref4 = _ref3[_j], i = _ref4[0], f = _ref4[1];
-      v1 = "v" + f.slice(-1)[0];
+      v1 = "v" + f[f.length - 1];
       for (_k = 0, _len3 = f.length; _k < _len3; _k++) {
         v = f[_k];
         v2 = "v" + v;
         if (f.length === n || n === 0) {
           foundAny = true;
-          flag.newV("f" + i, add(centers[i], mult(0.1, normals[i])));
-          fname = i + v1;
+          apex = "apex" + i;
+          fname = "" + i + v1;
+          flag.newV(apex, add(centers[i], mult(0.2, normals[i])));
           flag.newFlag(fname, v1, v2);
-          flag.newFlag(fname, v2, "f" + i);
-          flag.newFlag(fname, "f" + i, v1);
+          flag.newFlag(fname, v2, apex);
+          flag.newFlag(fname, apex, v1);
         } else {
-          flag.newFlag(i, v1, v2);
+          flag.newFlag("" + i, v1, v2);
         }
         v1 = v2;
       }
@@ -602,16 +603,16 @@
     newpoly.name = "k" + (n === 0 ? "" : n) + poly.name;
     return newpoly;
   };
-  midName = function(v1, v2) {
-    if (v1 < v2) {
-      return v1 + "_" + v2;
-    } else {
-      return v2 + "_" + v1;
-    }
-  };
   ambo = function(poly) {
-    var f, flag, i, newpoly, v1, v2, v3, _i, _j, _len, _len2, _ref, _ref2, _ref3, _ref4;
+    var f, flag, i, midName, newpoly, v1, v2, v3, _i, _j, _len, _len2, _ref, _ref2, _ref3, _ref4;
     console.log("Taking ambo of " + poly.name + "...");
+    midName = function(v1, v2) {
+      if (v1 < v2) {
+        return v1 + "_" + v2;
+      } else {
+        return v2 + "_" + v1;
+      }
+    };
     flag = new polyflag();
     _ref = enumerate(poly.face);
     for (_i = 0, _len = _ref.length; _i < _len; _i++) {
@@ -622,8 +623,8 @@
         if (v1 < v2) {
           flag.newV(midName(v1, v2), midpoint(poly.xyz[v1], poly.xyz[v2]));
         }
-        flag.newFlag("f" + i, midName(v1, v2), midName(v2, v3));
-        flag.newFlag("v" + v2, midName(v2, v3), midName(v1, v2));
+        flag.newFlag("orig" + i, midName(v1, v2), midName(v2, v3));
+        flag.newFlag("dual" + v2, midName(v2, v3), midName(v1, v2));
         _ref4 = [v2, v3], v1 = _ref4[0], v2 = _ref4[1];
       }
     }
@@ -644,7 +645,7 @@
     _ref3 = enumerate(poly.face);
     for (_j = 0, _len2 = _ref3.length; _j < _len2; _j++) {
       _ref4 = _ref3[_j], i = _ref4[0], f = _ref4[1];
-      flag.newV("f" + i, unit(centers[i]));
+      flag.newV("center" + i, unit(centers[i]));
     }
     _ref5 = enumerate(poly.face);
     for (_k = 0, _len3 = _ref5.length; _k < _len3; _k++) {
@@ -656,11 +657,11 @@
         v3 = v;
         flag.newV(v1 + "~" + v2, oneThird(poly.xyz[v1], poly.xyz[v2]));
         fname = i + "f" + v1;
-        flag.newFlag(fname, "f" + i, v1 + "~" + v2);
+        flag.newFlag(fname, "center" + i, v1 + "~" + v2);
         flag.newFlag(fname, v1 + "~" + v2, v2 + "~" + v1);
         flag.newFlag(fname, v2 + "~" + v1, "v" + v2);
         flag.newFlag(fname, "v" + v2, v2 + "~" + v3);
-        flag.newFlag(fname, v2 + "~" + v3, "f" + i);
+        flag.newFlag(fname, v2 + "~" + v3, "center" + i);
         _ref10 = [v2, v3], v1 = _ref10[0], v2 = _ref10[1];
       }
     }
@@ -1372,6 +1373,7 @@
       clr = mult((illum / 2.0 + .5) * 0.7 + 0.3, clr);
       ctx.fillStyle = "rgba(" + (round(clr[0] * 255)) + ", " + (round(clr[1] * 255)) + ", " + (round(clr[2] * 255)) + ", " + 1.0 + ")";
       ctx.fill();
+      ctx.strokeStyle = "rgba(0,0,0, .3)";
       ctx.stroke();
     }
     return poly.xyz = oldxyz;
