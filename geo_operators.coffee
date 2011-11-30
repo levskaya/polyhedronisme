@@ -98,7 +98,7 @@ canonicalize = (poly, Niter) ->
 
 # get the spherical reciprocals of face centers
 reciprocalC = (poly) ->
-  centers = faceCenters(poly)
+  centers = poly.centers()
   for c in centers
     c = mult(1.0/dot(c,c), c)
   centers

@@ -236,7 +236,7 @@ clear = ->
 sortfaces = (poly) ->
   #smallestZ = (x) -> _.sortBy(x,(a,b)->a[2]-b[2])[0]
   #closests = (smallestZ(poly.xyz[v] for v in f) for f in poly.face)
-  centroids = faceCenters(poly)
+  centroids = poly.centers()
 
   zsortIndex = _.zip(centroids, [0..poly.face.length-1])
     .sort((a,b) -> a[0][2]-b[0][2]) # js sort is lexicographic even for numbers!
@@ -252,7 +252,7 @@ sortfaces = (poly) ->
 drawpoly = (poly,tvec) ->
   tvec ||= [3,3,3]
 
-  #centers = _.map(faceCenters(poly), (x)->mv3(rotm(rot[0],rot[1],rot[2]),x))
+  #centers = _.map(poly.centers(), (x)->mv3(rotm(rot[0],rot[1],rot[2]),x))
   #oldfaces = ("#{fno}" for fno in [0..centers.length-1])
 
   # rotate poly in 3d

@@ -104,8 +104,8 @@ kisN = (poly, n)->
     # each old vertex is a new vertex
     flag.newV "v#{i}", p
 
-  normals = faceNormals(poly)
-  centers = faceCenters(poly)      # new vertices in centers of n-sided face
+  normals = poly.normals()
+  centers = poly.centers()      # new vertices in centers of n-sided face
   foundAny = false                 # alert if don't find any
   for [i,f] in enumerate(poly.face)
     v1 = "v"+f[-1..][0]
@@ -172,7 +172,7 @@ gyro = (poly)->
   for [i,v] in enumerate(poly.xyz)
     flag.newV "v"+i, unit(v)  # each old vertex is a new vertex
 
-  centers = faceCenters(poly) # new vertices in center of each face
+  centers = poly.centers() # new vertices in center of each face
   for [i,f] in enumerate(poly.face)
     flag.newV "f"+i, unit(centers[i])
 
@@ -268,7 +268,7 @@ dual = (poly) ->
       face[v1]["v#{v2}"] = "#{i}" # fill it. 2nd index is associative
       v1=v2 # current becomes previous
 
-  centers = faceCenters(poly)
+  centers = poly.centers()
   for i in [0..poly.face.length-1]
     flag.newV("#{i}",centers[i])
 
@@ -304,8 +304,8 @@ insetN = (poly, n)->
     # each old vertex is a new vertex
     flag.newV "v#{i}", p
 
-  normals = faceNormals(poly)
-  centers = faceCenters(poly)
+  normals = poly.normals()
+  centers = poly.centers()
   for [i,f] in enumerate(poly.face) #new inset vertex for every vert in face
     if f.length is n or n is 0
       for v in f
@@ -349,8 +349,8 @@ extrudeN = (poly, n)->
     # each old vertex is a new vertex
     flag.newV "v#{i}", p
 
-  normals = faceNormals(poly)
-  centers = faceCenters(poly)
+  normals = poly.normals()
+  centers = poly.centers()
   for [i,f] in enumerate(poly.face) #new inset vertex for every vert in face
     if f.length is n or n is 0
       for v in f
@@ -391,7 +391,7 @@ extrudeN = (poly, n)->
 stellaN = (poly)->
   console.log "Taking stella of #{poly.name}..."
 
-  centers = faceCenters(poly)  # calculate face centers
+  centers = poly.centers()  # calculate face centers
 
   flag = new polyflag()
   for [i,p] in enumerate(poly.xyz)

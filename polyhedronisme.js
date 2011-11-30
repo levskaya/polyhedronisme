@@ -1,5 +1,5 @@
 (function() {
-  var BG_CLEAR, BG_COLOR, CANVAS_HEIGHT, CANVAS_WIDTH, COLOR_METHOD, DEFAULT_RECIPES, LastMouseX, LastMouseY, LastSphVec, MOUSEDOWN, PALETTE, PI, abs, acos, add, adjustXYZ, ambo, animateShape, antiprism, asin, atan, calcCentroid, canonicalXYZ, canonicalize, clear, clone, colorassign, convexarea, copyVecArray, cos, cross, ctx, ctx_linewidth, cube, def_palette, dodecahedron, dot, drawShape, drawpoly, dual, edgeDist, enumerate, extrudeN, eye3, faceCenters, faceNormals, faceToEdges, floor, generatePoly, getOps, getVec2VecRotM, globPolys, globRotM, globlastRotM, globtime, gyro, hextofloats, icosahedron, init, insetN, intersect, invperspT, kisN, mag, mag2, midName, midpoint, mm3, mult, mv3, normal, octahedron, oneThird, orthogonal, paintPolyhedron, palette, parseurl, perspT, persp_ratio, persp_z_max, persp_z_min, perspective_scale, planarize, polyflag, polyhedron, pow, prism, project2dface, propellor, pyramid, random, randomchoice, recenter, reciprocal, reciprocalC, reciprocalN, reflect, rescale, rotm, round, rwb_palette, rwbg_palette, saveText, sin, sortfaces, specreplacements, sqrt, stellaN, sub, tan, tangentPoint, tangentify, testrig, tetrahedron, topolog, tween, unit, vec_rotm, _2d_x_offset, _2d_y_offset, _mult;
+  var BG_CLEAR, BG_COLOR, CANVAS_HEIGHT, CANVAS_WIDTH, COLOR_METHOD, DEFAULT_RECIPES, LastMouseX, LastMouseY, LastSphVec, MOUSEDOWN, PALETTE, PI, abs, acos, add, adjustXYZ, ambo, animateShape, antiprism, asin, atan, calcCentroid, canonicalXYZ, canonicalize, clear, clone, colorassign, convexarea, copyVecArray, cos, cross, ctx, ctx_linewidth, cube, def_palette, dodecahedron, dot, drawShape, drawpoly, dual, edgeDist, enumerate, extrudeN, eye3, faceToEdges, floor, generatePoly, getOps, getVec2VecRotM, globPolys, globRotM, globlastRotM, globtime, gyro, hextofloats, icosahedron, init, insetN, intersect, invperspT, kisN, mag, mag2, midName, midpoint, mm3, mult, mv3, normal, octahedron, oneThird, orthogonal, paintPolyhedron, palette, parseurl, perspT, persp_ratio, persp_z_max, persp_z_min, perspective_scale, planarize, polyflag, polyhedron, pow, prism, project2dface, propellor, pyramid, random, randomchoice, recenter, reciprocal, reciprocalC, reciprocalN, reflect, rescale, rotm, round, rwb_palette, rwbg_palette, saveText, sin, sortfaces, specreplacements, sqrt, stellaN, sub, tan, tangentPoint, tangentify, testrig, tetrahedron, topolog, tween, unit, vec_rotm, _2d_x_offset, _2d_y_offset, _mult;
   random = Math.random;
   round = Math.round;
   floor = Math.floor;
@@ -278,6 +278,39 @@
       }
       return uniqedges;
     };
+    polyhedron.prototype.centers = function() {
+      var centers_array, f, fcenter, v, _i, _j, _len, _len2, _ref;
+      centers_array = [];
+      _ref = this.face;
+      for (_i = 0, _len = _ref.length; _i < _len; _i++) {
+        f = _ref[_i];
+        fcenter = [0, 0, 0];
+        for (_j = 0, _len2 = f.length; _j < _len2; _j++) {
+          v = f[_j];
+          fcenter = add(fcenter, this.xyz[v]);
+        }
+        centers_array.push(mult(1.0 / f.length, fcenter));
+      }
+      return centers_array;
+    };
+    polyhedron.prototype.normals = function() {
+      var f, normals_array, v, _i, _len, _ref;
+      normals_array = [];
+      _ref = this.face;
+      for (_i = 0, _len = _ref.length; _i < _len; _i++) {
+        f = _ref[_i];
+        normals_array.push(normal((function() {
+          var _j, _len2, _results;
+          _results = [];
+          for (_j = 0, _len2 = f.length; _j < _len2; _j++) {
+            v = f[_j];
+            _results.push(this.xyz[v]);
+          }
+          return _results;
+        }).call(this)));
+      }
+      return normals_array;
+    };
     polyhedron.prototype.toOBJ = function() {
       var f, i, norm, objstr, v, _i, _j, _k, _l, _len, _len2, _len3, _len4, _ref, _ref2, _ref3, _ref4;
       objstr = "#Produced by polyHédronisme http://levskaya.github.com/polyhedronisme\n";
@@ -349,36 +382,6 @@
     };
     return polyhedron;
   })();
-  faceCenters = function(poly) {
-    var centers, i, j, _ref, _ref2;
-    centers = [];
-    for (i = 0, _ref = poly.face.length - 1; 0 <= _ref ? i <= _ref : i >= _ref; 0 <= _ref ? i++ : i--) {
-      centers[i] = [0, 0, 0];
-      for (j = 0, _ref2 = poly.face[i].length - 1; 0 <= _ref2 ? j <= _ref2 : j >= _ref2; 0 <= _ref2 ? j++ : j--) {
-        centers[i] = add(centers[i], poly.xyz[poly.face[i][j]]);
-      }
-      centers[i] = mult(1.0 / poly.face[i].length, centers[i]);
-    }
-    return centers;
-  };
-  faceNormals = function(poly) {
-    var f, normals, v, _i, _len, _ref;
-    normals = [];
-    _ref = poly.face;
-    for (_i = 0, _len = _ref.length; _i < _len; _i++) {
-      f = _ref[_i];
-      normals.push(normal((function() {
-        var _j, _len2, _results;
-        _results = [];
-        for (_j = 0, _len2 = f.length; _j < _len2; _j++) {
-          v = f[_j];
-          _results.push(poly.xyz[v]);
-        }
-        return _results;
-      })()));
-    }
-    return normals;
-  };
   tetrahedron = function() {
     var poly;
     poly = new polyhedron();
@@ -569,8 +572,8 @@
       _ref2 = _ref[_i], i = _ref2[0], p = _ref2[1];
       flag.newV("v" + i, p);
     }
-    normals = faceNormals(poly);
-    centers = faceCenters(poly);
+    normals = poly.normals();
+    centers = poly.centers();
     foundAny = false;
     _ref3 = enumerate(poly.face);
     for (_j = 0, _len2 = _ref3.length; _j < _len2; _j++) {
@@ -637,7 +640,7 @@
       _ref2 = _ref[_i], i = _ref2[0], v = _ref2[1];
       flag.newV("v" + i, unit(v));
     }
-    centers = faceCenters(poly);
+    centers = poly.centers();
     _ref3 = enumerate(poly.face);
     for (_j = 0, _len2 = _ref3.length; _j < _len2; _j++) {
       _ref4 = _ref3[_j], i = _ref4[0], f = _ref4[1];
@@ -725,7 +728,7 @@
         v1 = v2;
       }
     }
-    centers = faceCenters(poly);
+    centers = poly.centers();
     for (i = 0, _ref4 = poly.face.length - 1; 0 <= _ref4 ? i <= _ref4 : i >= _ref4; 0 <= _ref4 ? i++ : i--) {
       flag.newV("" + i, centers[i]);
     }
@@ -764,8 +767,8 @@
       _ref2 = _ref[_i], i = _ref2[0], p = _ref2[1];
       flag.newV("v" + i, p);
     }
-    normals = faceNormals(poly);
-    centers = faceCenters(poly);
+    normals = poly.normals();
+    centers = poly.centers();
     _ref3 = enumerate(poly.face);
     for (_j = 0, _len2 = _ref3.length; _j < _len2; _j++) {
       _ref4 = _ref3[_j], i = _ref4[0], f = _ref4[1];
@@ -814,8 +817,8 @@
       _ref2 = _ref[_i], i = _ref2[0], p = _ref2[1];
       flag.newV("v" + i, p);
     }
-    normals = faceNormals(poly);
-    centers = faceCenters(poly);
+    normals = poly.normals();
+    centers = poly.centers();
     _ref3 = enumerate(poly.face);
     for (_j = 0, _len2 = _ref3.length; _j < _len2; _j++) {
       _ref4 = _ref3[_j], i = _ref4[0], f = _ref4[1];
@@ -858,7 +861,7 @@
   stellaN = function(poly) {
     var centers, f, flag, i, newpoly, p, v, v1, v12, v2, v21, v23, v3, vert1, vert2, vert3, _i, _j, _k, _len, _len2, _len3, _ref, _ref2, _ref3, _ref4, _ref5, _ref6;
     console.log("Taking stella of " + poly.name + "...");
-    centers = faceCenters(poly);
+    centers = poly.centers();
     flag = new polyflag();
     _ref = enumerate(poly.xyz);
     for (_i = 0, _len = _ref.length; _i < _len; _i++) {
@@ -993,7 +996,7 @@
   };
   reciprocalC = function(poly) {
     var c, centers, _i, _len;
-    centers = faceCenters(poly);
+    centers = poly.centers();
     for (_i = 0, _len = centers.length; _i < _len; _i++) {
       c = centers[_i];
       c = mult(1.0 / dot(c, c), c);
@@ -1304,7 +1307,7 @@
   };
   sortfaces = function(poly) {
     var centroids, idx, zsortIndex, _i, _ref, _results;
-    centroids = faceCenters(poly);
+    centroids = poly.centers();
     zsortIndex = _.zip(centroids, (function() {
       _results = [];
       for (var _i = 0, _ref = poly.face.length - 1; 0 <= _ref ? _i <= _ref : _i >= _ref; 0 <= _ref ? _i++ : _i--){ _results.push(_i); }

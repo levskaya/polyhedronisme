@@ -27,7 +27,7 @@ stellaN = (poly)->
     # each old vertex is a new vertex
     flag.newV "v#{i}", p
 
-  centers = faceCenters(poly)
+  centers = poly.centers()
 
   for [i,f] in enumerate(poly.face)
     v1 = "v"+f[f.length-2]

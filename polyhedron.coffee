@@ -53,6 +53,26 @@ class polyhedron
     #return edges
     uniqedges
 
+  centers: ->
+    # get array of face centers
+    centers_array = []
+    for f in @face
+      fcenter = [0,0,0]
+      for v in f #avg vertex coords
+        fcenter = add(fcenter, @xyz[v]) # add
+      centers_array.push mult(1.0/f.length, fcenter) # div by n
+    # return face-ordered array of centroids
+    centers_array
+
+  normals: ->
+  # get array of face centers
+    normals_array = []
+    for f in @face
+      normals_array.push normal(@xyz[v] for v in f)
+    normals_array
+
+  # Export / Formatting Routines --------------------------------------------------
+
   # produces vanilla OBJ files for import into 3d apps
   toOBJ: () ->
     objstr="#Produced by polyHédronisme http://levskaya.github.com/polyhedronisme\n"
@@ -118,24 +138,25 @@ class polyhedron
 
     x3dstr
 
-# get array of face centers
-faceCenters = (poly) ->
-  centers = []
-  for i in [0..poly.face.length-1]
-    centers[i] = [0,0,0]
-    for j in [0..poly.face[i].length-1] #avg vertex coords
-      centers[i] = add(centers[i], poly.xyz[poly.face[i][j]]) # add
-    centers[i] = mult(1.0/poly.face[i].length, centers[i]) # div by n
-
-  centers
 
 # get array of face centers
-faceNormals = (poly) ->
-  normals = []
-  for f in poly.face
-    normals.push normal(poly.xyz[v] for v in f)
+# faceCenters = (poly) ->
+#   centers = []
+#   for i in [0..poly.face.length-1]
+#     centers[i] = [0,0,0]
+#     for j in [0..poly.face[i].length-1] #avg vertex coords
+#       centers[i] = add(centers[i], poly.xyz[poly.face[i][j]]) # add
+#     centers[i] = mult(1.0/poly.face[i].length, centers[i]) # div by n
 
-  normals
+#   centers
+
+# # get array of face centers
+# faceNormals = (poly) ->
+#   normals = []
+#   for f in poly.face
+#     normals.push normal(poly.xyz[v] for v in f)
+
+#   normals
 
 
 
