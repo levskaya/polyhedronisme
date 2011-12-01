@@ -9,12 +9,13 @@ fs     = require 'fs'
 #{spawn} = require 'child_process'
 
 appFiles  = [
-  'geo' # math, geometry
-  'polyhedron' # core mesh functions
-  'topo_operators' #flagset->polyhedron constructor and topological operators
-  'geo_operators' #geometrical refiners/operators
-  'testing' # random testing funcs
-  'canvas_ui' # 2d renderer and simple UI
+  'geo'            # math, geometry
+  'polyhedron'     # core mesh functions
+  'topo_operators' # flagset->polyhedron constructor and topological operators
+  'geo_operators'  # geometrical refiners/operators
+  'triangulate'       # 2d delauney triangulation routine
+  'testing'        # random testing funcs
+  'canvas_ui'      # 2d renderer and simple UI
 ]
 outFile = 'polyhedronisme.coffee'
 jsFile = 'polyhedronisme.js'

@@ -171,6 +171,7 @@ generatePoly = (notation) ->
       when "n" then poly     = insetN(poly, n)
       when "x" then poly     = extrudeN(poly, n)
       when "l" then poly     = stellaN(poly, n)
+      when "z" then poly     = triangulate(poly,false)
 
     ops = ops.slice(0,-1);  # remove last character
 
@@ -281,6 +282,9 @@ drawpoly = (poly,tvec) ->
     face_verts = (poly.xyz[v] for v in face)
     illum = dot(normal(face_verts), unit([1,-1,0]))
     clr   = mult((illum/2.0+.5)*0.7+0.3,clr)
+
+    #console.log dot(normal(face_verts), calcCentroid(face_verts))
+    #  clr = "rgba(0,0,0,1)"
 
     ctx.fillStyle = "rgba(#{round(clr[0]*255)}, #{round(clr[1]*255)}, #{round(clr[2]*255)}, #{1.0})"
     ctx.fill()
@@ -407,9 +411,11 @@ $( -> #wait for page to load
     saveText(objtxt,filename)
   )
   $("#x3dsavebutton").click((e)->
-    x3dtxt = globPolys[0].toX3D()
+    triangulated = triangulate(globPolys[0],true) #triangulate to preserve face_colors for 3d printing
+    x3dtxt = triangulated.toVRML()
     spec = $("#spec").val().split(/\s+/g)[0]
-    filename = "polyhedronisme-"+spec+".x3d"
+    #filename = "polyhedronisme-"+spec+".x3d"
+    filename = "polyhedronisme-"+spec+".wrl"
     saveText(x3dtxt,filename)
   )
 

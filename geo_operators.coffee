@@ -108,13 +108,13 @@ reciprocalN = (poly) ->
   ans = []
   for f in poly.face #for each face
     centroid    = [0,0,0] # running sum of vertex coords
-    normalV      = [0,0,0] # running sum of normal vectors
+    normalV     = [0,0,0] # running sum of normal vectors
     avgEdgeDist =    0.0  # running sum for avg edge distance
 
     [v1, v2] = f[-2..-1]
     for v3 in f
-      centroid = add centroid, poly.xyz[v3]
-      normalV   = add normalV, orthogonal(poly.xyz[v1], poly.xyz[v2], poly.xyz[v3])
+      centroid     = add centroid, poly.xyz[v3]
+      normalV      = add normalV, orthogonal(poly.xyz[v1], poly.xyz[v2], poly.xyz[v3])
       avgEdgeDist += edgeDist(poly.xyz[v1], poly.xyz[v2])
       [v1, v2] = [v2, v3] # shift over one
 
