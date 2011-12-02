@@ -43,10 +43,10 @@ LastMouseX=0
 LastMouseY=0
 LastSphVec=[1,0,0] #for 3d trackball
 
-DEFAULT_RECIPES = ["dakD","opD","lT","lQ5oC","knD","dn6x4Q5bT"]  # random grabbag of polyhedra
+# random grabbag of polyhedra
+DEFAULT_RECIPES = ["dakD","oC20kkkT","kn4C40A0dA4","opD","lT","lK5oC","knD","dn6x4K5bT","oox4P7","n18n18n9n9n9soxY9"]
 
-
-#get_blob_builder = ->	view.BlobBuilder || view.WebKitBlobBuilder || view.MozBlobBuilder
+# File-saving objects used to export txt/canvas-png
 saveText = (text, filename) ->
   BB = window.BlobBuilder || window.WebKitBlobBuilder || window.MozBlobBuilder
   bb = new BB()
@@ -311,6 +311,24 @@ drawpoly = (poly,tvec) ->
   poly.xyz = oldxyz
 
 
+# draw polyhedra just once
+# -----------------------------------------------------------------------------------
+drawShape = ->
+  clear()
+  for [i,p] in enumerate(globPolys)
+    drawpoly(p,[0+3*i,0,3])
+
+
+# loop for animation
+# -----------------------------------------------------------------------------------
+animateShape = ->
+  clear()
+  globtheta=(2*Math.PI)/180.0*globtime.getSeconds()*0.1
+  for [i,p] in enumerate(globPolys)
+    drawpoly(p,[0+3*i,0,3])
+  setTimeout(animateShape, 100)
+
+
 # Initialization and Basic UI
 #===================================================================================================
 
@@ -330,8 +348,11 @@ $( -> #wait for page to load
   globPolys = _.map(specs, (x)->generatePoly(x))
 
   # draw it
-  #animateShape()
   drawShape()
+
+
+  # Event Handlers
+  # ----------------------------------------------------
 
   # when spec changes in input, parse and draw new polyhedra
   $("#spec").change((e) ->
@@ -342,7 +363,7 @@ $( -> #wait for page to load
     drawShape()
   )
 
-  # basic manipulation: rotation and scaling of geometry
+  # Basic manipulation: rotation and scaling of geometry
   # ----------------------------------------------------
 
   # mousewheel changes scale of drawing
@@ -352,7 +373,7 @@ $( -> #wait for page to load
     drawShape()
   )
 
-  # implement standard trackball routines
+  # Implement standard trackball routines
   # ---------------------------------------
   $("#poly").mousedown( (e)->
     e.preventDefault()
@@ -378,18 +399,19 @@ $( -> #wait for page to load
   $("#poly").mousemove( (e)->
     e.preventDefault()
     if MOUSEDOWN
-      #globtheta += -( e.clientX-$(this).offset().left-LastMouseX)*(Math.PI/180)
-      #globphi   += -( e.clientY-$(this).offset().top-LastMouseY)*(Math.PI/180)
-      #LastMouseX=e.clientX-$(this).offset().left
-      #LastMouseY=e.clientY-$(this).offset().top
       MouseX=e.clientX-$(this).offset().left
       MouseY=e.clientY-$(this).offset().top
       SphVec=invperspT(MouseX,MouseY,_2d_x_offset,_2d_y_offset,persp_z_max,persp_z_min,persp_ratio,perspective_scale)
-      #quick NaN check
+
+      # quick NaN check
       if SphVec[0]*SphVec[1]*SphVec[2]*0 is 0 and LastSphVec[0]*LastSphVec[1]*LastSphVec[2]*0 is 0
         globRotM = mm3(getVec2VecRotM(LastSphVec,SphVec),globlastRotM)
+
       drawShape()
   )
+
+  # State control via some buttons
+  # ---------------------------------------
 
   $("#strokeonly").click((e) ->
     PaintMode = "stroke"
@@ -417,6 +439,9 @@ $( -> #wait for page to load
     drawShape()
   )
 
+  # Export Options
+  # ---------------------------------------
+
   $("#pngsavebutton").click((e)->
     canvas=$("#poly")[0]
     #this works, but is janky
@@ -441,19 +466,3 @@ $( -> #wait for page to load
   )
 
 )
-
-# loop for animation
-# -----------------------------------------------------------------------------------
-animateShape = ->
-  clear()
-  globtheta=(2*Math.PI)/180.0*globtime.getSeconds()*0.1
-  for [i,p] in enumerate(globPolys)
-    drawpoly(p,[0+3*i,0,3])
-  setTimeout(animateShape, 100)
-
-# just draw polys once
-drawShape = ->
-  clear()
-  for [i,p] in enumerate(globPolys)
-    drawpoly(p,[0+3*i,0,3])
-
