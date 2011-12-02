@@ -1393,7 +1393,7 @@
   LastMouseX = 0;
   LastMouseY = 0;
   LastSphVec = [1, 0, 0];
-  DEFAULT_RECIPES = ["dakD", "opD", "lT", "lQ5oC", "knD", "dn6x4Q5bT"];
+  DEFAULT_RECIPES = ["dakD", "oC20kkkT", "kn4C40A0dA4", "opD", "lT", "lK5oC", "knD", "dn6x4K5bT", "oox4P7", "n18n18n9n9n9soxY9"];
   saveText = function(text, filename) {
     var BB, bb;
     BB = window.BlobBuilder || window.WebKitBlobBuilder || window.MozBlobBuilder;
@@ -1687,6 +1687,28 @@
     }
     return poly.xyz = oldxyz;
   };
+  drawShape = function() {
+    var i, p, _i, _len, _ref, _ref2, _results;
+    clear();
+    _ref = enumerate(globPolys);
+    _results = [];
+    for (_i = 0, _len = _ref.length; _i < _len; _i++) {
+      _ref2 = _ref[_i], i = _ref2[0], p = _ref2[1];
+      _results.push(drawpoly(p, [0 + 3 * i, 0, 3]));
+    }
+    return _results;
+  };
+  animateShape = function() {
+    var globtheta, i, p, _i, _len, _ref, _ref2;
+    clear();
+    globtheta = (2 * Math.PI) / 180.0 * globtime.getSeconds() * 0.1;
+    _ref = enumerate(globPolys);
+    for (_i = 0, _len = _ref.length; _i < _len; _i++) {
+      _ref2 = _ref[_i], i = _ref2[0], p = _ref2[1];
+      drawpoly(p, [0 + 3 * i, 0, 3]);
+    }
+    return setTimeout(animateShape, 100);
+  };
   $(function() {
     var specs, urlParams;
     init();
@@ -1796,26 +1818,4 @@
       return saveText(x3dtxt, filename);
     });
   });
-  animateShape = function() {
-    var globtheta, i, p, _i, _len, _ref, _ref2;
-    clear();
-    globtheta = (2 * Math.PI) / 180.0 * globtime.getSeconds() * 0.1;
-    _ref = enumerate(globPolys);
-    for (_i = 0, _len = _ref.length; _i < _len; _i++) {
-      _ref2 = _ref[_i], i = _ref2[0], p = _ref2[1];
-      drawpoly(p, [0 + 3 * i, 0, 3]);
-    }
-    return setTimeout(animateShape, 100);
-  };
-  drawShape = function() {
-    var i, p, _i, _len, _ref, _ref2, _results;
-    clear();
-    _ref = enumerate(globPolys);
-    _results = [];
-    for (_i = 0, _len = _ref.length; _i < _len; _i++) {
-      _ref2 = _ref[_i], i = _ref2[0], p = _ref2[1];
-      _results.push(drawpoly(p, [0 + 3 * i, 0, 3]));
-    }
-    return _results;
-  };
 }).call(this);
