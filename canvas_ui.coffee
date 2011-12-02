@@ -14,15 +14,15 @@
 # GLOBALS
 #===================================================================================================
 ctx={} # for global access to canvas context
-CANVAS_WIDTH  = 600 #canvas dims
-CANVAS_HEIGHT = 300 #canvas dims
+CANVAS_WIDTH  = 500 #canvas dims
+CANVAS_HEIGHT = 400 #canvas dims
 globPolys={} # constructed polyhedras
 
 globRotM = clone eye3
 globlastRotM = clone eye3
 #globtheta = 0 # rotation and projective mapping parameters
 #globphi   = 0
-perspective_scale = 500
+perspective_scale = 800
 persp_z_max = 5
 persp_z_min = 0
 persp_ratio = 0.8
@@ -34,7 +34,7 @@ globtime = new Date() # for animation
 BG_CLEAR = true # clear background or colored?
 BG_COLOR = "rgba(255,255,255,1.0)" # background color
 COLOR_METHOD = "area"
-
+PaintMode = "fillstroke"
 ctx_linewidth = 0.5 # for outline of faces
 
 # Mouse Event Variables
@@ -187,7 +187,7 @@ generatePoly = (notation) ->
 
 
 # parses URL string for polyhedron recipe, for bookmarking
-# should use # href format instead
+# should use #! href format instead
 parseurl = () ->
   urlParams = {}
   a = /\+/g  # Regex for replacing addition symbol with a space
@@ -286,12 +286,20 @@ drawpoly = (poly,tvec) ->
     #console.log dot(normal(face_verts), calcCentroid(face_verts))
     #  clr = "rgba(0,0,0,1)"
 
-    ctx.fillStyle = "rgba(#{round(clr[0]*255)}, #{round(clr[1]*255)}, #{round(clr[2]*255)}, #{1.0})"
-    ctx.fill()
+    if PaintMode is "fill" or PaintMode is "fillstroke"
+      ctx.fillStyle = "rgba(#{round(clr[0]*255)}, #{round(clr[1]*255)}, #{round(clr[2]*255)}, #{1.0})"
+      ctx.fill()
     # make cartoon stroke (=black) / realistic stroke an option (=below)
-    #ctx.strokeStyle = "rgba(#{round(clr[0]*255)}, #{round(clr[1]*255)}, #{round(clr[2]*255)}, #{1.0})"
-    ctx.strokeStyle = "rgba(0,0,0, .3)"  # light lines, less cartoony, more render-y
-    ctx.stroke()
+      ctx.strokeStyle = "rgba(#{round(clr[0]*255)}, #{round(clr[1]*255)}, #{round(clr[2]*255)}, #{1.0})"
+      ctx.stroke()
+    if PaintMode is "fillstroke"
+      ctx.fillStyle = "rgba(#{round(clr[0]*255)}, #{round(clr[1]*255)}, #{round(clr[2]*255)}, #{1.0})"
+      ctx.fill()
+      ctx.strokeStyle = "rgba(0,0,0, .3)"  # light lines, less cartoony, more render-y
+      ctx.stroke()
+    if PaintMode is "stroke"
+      ctx.strokeStyle = "rgba(0,0,0, .8)"
+      ctx.stroke()
 
   #for [fno,face] in enumerate(poly.face)
   #  ctx.textAlign = "center"
@@ -381,6 +389,19 @@ $( -> #wait for page to load
       if SphVec[0]*SphVec[1]*SphVec[2]*0 is 0 and LastSphVec[0]*LastSphVec[1]*LastSphVec[2]*0 is 0
         globRotM = mm3(getVec2VecRotM(LastSphVec,SphVec),globlastRotM)
       drawShape()
+  )
+
+  $("#strokeonly").click((e) ->
+    PaintMode = "stroke"
+    drawShape()
+  )
+  $("#fillonly").click((e) ->
+    PaintMode = "fill"
+    drawShape()
+  )
+  $("#fillandstroke").click((e) ->
+    PaintMode = "fillstroke"
+    drawShape()
   )
 
   $("#siderot").click((e) ->

@@ -1,5 +1,5 @@
 (function() {
-  var BG_CLEAR, BG_COLOR, CANVAS_HEIGHT, CANVAS_WIDTH, COLOR_METHOD, DEFAULT_RECIPES, LastMouseX, LastMouseY, LastSphVec, MOUSEDOWN, PALETTE, PI, abs, acos, add, adjustXYZ, ambo, animateShape, antiprism, asin, atan, calcCentroid, canonicalXYZ, canonicalize, clear, clone, colorassign, convexarea, copyVecArray, cos, cross, ctx, ctx_linewidth, cube, def_palette, diagsToTris, dodecahedron, dot, drawShape, drawpoly, dual, edgeDist, enumerate, extrudeN, eye3, faceToEdges, floor, generatePoly, getDiagonals, getOps, getVec2VecRotM, globPolys, globRotM, globlastRotM, globtime, gyro, hextofloats, icosahedron, init, insetN, intersect, invperspT, kisN, mag, mag2, midpoint, mm3, mult, mv3, normal, octahedron, oneThird, orthogonal, paintPolyhedron, palette, parseurl, perspT, persp_ratio, persp_z_max, persp_z_min, perspective_scale, planarize, polyflag, polyhedron, pow, prism, project2dface, propellor, pyramid, random, randomchoice, recenter, reciprocal, reciprocalC, reciprocalN, reflect, rescale, rotm, round, rwb_palette, rwbg_palette, saveText, sin, sortfaces, specreplacements, sqrt, stellaN, sub, tan, tangentPoint, tangentify, testrig, tetrahedron, topolog, triEq, triangulate, tween, unit, vec_rotm, vertColors, _2d_x_offset, _2d_y_offset, _mult;
+  var BG_CLEAR, BG_COLOR, CANVAS_HEIGHT, CANVAS_WIDTH, COLOR_METHOD, DEFAULT_RECIPES, LastMouseX, LastMouseY, LastSphVec, MOUSEDOWN, PALETTE, PI, PaintMode, abs, acos, add, adjustXYZ, ambo, animateShape, antiprism, asin, atan, calcCentroid, canonicalXYZ, canonicalize, clear, clone, colorassign, convexarea, copyVecArray, cos, cross, ctx, ctx_linewidth, cube, def_palette, diagsToTris, dodecahedron, dot, drawShape, drawpoly, dual, edgeDist, enumerate, extrudeN, eye3, faceToEdges, floor, generatePoly, getDiagonals, getOps, getVec2VecRotM, globPolys, globRotM, globlastRotM, globtime, gyro, hextofloats, icosahedron, init, insetN, intersect, invperspT, kisN, mag, mag2, midpoint, mm3, mult, mv3, normal, octahedron, oneThird, orthogonal, paintPolyhedron, palette, parseurl, perspT, persp_ratio, persp_z_max, persp_z_min, perspective_scale, planarize, polyflag, polyhedron, pow, prism, project2dface, propellor, pyramid, random, randomchoice, recenter, reciprocal, reciprocalC, reciprocalN, reflect, rescale, rotm, round, rwb_palette, rwbg_palette, saveText, sin, sortfaces, specreplacements, sqrt, stellaN, sub, tan, tangentPoint, tangentify, testrig, tetrahedron, topolog, triEq, triangulate, tween, unit, vec_rotm, vertColors, _2d_x_offset, _2d_y_offset, _mult;
   random = Math.random;
   round = Math.round;
   floor = Math.floor;
@@ -1372,12 +1372,12 @@
     return console.log("===== Done Testing Basic Ops =====");
   };
   ctx = {};
-  CANVAS_WIDTH = 600;
-  CANVAS_HEIGHT = 300;
+  CANVAS_WIDTH = 500;
+  CANVAS_HEIGHT = 400;
   globPolys = {};
   globRotM = clone(eye3);
   globlastRotM = clone(eye3);
-  perspective_scale = 500;
+  perspective_scale = 800;
   persp_z_max = 5;
   persp_z_min = 0;
   persp_ratio = 0.8;
@@ -1387,6 +1387,7 @@
   BG_CLEAR = true;
   BG_COLOR = "rgba(255,255,255,1.0)";
   COLOR_METHOD = "area";
+  PaintMode = "fillstroke";
   ctx_linewidth = 0.5;
   MOUSEDOWN = false;
   LastMouseX = 0;
@@ -1667,10 +1668,22 @@
       })();
       illum = dot(normal(face_verts), unit([1, -1, 0]));
       clr = mult((illum / 2.0 + .5) * 0.7 + 0.3, clr);
-      ctx.fillStyle = "rgba(" + (round(clr[0] * 255)) + ", " + (round(clr[1] * 255)) + ", " + (round(clr[2] * 255)) + ", " + 1.0 + ")";
-      ctx.fill();
-      ctx.strokeStyle = "rgba(0,0,0, .3)";
-      ctx.stroke();
+      if (PaintMode === "fill" || PaintMode === "fillstroke") {
+        ctx.fillStyle = "rgba(" + (round(clr[0] * 255)) + ", " + (round(clr[1] * 255)) + ", " + (round(clr[2] * 255)) + ", " + 1.0 + ")";
+        ctx.fill();
+        ctx.strokeStyle = "rgba(" + (round(clr[0] * 255)) + ", " + (round(clr[1] * 255)) + ", " + (round(clr[2] * 255)) + ", " + 1.0 + ")";
+        ctx.stroke();
+      }
+      if (PaintMode === "fillstroke") {
+        ctx.fillStyle = "rgba(" + (round(clr[0] * 255)) + ", " + (round(clr[1] * 255)) + ", " + (round(clr[2] * 255)) + ", " + 1.0 + ")";
+        ctx.fill();
+        ctx.strokeStyle = "rgba(0,0,0, .3)";
+        ctx.stroke();
+      }
+      if (PaintMode === "stroke") {
+        ctx.strokeStyle = "rgba(0,0,0, .8)";
+        ctx.stroke();
+      }
     }
     return poly.xyz = oldxyz;
   };
@@ -1734,6 +1747,26 @@
         }
         return drawShape();
       }
+    });
+    $("#poly")[0].addEventListener('touchmove', function(event) {
+      event.preventDefault();
+      return console.log("Scale: " + event.scale + ", Rotation: " + event.rotation);
+    }, false);
+    $("#poly")[0].addEventListener('gesturechange', function(event) {
+      event.preventDefault();
+      return console.log("Scale: " + event.scale + ", Rotation: " + event.rotation);
+    }, false);
+    $("#strokeonly").click(function(e) {
+      PaintMode = "stroke";
+      return drawShape();
+    });
+    $("#fillonly").click(function(e) {
+      PaintMode = "fill";
+      return drawShape();
+    });
+    $("#fillandstroke").click(function(e) {
+      PaintMode = "fillstroke";
+      return drawShape();
     });
     $("#siderot").click(function(e) {
       globRotM = vec_rotm(PI / 2, 0, 1, 0);
