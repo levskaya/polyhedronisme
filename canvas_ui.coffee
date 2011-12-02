@@ -338,7 +338,7 @@ $( -> #wait for page to load
     specs = $("#spec").val().split(/\s+/g)[0..1] #only allow one recipe for now
     globPolys = _.map(specs, (x)->generatePoly(x) )
     #animateShape()
-    window.location.replace("?recipe="+specs[0])
+    #window.location.replace("?recipe="+specs[0])
     drawShape()
   )
 
