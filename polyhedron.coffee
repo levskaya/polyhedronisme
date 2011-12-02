@@ -282,9 +282,9 @@ prism = (n) ->
   poly.name = "P#{n}"
 
   for i in [0..n-1] # vertex #'s 0...n-1 around one face
-    poly.xyz.push [cos(i*theta), sin(i*theta),  h]
+    poly.xyz.push [-cos(i*theta), -sin(i*theta),  -h]
   for i in [0..n-1] # vertex #'s n...2n-1 around other
-    poly.xyz.push [cos(i*theta), sin(i*theta), -h]
+    poly.xyz.push [-cos(i*theta), -sin(i*theta), h]
 
   poly.face.push [n-1..0] #top
   poly.face.push [n..2*n-1] #bottom
@@ -300,8 +300,8 @@ antiprism = (n) ->
   r = sqrt(1-h*h)
   f = sqrt(h*h + pow(r*cos(theta/2),2) )
   # correction so edge midpoints (not vertices) on unit sphere
-  r = r/f
-  h = h/f
+  r = -r/f
+  h = -h/f
   poly = new polyhedron()
   poly.name = "A#{n}"
 
@@ -326,8 +326,8 @@ pyramid = (n) ->
   poly.name = "Y#{n}"
 
   for i in [0..n-1] # vertex #'s 0...n-1 around one face
-    poly.xyz.push [cos(i*theta), sin(i*theta), 0.2]
-  poly.xyz.push [0,0,-1*height] # apex
+    poly.xyz.push [-cos(i*theta), -sin(i*theta), -0.2]
+  poly.xyz.push [0,0, height] # apex
 
   poly.face.push [n-1..0] # base
   for i in [0..n-1] # n triangular sides
