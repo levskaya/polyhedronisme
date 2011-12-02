@@ -473,10 +473,10 @@
     poly = new polyhedron();
     poly.name = "P" + n;
     for (i = 0, _ref = n - 1; 0 <= _ref ? i <= _ref : i >= _ref; 0 <= _ref ? i++ : i--) {
-      poly.xyz.push([cos(i * theta), sin(i * theta), h]);
+      poly.xyz.push([-cos(i * theta), -sin(i * theta), -h]);
     }
     for (i = 0, _ref2 = n - 1; 0 <= _ref2 ? i <= _ref2 : i >= _ref2; 0 <= _ref2 ? i++ : i--) {
-      poly.xyz.push([cos(i * theta), sin(i * theta), -h]);
+      poly.xyz.push([-cos(i * theta), -sin(i * theta), h]);
     }
     poly.face.push((function() {
       _results = [];
@@ -500,8 +500,8 @@
     h = sqrt(1 - 4 / (4 + 2 * cos(theta / 2) - 2 * cos(theta)));
     r = sqrt(1 - h * h);
     f = sqrt(h * h + pow(r * cos(theta / 2), 2));
-    r = r / f;
-    h = h / f;
+    r = -r / f;
+    h = -h / f;
     poly = new polyhedron();
     poly.name = "A" + n;
     for (i = 0, _ref = n - 1; 0 <= _ref ? i <= _ref : i >= _ref; 0 <= _ref ? i++ : i--) {
@@ -534,9 +534,9 @@
     poly = new polyhedron();
     poly.name = "Y" + n;
     for (i = 0, _ref = n - 1; 0 <= _ref ? i <= _ref : i >= _ref; 0 <= _ref ? i++ : i--) {
-      poly.xyz.push([cos(i * theta), sin(i * theta), 0.2]);
+      poly.xyz.push([-cos(i * theta), -sin(i * theta), -0.2]);
     }
-    poly.xyz.push([0, 0, -1 * height]);
+    poly.xyz.push([0, 0, height]);
     poly.face.push((function() {
       _results = [];
       for (var _i = _ref2 = n - 1; _ref2 <= 0 ? _i <= 0 : _i >= 0; _ref2 <= 0 ? _i++ : _i--){ _results.push(_i); }
@@ -1707,7 +1707,6 @@
       globPolys = _.map(specs, function(x) {
         return generatePoly(x);
       });
-      window.location.replace("?recipe=" + specs[0]);
       return drawShape();
     });
     $("#poly").mousewheel(function(e, delta, deltaX, deltaY) {
@@ -1748,14 +1747,6 @@
         return drawShape();
       }
     });
-    $("#poly")[0].addEventListener('touchmove', function(event) {
-      event.preventDefault();
-      return console.log("Scale: " + event.scale + ", Rotation: " + event.rotation);
-    }, false);
-    $("#poly")[0].addEventListener('gesturechange', function(event) {
-      event.preventDefault();
-      return console.log("Scale: " + event.scale + ", Rotation: " + event.rotation);
-    }, false);
     $("#strokeonly").click(function(e) {
       PaintMode = "stroke";
       return drawShape();

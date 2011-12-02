@@ -5,6 +5,16 @@
 * Released under the MIT License
 */
 
+@import url(http://fonts.googleapis.com/css?family=Metrophobic);
+
+.clearfix:after {
+    content: ".";
+    display: block;
+    height: 0;
+    clear: both;
+    visibility: hidden;
+}
+
 body {
     font-size: 16px;
     line-height: 24px;
@@ -25,6 +35,7 @@ div.container {
 #poly {
     margin-left: auto;
     margin-right: auto;
+    float:left;
 }
 
 #spec {
@@ -49,6 +60,24 @@ div.container {
     text-align:   center;
     margin-right: auto;
     margin-left:  auto;
+}
+
+.leftside {
+    display: block;
+    float: left;
+    height: 400px;
+    width: 110px;
+    //font-family:  sans-serif;
+    //font-variant: small-caps;
+}
+.rightside {
+    display: block;
+    float: left;
+    height: 400px;
+    width: 110px;
+    //font-family: sans-serif;
+    //font-variant: small-caps;
+
 }
 
 /* used for title shading */

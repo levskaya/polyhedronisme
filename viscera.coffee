@@ -59,3 +59,15 @@ stellaN = (poly)->
   #newpoly.xyz = canonicalXYZ(newpoly, 3)  # this tends to make results look like shit
   newpoly
 
+
+
+
+  $("#poly")[0].addEventListener('touchmove', (event)->
+      event.preventDefault()
+      console.log("Scale: " + event.scale + ", Rotation: " + event.rotation)
+  , false)
+
+  $("#poly")[0].addEventListener('gesturechange', (event)->
+      event.preventDefault()
+      console.log("Scale: " + event.scale + ", Rotation: " + event.rotation)
+    , false)
