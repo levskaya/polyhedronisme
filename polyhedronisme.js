@@ -1393,7 +1393,7 @@
   LastMouseX = 0;
   LastMouseY = 0;
   LastSphVec = [1, 0, 0];
-  DEFAULT_RECIPES = ["dakD", "oC20kkkT", "kn4C40A0dA4", "opD", "lT", "lK5oC", "knD", "dn6x4K5bT", "oox4P7", "n18n18n9n9n9soxY9"];
+  DEFAULT_RECIPES = ["C2dakD", "oC20kkkT", "kn4C40A0dA4", "opD", "lT", "lK5oC", "knD", "dn6x4K5bT", "oox4P7", "n18n18n9n9n9soxY9"];
   saveText = function(text, filename) {
     var BB, bb;
     BB = window.BlobBuilder || window.WebKitBlobBuilder || window.MozBlobBuilder;
@@ -1604,16 +1604,22 @@
     }
   };
   sortfaces = function(poly) {
-    var centroids, idx, zsortIndex, _i, _ref, _results;
+    var centroids, idx, normals, planesort, ray_origin, zcentroidsort, zsortIndex, _i, _ref, _results;
     centroids = poly.centers();
-    zsortIndex = _.zip(centroids, (function() {
+    normals = poly.normals();
+    ray_origin = [0, 0, (persp_z_max * persp_ratio - persp_z_min) / (1 - persp_ratio)];
+    planesort = function(a, b) {
+      return -dot(sub(ray_origin, a[0]), a[1]) * dot(sub(b[0], a[0]), a[1]);
+    };
+    zcentroidsort = function(a, b) {
+      return a[0][2] - b[0][2];
+    };
+    zsortIndex = _.zip(centroids, normals, (function() {
       _results = [];
       for (var _i = 0, _ref = poly.face.length - 1; 0 <= _ref ? _i <= _ref : _i >= _ref; 0 <= _ref ? _i++ : _i--){ _results.push(_i); }
       return _results;
-    }).apply(this)).sort(function(a, b) {
-      return a[0][2] - b[0][2];
-    }).map(function(x) {
-      return x[1];
+    }).apply(this)).sort(zcentroidsort).map(function(x) {
+      return x[2];
     });
     poly.face = (function() {
       var _j, _len, _results2;
