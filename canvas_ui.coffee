@@ -44,7 +44,7 @@ LastMouseY=0
 LastSphVec=[1,0,0] #for 3d trackball
 
 # random grabbag of polyhedra
-DEFAULT_RECIPES = ["dakD","oC20kkkT","kn4C40A0dA4","opD","lT","lK5oC","knD","dn6x4K5bT","oox4P7","n18n18n9n9n9soxY9"]
+DEFAULT_RECIPES = ["C2dakD","oC20kkkT","kn4C40A0dA4","opD","lT","lK5oC","knD","dn6x4K5bT","oox4P7","n18n18n9n9n9soxY9"]
 
 # File-saving objects used to export txt/canvas-png
 saveText = (text, filename) ->
