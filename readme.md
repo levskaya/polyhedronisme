@@ -19,6 +19,8 @@ This project was inspired by the renaissance tome [Perspectiva Corporum Regulari
 
 ### Future
 - 2d vector export to SVG
+- proper [PEG.js][5] parser for parsing recipes
+- integration of [csg.js][6] lib for mesh joins
 - proper touch event handling for mobile
 - geometric distortion operators, i.e.:
 ```
@@ -41,4 +43,5 @@ Text CC-BY, Code MIT License
 [2]: http://www.georgehart.com/ "George W. Hart"
 [3]: http://www.georgehart.com/virtual-polyhedra/conway_notation.html
 [4]: http://bibliodyssey.blogspot.com/2009/08/jamnitzer-perspectiva.html
-
+[5]: http://pegjs.majda.cz/
+[6]: https://github.com/evanw/csg.js
