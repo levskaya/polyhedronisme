@@ -49,11 +49,12 @@ recenter = (xyzs, edges) ->
   _.map(xyzs, (x)->sub(x, polycenter) ) # subtract off any deviation from center
 
 # rescales maximum radius of polyhedron to 1
-rescale = (xyzs) ->
+rescale = (xyzs, scale) ->
   polycenter = [0,0,0]
   maxExtent = _.max(_.map(xyzs,(x)->mag(x)))
   s = 1/maxExtent
-  _.map(xyzs,(x)->[s*x[0],s*x[1],s*x[2]])
+  scale or= s
+  _.map(xyzs,(x)->[scale*x[0],scale*x[1],scale*x[2]])
 
 # adjusts vertices in each face to improve its planarity
 planarize = (xyzs, faces) ->

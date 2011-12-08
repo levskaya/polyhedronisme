@@ -53,6 +53,9 @@ saveText = (text, filename) ->
   bb.append(text)
   saveAs(bb.getBlob("text/plain;charset="+document.characterSet), filename)
 
+# debug vars
+old_centers=[]
+old_normals=[]
 
 # Polyhedra Coloring Functions
 #===================================================================================================
@@ -267,9 +270,6 @@ sortfaces = (poly) ->
 drawpoly = (poly,tvec) ->
   tvec ||= [3,3,3]
 
-  #centers = _.map(poly.centers(), (x)->mv3(rotm(rot[0],rot[1],rot[2]),x))
-  #oldfaces = ("#{fno}" for fno in [0..centers.length-1])
-
   # rotate poly in 3d
   oldxyz = _.map(poly.xyz, (x)->x)
   #poly.xyz = _.map(poly.xyz, (x)->mv3(rotm(rot[0],rot[1],rot[2]),x))
@@ -301,13 +301,13 @@ drawpoly = (poly,tvec) ->
     #  clr = "rgba(0,0,0,1)"
 
     if PaintMode is "fill" or PaintMode is "fillstroke"
-      ctx.fillStyle = "rgba(#{round(clr[0]*255)}, #{round(clr[1]*255)}, #{round(clr[2]*255)}, #{1.0})"
+      ctx.fillStyle   = "rgba(#{round(clr[0]*255)}, #{round(clr[1]*255)}, #{round(clr[2]*255)}, #{1.0})"
       ctx.fill()
     # make cartoon stroke (=black) / realistic stroke an option (=below)
       ctx.strokeStyle = "rgba(#{round(clr[0]*255)}, #{round(clr[1]*255)}, #{round(clr[2]*255)}, #{1.0})"
       ctx.stroke()
     if PaintMode is "fillstroke"
-      ctx.fillStyle = "rgba(#{round(clr[0]*255)}, #{round(clr[1]*255)}, #{round(clr[2]*255)}, #{1.0})"
+      ctx.fillStyle   = "rgba(#{round(clr[0]*255)}, #{round(clr[1]*255)}, #{round(clr[2]*255)}, #{1.0})"
       ctx.fill()
       ctx.strokeStyle = "rgba(0,0,0, .3)"  # light lines, less cartoony, more render-y
       ctx.stroke()
@@ -315,11 +315,28 @@ drawpoly = (poly,tvec) ->
       ctx.strokeStyle = "rgba(0,0,0, .8)"
       ctx.stroke()
 
-  #for [fno,face] in enumerate(poly.face)
-  #  ctx.textAlign = "center"
-  #  ctx.fillStyle = "rgba(0,0,0,1)"
-  #  [x,y] = perspT(add(tvec, centers[fno]),persp_z_max,persp_z_min,persp_ratio,perspective_scale)
-  #  ctx.fillText(oldfaces[fno],x+_2d_x_offset,y+_2d_y_offset)
+  #plot face-numbers and normal-vectors for debugging --------------------------------------------
+  centers  = _.map( old_centers, (x)->mv3(globRotM,x))
+  normals  = _.map( old_normals, (x)->mv3(globRotM,x))
+  face_labels = ("#{fno}" for fno in [0..centers.length-1])
+  vert_labels = ("#{vno}" for vno in [0..poly.xyz.length-1])
+  for [fno,face] in enumerate(poly.face) # original, unsorted face_indices
+    ctx.textAlign = "center"
+    ctx.fillStyle = "rgba(0,0,0,1)"
+    [x,y] = perspT(add(tvec, centers[fno]),persp_z_max,persp_z_min,persp_ratio,perspective_scale)
+    ctx.fillText(face_labels[fno],x+_2d_x_offset,y+_2d_y_offset)
+  for [fno,face] in enumerate(poly.face) # face normals
+    ctx.strokeStyle = "rgba(0,0,0,1)"
+    ctx.beginPath()
+    [x,y] = perspT(add(tvec, centers[fno]),persp_z_max,persp_z_min,persp_ratio,perspective_scale)
+    ctx.moveTo(x+_2d_x_offset,y+_2d_y_offset)
+    [x,y] = perspT(add(tvec, add(centers[fno],mult(0.1,normals[fno]))),persp_z_max,persp_z_min,persp_ratio,perspective_scale)
+    ctx.lineTo(x+_2d_x_offset,y+_2d_y_offset)
+    ctx.stroke()
+  for [vno,vert] in enumerate(poly.xyz) # vertex indices
+    [x,y] = perspT(add(tvec, poly.xyz[vno]),persp_z_max,persp_z_min,persp_ratio,perspective_scale)
+    #ctx.fillText(vert_labels[vno],x+_2d_x_offset,y+_2d_y_offset)
+  #-----------------------------------------------------------------------------------------------
 
   # reset coords, for setting absolute rotation, as poly is passed by ref
   poly.xyz = oldxyz
@@ -359,7 +376,37 @@ $( -> #wait for page to load
     $("#spec").val(specs)
 
   # construct the polyhedra from spec
-  globPolys = _.map(specs, (x)->generatePoly(x))
+  #globPolys = _.map(specs, (x)->generatePoly(x))
+
+  c0 = cube()
+  c1 = cube()
+  c2 = cube().rescale(.5)
+  for v in c0.xyz
+    #c2.xyz = _.map(c2.xyz, (x)->[x[0]+v[0]/2,x[1]+v[1]/2,x[2]+v[2]/2] )
+    c2.translate(mult(1,v))
+    c1 = csgUnion(c1, c2)
+    c2.translate(mult(-1,v))
+  #console.log c3
+  c4 = c1
+  #c4.xyz = canonicalize(c4,10)
+  globPolys = [paintPolyhedron(c4)]
+
+  #c1 = cube()
+  #c2 = cube()
+  #c2.xyz = _.map(c2.xyz, (x)-> mv3(rotm(PI/3,PI/3,0),x) )
+  #c3 = cube()
+  #c3.xyz = _.map(c3.xyz, (x)-> mv3(rotm(2*PI/3,2*PI/3,0),x) )
+  #c4 = csgUnion(c3,csgUnion(c1,c2))
+  #console.log c4
+  #globPolys = [paintPolyhedron(ambo c4)]
+
+
+  console.log "face count from " , c4.face.length, "to", uniteFaces(c4).face.length, "should be", 6*8+6
+
+  #globPolys = [paintPolyhedron(uniteFaces(c4))]
+
+  old_centers = _.map(globPolys[0].centers(),(x)->x)
+  old_normals = _.map(globPolys[0].normals(),(x)->x)
 
   # draw it
   drawShape()

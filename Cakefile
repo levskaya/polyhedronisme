@@ -13,8 +13,9 @@ appFiles  = [
   'polyhedron'     # core mesh functions
   'topo_operators' # flagset->polyhedron constructor and topological operators
   'geo_operators'  # geometrical refiners/operators
-  'triangulate'       # 2d delauney triangulation routine
+  'triangulate'    # 2d delauney triangulation routine
   'testing'        # random testing funcs
+  'csg'            # csg union,intersect,subtract routines
   'canvas_ui'      # 2d renderer and simple UI
 ]
 outFile = 'polyhedronisme.coffee'

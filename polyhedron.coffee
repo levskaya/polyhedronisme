@@ -73,6 +73,14 @@ class polyhedron
       normals_array.push normal(@xyz[v] for v in f)
     normals_array
 
+  rescale: (s)->
+    @xyz = rescale(@xyz,s)
+    this
+
+  translate:(x)->
+    @xyz = _.map(@xyz,(v)->[v[0]+x[0],v[1]+x[1],v[2]+x[2]])
+    this
+
   # Export / Formatting Routines --------------------------------------------------
 
   # produces vanilla OBJ files for import into 3d apps

@@ -1,5 +1,5 @@
 (function() {
-  var BG_CLEAR, BG_COLOR, CANVAS_HEIGHT, CANVAS_WIDTH, COLOR_METHOD, DEFAULT_RECIPES, LastMouseX, LastMouseY, LastSphVec, MOUSEDOWN, PALETTE, PI, PaintMode, abs, acos, add, adjustXYZ, ambo, animateShape, antiprism, asin, atan, calcCentroid, canonicalXYZ, canonicalize, clear, clone, colorassign, convexarea, copyVecArray, cos, cross, ctx, ctx_linewidth, cube, def_palette, diagsToTris, dodecahedron, dot, drawShape, drawpoly, dual, edgeDist, enumerate, extrudeN, eye3, faceToEdges, floor, generatePoly, getDiagonals, getOps, getVec2VecRotM, globPolys, globRotM, globlastRotM, globtime, gyro, hextofloats, icosahedron, init, insetN, intersect, invperspT, kisN, mag, mag2, midpoint, mm3, mult, mv3, normal, octahedron, oneThird, orthogonal, paintPolyhedron, palette, parseurl, perspT, persp_ratio, persp_z_max, persp_z_min, perspective_scale, planarize, polyflag, polyhedron, pow, prism, project2dface, propellor, pyramid, random, randomchoice, recenter, reciprocal, reciprocalC, reciprocalN, reflect, rescale, rotm, round, rwb_palette, rwbg_palette, saveText, sin, sortfaces, specreplacements, sqrt, stellaN, sub, tan, tangentPoint, tangentify, testrig, tetrahedron, topolog, triEq, triangulate, tween, unit, vec_rotm, vertColors, _2d_x_offset, _2d_y_offset, _mult;
+  var BG_CLEAR, BG_COLOR, CANVAS_HEIGHT, CANVAS_WIDTH, COLOR_METHOD, CSGToPoly, DEFAULT_RECIPES, LastMouseX, LastMouseY, LastSphVec, MOUSEDOWN, PALETTE, PI, PaintMode, abs, acos, add, adjustXYZ, ambo, animateShape, antiprism, arrayToCSGVertex, asin, atan, calcCentroid, canonicalXYZ, canonicalize, clear, clone, colorassign, convexarea, copyVecArray, cos, cross, csgIntersect, csgSubtract, csgUnion, ctx, ctx_linewidth, cube, def_palette, diagsToTris, dodecahedron, dot, drawShape, drawpoly, dual, edgeDist, edge_vert_isect, edgesToFace, enumerate, extrudeN, eye3, faceToEdges, faceprint, floor, generatePoly, getDiagonals, getOps, getVec2VecRotM, globPolys, globRotM, globlastRotM, globtime, gyro, hextofloats, icosahedron, init, insetN, intersect, invperspT, joinFaces, kisN, mag, mag2, meshFix, midpoint, mm3, mult, mv3, normal, octahedron, old_centers, old_normals, oneThird, orthogonal, paintPolyhedron, palette, parseurl, perspT, persp_ratio, persp_z_max, persp_z_min, perspective_scale, planarize, polyToCSG, polyflag, polyhedron, pow, prism, project2dface, propellor, pyramid, random, randomchoice, recenter, reciprocal, reciprocalC, reciprocalN, reflect, rescale, rotm, round, rwb_palette, rwbg_palette, saveText, sin, sortfaces, specreplacements, sqrt, stellaN, sub, tan, tangentPoint, tangentify, testrig, tetrahedron, topolog, triEq, triangulate, tween, uniquifyedges, uniquifyverts, unit, uniteFaces, vec_rotm, vertColors, vertIndex, _2d_x_offset, _2d_y_offset, _mult;
   random = Math.random;
   round = Math.round;
   floor = Math.floor;
@@ -323,6 +323,16 @@
         }).call(this)));
       }
       return normals_array;
+    };
+    polyhedron.prototype.rescale = function(s) {
+      this.xyz = rescale(this.xyz, s);
+      return this;
+    };
+    polyhedron.prototype.translate = function(x) {
+      this.xyz = _.map(this.xyz, function(v) {
+        return [v[0] + x[0], v[1] + x[1], v[2] + x[2]];
+      });
+      return this;
     };
     polyhedron.prototype.toOBJ = function() {
       var f, i, norm, objstr, v, _i, _j, _k, _l, _len, _len2, _len3, _len4, _ref, _ref2, _ref3, _ref4;
@@ -787,6 +797,7 @@
         v1 = v2;
       }
     }
+    console.log("dual flag:", flag);
     dpoly = flag.topoly();
     sortF = [];
     _ref7 = dpoly.face;
@@ -977,15 +988,16 @@
       return sub(x, polycenter);
     });
   };
-  rescale = function(xyzs) {
+  rescale = function(xyzs, scale) {
     var maxExtent, polycenter, s;
     polycenter = [0, 0, 0];
     maxExtent = _.max(_.map(xyzs, function(x) {
       return mag(x);
     }));
     s = 1 / maxExtent;
+    scale || (scale = s);
     return _.map(xyzs, function(x) {
-      return [s * x[0], s * x[1], s * x[2]];
+      return [scale * x[0], scale * x[1], scale * x[2]];
     });
   };
   planarize = function(xyzs, faces) {
@@ -1371,6 +1383,289 @@
     }
     return console.log("===== Done Testing Basic Ops =====");
   };
+  arrayToCSGVertex = function(pos, norm) {
+    var csgvec;
+    pos || (pos = [0, 0, 0]);
+    norm || (norm = unit(pos));
+    csgvec = new CSG.Vertex(new CSG.Vector(pos[0], pos[1], pos[2]), new CSG.Vector(norm[0], norm[1], norm[2]));
+    return csgvec;
+  };
+  polyToCSG = function(poly) {
+    var CSGPolys, csg, f, v, _i, _len, _ref;
+    CSGPolys = [];
+    _ref = poly.face;
+    for (_i = 0, _len = _ref.length; _i < _len; _i++) {
+      f = _ref[_i];
+      CSGPolys.push(new CSG.Polygon((function() {
+        var _j, _len2, _results;
+        _results = [];
+        for (_j = 0, _len2 = f.length; _j < _len2; _j++) {
+          v = f[_j];
+          _results.push(arrayToCSGVertex(poly.xyz[v]));
+        }
+        return _results;
+      })(), {}));
+    }
+    csg = CSG.fromPolygons(CSGPolys);
+    return csg;
+  };
+  vertIndex = function(vertlist, vert) {
+    var i, v, _i, _len, _ref, _ref2;
+    _ref = enumerate(vertlist);
+    for (_i = 0, _len = _ref.length; _i < _len; _i++) {
+      _ref2 = _ref[_i], i = _ref2[0], v = _ref2[1];
+      if (mag(sub(vert, v)) < 1E-6) {
+        return i;
+      }
+    }
+    return -1;
+  };
+  uniquifyverts = function(vertlist) {
+    var already_present, u, uniqverts, v, _i, _j, _len, _len2;
+    uniqverts = [];
+    uniqverts.push(vertlist[0]);
+    for (_i = 0, _len = vertlist.length; _i < _len; _i++) {
+      v = vertlist[_i];
+      already_present = false;
+      for (_j = 0, _len2 = uniqverts.length; _j < _len2; _j++) {
+        u = uniqverts[_j];
+        if (mag(sub(v, u)) < 1E-6) {
+          already_present = true;
+        }
+      }
+      if (!already_present) {
+        uniqverts.push(v);
+      }
+    }
+    return uniqverts;
+  };
+  edge_vert_isect = function(evert1, evert2, testvert) {
+    var a, b, dT, dv, _ref;
+    dv = sub(evert2, evert1);
+    dT = sub(testvert, evert1);
+    a = dot(unit(dv), dT);
+    b = mag(sub(unit(dv), unit(dT)));
+    if (b < 1E-6 && (0 < (_ref = mag(dT)) && _ref < mag(dv))) {
+      return true;
+    } else {
+      return false;
+    }
+  };
+  meshFix = function(poly) {
+    var edge0, edge1, f, faces, newf, newfaces, newpoly, testv, v, verts, vno, _i, _j, _k, _len, _len2, _len3, _ref, _ref2;
+    faces = poly.face;
+    verts = poly.xyz;
+    newfaces = [];
+    for (_i = 0, _len = faces.length; _i < _len; _i++) {
+      f = faces[_i];
+      newf = [];
+      edge0 = verts[f[f.length - 1]];
+      for (_j = 0, _len2 = f.length; _j < _len2; _j++) {
+        v = f[_j];
+        edge1 = verts[v];
+        _ref = enumerate(verts);
+        for (_k = 0, _len3 = _ref.length; _k < _len3; _k++) {
+          _ref2 = _ref[_k], vno = _ref2[0], testv = _ref2[1];
+          if (edge_vert_isect(edge0, edge1, testv)) {
+            newf.push(vno);
+          }
+        }
+        newf.push(v);
+        edge0 = edge1;
+      }
+      newfaces.push(newf);
+    }
+    newpoly = new polyhedron();
+    newpoly.face = newfaces;
+    newpoly.xyz = clone(verts);
+    return newpoly;
+  };
+  CSGToPoly = function(csgpoly) {
+    var csg, faces, poly, v, verts, _i, _j, _k, _len, _len2, _len3, _ref, _ref2, _ref3;
+    faces = [];
+    verts = [];
+    _ref = csgpoly.toPolygons();
+    for (_i = 0, _len = _ref.length; _i < _len; _i++) {
+      csg = _ref[_i];
+      _ref2 = csg.vertices;
+      for (_j = 0, _len2 = _ref2.length; _j < _len2; _j++) {
+        v = _ref2[_j];
+        verts.push([v.pos.x, v.pos.y, v.pos.z]);
+      }
+    }
+    verts = uniquifyverts(verts);
+    _ref3 = csgpoly.toPolygons();
+    for (_k = 0, _len3 = _ref3.length; _k < _len3; _k++) {
+      csg = _ref3[_k];
+      faces.push((function() {
+        var _l, _len4, _ref4, _results;
+        _ref4 = csg.vertices;
+        _results = [];
+        for (_l = 0, _len4 = _ref4.length; _l < _len4; _l++) {
+          v = _ref4[_l];
+          _results.push(vertIndex(verts, [v.pos.x, v.pos.y, v.pos.z]));
+        }
+        return _results;
+      })());
+    }
+    poly = new polyhedron();
+    poly.face = faces;
+    poly.xyz = verts;
+    return meshFix(poly);
+  };
+  csgUnion = function(polyA, polyB) {
+    var csgA, csgB, csgresult;
+    csgA = polyToCSG(polyA);
+    csgB = polyToCSG(polyB);
+    csgresult = csgA.union(csgB);
+    return CSGToPoly(csgresult);
+  };
+  csgIntersect = function(polyA, polyB) {
+    var csgA, csgB, csgresult;
+    csgA = polyToCSG(polyA);
+    csgB = polyToCSG(polyB);
+    csgresult = csgA.intersect(csgB);
+    return CSGToPoly(csgresult);
+  };
+  csgSubtract = function(polyA, polyB) {
+    var csgA, csgB, csgresult;
+    csgA = polyToCSG(polyA);
+    csgB = polyToCSG(polyB);
+    csgresult = csgA.subtract(csgB);
+    return CSGToPoly(csgresult);
+  };
+  edgesToFace = function(edges) {
+    var e, edict, face, itCTR, v, v0, _i, _len;
+    face = [];
+    edict = {};
+    for (_i = 0, _len = edges.length; _i < _len; _i++) {
+      e = edges[_i];
+      edict[e[0]] = e[1];
+    }
+    v0 = edges[0][0];
+    v = edges[0][1];
+    face.push(v);
+    itCTR = 0;
+    while (v !== v0) {
+      v = edict[v];
+      face.push(v);
+      itCTR++;
+      if (itCTR > 1000) {
+        console.log("Bad edges to face join, have a neverending face:", edges);
+        break;
+      }
+    }
+    return face;
+  };
+  uniquifyedges = function(edgelist) {
+    var already_present, u, uniqverts, v, _i, _j, _len, _len2;
+    uniqverts = [];
+    uniqverts.push(vertlist[0]);
+    for (_i = 0, _len = vertlist.length; _i < _len; _i++) {
+      v = vertlist[_i];
+      already_present = false;
+      for (_j = 0, _len2 = uniqverts.length; _j < _len2; _j++) {
+        u = uniqverts[_j];
+        if (mag(sub(v, u)) < 1E-6) {
+          already_present = true;
+        }
+      }
+      if (!already_present) {
+        uniqverts.push(v);
+      }
+    }
+    return uniqverts;
+  };
+  faceprint = function(face) {
+    var str, v, _i, _len;
+    str = "";
+    for (_i = 0, _len = face.length; _i < _len; _i++) {
+      v = face[_i];
+      str += "" + v + "->";
+    }
+    return str.slice(0, (str.length - 3 + 1) || 9e9);
+  };
+  joinFaces = function(faces) {
+    var alledges, e, e2, i, newedges, nuked, _i, _len, _ref, _ref2;
+    alledges = [];
+    alledges = (_.reduce(_.map(faces, faceToEdges), (function(memo, x) {
+      return memo.concat(x);
+    }), alledges)).slice(0);
+    newedges = [];
+    while (alledges.length > 0) {
+      e = alledges.pop();
+      nuked = false;
+      if (alledges.length > 0) {
+        _ref = enumerate(alledges);
+        for (_i = 0, _len = _ref.length; _i < _len; _i++) {
+          _ref2 = _ref[_i], i = _ref2[0], e2 = _ref2[1];
+          if (e[0] === e2[1] && e[1] === e2[0]) {
+            nuked = true;
+            alledges.splice(i, 1);
+          }
+        }
+        if (!nuked) {
+          newedges.push(e);
+        }
+      } else {
+        newedges.push(e);
+      }
+    }
+    return edgesToFace(newedges);
+  };
+  uniteFaces = function(poly) {
+    var Fi, Fi2, dpoly, e, edict, face_idx, facepile, facepiles, itCTR, newfaces, newpoly, normals, unused_faces, _i, _j, _k, _len, _len2, _ref, _ref2, _ref3, _results;
+    face_idx = (function() {
+      _results = [];
+      for (var _i = 0, _ref = poly.face.length - 1; 0 <= _ref ? _i <= _ref : _i >= _ref; 0 <= _ref ? _i++ : _i--){ _results.push(_i); }
+      return _results;
+    }).apply(this);
+    dpoly = dual(poly);
+    edict = {};
+    _ref2 = dpoly.getEdges();
+    for (_j = 0, _len = _ref2.length; _j < _len; _j++) {
+      e = _ref2[_j];
+      edict[e[0]] = [];
+    }
+    _ref3 = dpoly.getEdges();
+    for (_k = 0, _len2 = _ref3.length; _k < _len2; _k++) {
+      e = _ref3[_k];
+      edict[e[0]].push(e[1]);
+      edict[e[1]].push(e[0]);
+    }
+    normals = poly.normals();
+    facepiles = [];
+    facepile = [];
+    Fi = face_idx.pop();
+    facepile.push(Fi);
+    unused_faces = [];
+    itCTR = 0;
+    while (face_idx.length > 0 && itCTR < 1000000) {
+      itCTR++;
+      Fi2 = face_idx.pop();
+      if (mag(sub(unit(normals[Fi]), unit(normals[Fi2]))) < 1E-6 && (edict[Fi].indexOf(Fi2) !== -1)) {
+        facepile.push(Fi2);
+      } else {
+        unused_faces.unshift(Fi2);
+      }
+      if (face_idx.length === 0 && unused_faces.length > 0) {
+        face_idx = unused_faces;
+        unused_faces = [];
+        console.log(Fi, "pile", facepile.length);
+        facepiles.push(_.map(facepile, function(idx) {
+          return poly.face[idx];
+        }));
+        facepile = [];
+        Fi = face_idx.pop();
+        facepile.push(Fi);
+      }
+    }
+    newfaces = _.map(facepiles, joinFaces);
+    newpoly = new polyhedron();
+    newpoly.xyz = clone(poly.xyz);
+    newpoly.face = newfaces;
+    return newpoly;
+  };
   ctx = {};
   CANVAS_WIDTH = 500;
   CANVAS_HEIGHT = 400;
@@ -1401,6 +1696,8 @@
     bb.append(text);
     return saveAs(bb.getBlob("text/plain;charset=" + document.characterSet), filename);
   };
+  old_centers = [];
+  old_normals = [];
   def_palette = ["#ff3333", "#33ff33", "#3333ff", "#ffff33", "#ff33ff", "#33ffff", "#dddddd", "#555555", "#dd0000", "#00dd00", "#0000dd"];
   rwb_palette = ["#ff8888", "#dddddd", "#777777", "#aa3333", "#ff0000", "#ffffff", "#aaaaaa"];
   rwbg_palette = ["#ff8888", "#ffeeee", "#88ff88", "#dd7777", "#ff2222", "#22ff22", "#ee4422", "#aaaaaa"];
@@ -1641,7 +1938,7 @@
     })();
   };
   drawpoly = function(poly, tvec) {
-    var clr, face, face_verts, fno, illum, oldxyz, v, v0, x, y, _i, _j, _len, _len2, _ref, _ref2, _ref3, _ref4;
+    var centers, clr, face, face_labels, face_verts, fno, illum, normals, oldxyz, v, v0, vert, vert_labels, vno, x, y, _i, _j, _k, _l, _len, _len2, _len3, _len4, _len5, _m, _ref, _ref10, _ref11, _ref12, _ref13, _ref14, _ref2, _ref3, _ref4, _ref5, _ref6, _ref7, _ref8, _ref9;
     tvec || (tvec = [3, 3, 3]);
     oldxyz = _.map(poly.xyz, function(x) {
       return x;
@@ -1691,6 +1988,52 @@
         ctx.stroke();
       }
     }
+    centers = _.map(old_centers, function(x) {
+      return mv3(globRotM, x);
+    });
+    normals = _.map(old_normals, function(x) {
+      return mv3(globRotM, x);
+    });
+    face_labels = (function() {
+      var _ref5, _results;
+      _results = [];
+      for (fno = 0, _ref5 = centers.length - 1; 0 <= _ref5 ? fno <= _ref5 : fno >= _ref5; 0 <= _ref5 ? fno++ : fno--) {
+        _results.push("" + fno);
+      }
+      return _results;
+    })();
+    vert_labels = (function() {
+      var _ref5, _results;
+      _results = [];
+      for (vno = 0, _ref5 = poly.xyz.length - 1; 0 <= _ref5 ? vno <= _ref5 : vno >= _ref5; 0 <= _ref5 ? vno++ : vno--) {
+        _results.push("" + vno);
+      }
+      return _results;
+    })();
+    _ref5 = enumerate(poly.face);
+    for (_k = 0, _len3 = _ref5.length; _k < _len3; _k++) {
+      _ref6 = _ref5[_k], fno = _ref6[0], face = _ref6[1];
+      ctx.textAlign = "center";
+      ctx.fillStyle = "rgba(0,0,0,1)";
+      _ref7 = perspT(add(tvec, centers[fno]), persp_z_max, persp_z_min, persp_ratio, perspective_scale), x = _ref7[0], y = _ref7[1];
+      ctx.fillText(face_labels[fno], x + _2d_x_offset, y + _2d_y_offset);
+    }
+    _ref8 = enumerate(poly.face);
+    for (_l = 0, _len4 = _ref8.length; _l < _len4; _l++) {
+      _ref9 = _ref8[_l], fno = _ref9[0], face = _ref9[1];
+      ctx.strokeStyle = "rgba(0,0,0,1)";
+      ctx.beginPath();
+      _ref10 = perspT(add(tvec, centers[fno]), persp_z_max, persp_z_min, persp_ratio, perspective_scale), x = _ref10[0], y = _ref10[1];
+      ctx.moveTo(x + _2d_x_offset, y + _2d_y_offset);
+      _ref11 = perspT(add(tvec, add(centers[fno], mult(0.1, normals[fno]))), persp_z_max, persp_z_min, persp_ratio, perspective_scale), x = _ref11[0], y = _ref11[1];
+      ctx.lineTo(x + _2d_x_offset, y + _2d_y_offset);
+      ctx.stroke();
+    }
+    _ref12 = enumerate(poly.xyz);
+    for (_m = 0, _len5 = _ref12.length; _m < _len5; _m++) {
+      _ref13 = _ref12[_m], vno = _ref13[0], vert = _ref13[1];
+      _ref14 = perspT(add(tvec, poly.xyz[vno]), persp_z_max, persp_z_min, persp_ratio, perspective_scale), x = _ref14[0], y = _ref14[1];
+    }
     return poly.xyz = oldxyz;
   };
   drawShape = function() {
@@ -1716,7 +2059,7 @@
     return setTimeout(animateShape, 100);
   };
   $(function() {
-    var specs, urlParams;
+    var c0, c1, c2, c4, specs, urlParams, v, _i, _len, _ref;
     init();
     urlParams = parseurl();
     if ("recipe" in urlParams) {
@@ -1726,8 +2069,24 @@
       specs = [randomchoice(DEFAULT_RECIPES)];
       $("#spec").val(specs);
     }
-    globPolys = _.map(specs, function(x) {
-      return generatePoly(x);
+    c0 = cube();
+    c1 = cube();
+    c2 = cube().rescale(.5);
+    _ref = c0.xyz;
+    for (_i = 0, _len = _ref.length; _i < _len; _i++) {
+      v = _ref[_i];
+      c2.translate(mult(1, v));
+      c1 = csgUnion(c1, c2);
+      c2.translate(mult(-1, v));
+    }
+    c4 = c1;
+    globPolys = [paintPolyhedron(c4)];
+    console.log("face count from ", c4.face.length, "to", uniteFaces(c4).face.length, "should be", 6 * 8 + 6);
+    old_centers = _.map(globPolys[0].centers(), function(x) {
+      return x;
+    });
+    old_normals = _.map(globPolys[0].normals(), function(x) {
+      return x;
     });
     drawShape();
     $("#spec").change(function(e) {

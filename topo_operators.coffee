@@ -286,6 +286,8 @@ dual = (poly) ->
       flag.newFlag(v1, face[v2]["v#{v1}"], "#{i}")
       v1=v2 # current becomes previous
 
+  console.log "dual flag:",flag
+
   dpoly = flag.topoly() # build topological dual from flags
 
   # match F index ordering to V index ordering on dual
