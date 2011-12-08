@@ -1,5 +1,11 @@
 (function() {
   var BG_CLEAR, BG_COLOR, CANVAS_HEIGHT, CANVAS_WIDTH, COLOR_METHOD, CSGToPoly, DEFAULT_RECIPES, LastMouseX, LastMouseY, LastSphVec, MOUSEDOWN, PALETTE, PI, PaintMode, abs, acos, add, adjustXYZ, ambo, animateShape, antiprism, arrayToCSGVertex, asin, atan, calcCentroid, canonicalXYZ, canonicalize, clear, clone, colorassign, convexarea, copyVecArray, cos, cross, csgIntersect, csgSubtract, csgUnion, ctx, ctx_linewidth, cube, def_palette, diagsToTris, dodecahedron, dot, drawShape, drawpoly, dual, edgeDist, edge_vert_isect, edgesToFace, enumerate, extrudeN, eye3, faceToEdges, faceprint, floor, generatePoly, getDiagonals, getOps, getVec2VecRotM, globPolys, globRotM, globlastRotM, globtime, gyro, hextofloats, icosahedron, init, insetN, intersect, invperspT, joinFaces, kisN, mag, mag2, meshFix, midpoint, mm3, mult, mv3, normal, octahedron, old_centers, old_normals, oneThird, orthogonal, paintPolyhedron, palette, parseurl, perspT, persp_ratio, persp_z_max, persp_z_min, perspective_scale, planarize, polyToCSG, polyflag, polyhedron, pow, prism, project2dface, propellor, pyramid, random, randomchoice, recenter, reciprocal, reciprocalC, reciprocalN, reflect, rescale, rotm, round, rwb_palette, rwbg_palette, saveText, sin, sortfaces, specreplacements, sqrt, stellaN, sub, tan, tangentPoint, tangentify, testrig, tetrahedron, topolog, triEq, triangulate, tween, uniquifyedges, uniquifyverts, unit, uniteFaces, vec_rotm, vertColors, vertIndex, _2d_x_offset, _2d_y_offset, _mult;
+  var __indexOf = Array.prototype.indexOf || function(item) {
+    for (var i = 0, l = this.length; i < l; i++) {
+      if (this[i] === item) return i;
+    }
+    return -1;
+  };
   random = Math.random;
   round = Math.round;
   floor = Math.floor;
@@ -1614,56 +1620,101 @@
     return edgesToFace(newedges);
   };
   uniteFaces = function(poly) {
-    var Fi, Fi2, dpoly, e, edict, face_idx, facepile, facepiles, itCTR, newfaces, newpoly, normals, unused_faces, _i, _j, _k, _len, _len2, _ref, _ref2, _ref3, _results;
-    face_idx = (function() {
-      _results = [];
-      for (var _i = 0, _ref = poly.face.length - 1; 0 <= _ref ? _i <= _ref : _i >= _ref; 0 <= _ref ? _i++ : _i--){ _results.push(_i); }
-      return _results;
-    }).apply(this);
+    var connected_set, dpoly, e, edict, face_idx, face_set, face_sets, faces_to_join, hash, idx, isNeighbor, j, joinset, joinsets, k, ndict, newfaces, newpoly, normals, normhash, t, v, _i, _j, _k, _l, _len, _len2, _len3, _len4, _len5, _len6, _len7, _m, _n, _o, _p, _ref, _ref2, _ref3, _ref4, _ref5, _results;
     dpoly = dual(poly);
     edict = {};
-    _ref2 = dpoly.getEdges();
-    for (_j = 0, _len = _ref2.length; _j < _len; _j++) {
-      e = _ref2[_j];
+    _ref = dpoly.getEdges();
+    for (_i = 0, _len = _ref.length; _i < _len; _i++) {
+      e = _ref[_i];
       edict[e[0]] = [];
     }
-    _ref3 = dpoly.getEdges();
-    for (_k = 0, _len2 = _ref3.length; _k < _len2; _k++) {
-      e = _ref3[_k];
+    _ref2 = dpoly.getEdges();
+    for (_j = 0, _len2 = _ref2.length; _j < _len2; _j++) {
+      e = _ref2[_j];
       edict[e[0]].push(e[1]);
       edict[e[1]].push(e[0]);
     }
-    normals = poly.normals();
-    facepiles = [];
-    facepile = [];
-    Fi = face_idx.pop();
-    facepile.push(Fi);
-    unused_faces = [];
-    itCTR = 0;
-    while (face_idx.length > 0 && itCTR < 1000000) {
-      itCTR++;
-      Fi2 = face_idx.pop();
-      if (mag(sub(unit(normals[Fi]), unit(normals[Fi2]))) < 1E-6 && (edict[Fi].indexOf(Fi2) !== -1)) {
-        facepile.push(Fi2);
+    isNeighbor = function(Fi, Fi2) {
+      if (edict[Fi].indexOf(Fi2) !== -1) {
+        return true;
       } else {
-        unused_faces.unshift(Fi2);
+        return false;
       }
-      if (face_idx.length === 0 && unused_faces.length > 0) {
-        face_idx = unused_faces;
-        unused_faces = [];
-        console.log(Fi, "pile", facepile.length);
-        facepiles.push(_.map(facepile, function(idx) {
-          return poly.face[idx];
-        }));
-        facepile = [];
-        Fi = face_idx.pop();
-        facepile.push(Fi);
+    };
+    normals = poly.normals();
+    normhash = function(norm) {
+      return round(100 * norm[0]) + "~" + round(100 * norm[1]) + "~" + round(100 * norm[2]);
+    };
+    face_sets = [];
+    ndict = {};
+    face_idx = (function() {
+      _results = [];
+      for (var _k = 0, _ref3 = poly.face.length - 1; 0 <= _ref3 ? _k <= _ref3 : _k >= _ref3; 0 <= _ref3 ? _k++ : _k--){ _results.push(_k); }
+      return _results;
+    }).apply(this);
+    for (_l = 0, _len3 = face_idx.length; _l < _len3; _l++) {
+      idx = face_idx[_l];
+      hash = normhash(normals[idx]);
+      if (ndict[hash]) {
+        ndict[hash].push(idx);
+      } else {
+        ndict[hash] = [idx];
       }
     }
-    newfaces = _.map(facepiles, joinFaces);
+    console.log("ndict", ndict);
+    for (k in ndict) {
+      v = ndict[k];
+      face_sets.push(clone(v));
+      console.log(clone(v));
+    }
+    joinsets = [];
+    for (_m = 0, _len4 = face_sets.length; _m < _len4; _m++) {
+      face_set = face_sets[_m];
+      connected_set = [];
+      while (face_set.length > 0) {
+        connected_set.push(0);
+        for (j = 0, _ref4 = face_set.length - 1; 0 <= _ref4 ? j <= _ref4 : j >= _ref4; 0 <= _ref4 ? j++ : j--) {
+          if (__indexOf.call(connected_set, j) >= 0) {
+            continue;
+          }
+          for (_n = 0, _len5 = connected_set.length; _n < _len5; _n++) {
+            t = connected_set[_n];
+            if (isNeighbor(face_set[j], face_set[t])) {
+              connected_set.push(j);
+              j = 0;
+              break;
+            }
+          }
+        }
+        console.log(connected_set.sort((function(a, b) {
+          return a - b;
+        })).reverse(), clone(face_set));
+        joinset = [];
+        _ref5 = connected_set.sort((function(a, b) {
+          return a - b;
+        })).reverse();
+        for (_o = 0, _len6 = _ref5.length; _o < _len6; _o++) {
+          t = _ref5[_o];
+          joinset.push(face_set.splice(t, 1)[0]);
+        }
+        joinsets.push(joinset);
+        connected_set = [];
+      }
+    }
+    for (_p = 0, _len7 = joinsets.length; _p < _len7; _p++) {
+      j = joinsets[_p];
+      console.log(j);
+    }
+    faces_to_join = _.map(joinsets, (function(x) {
+      return _.map(x, function(i) {
+        return poly.face[i];
+      });
+    }));
+    newfaces = _.map(faces_to_join, joinFaces);
     newpoly = new polyhedron();
     newpoly.xyz = clone(poly.xyz);
     newpoly.face = newfaces;
+    console.log(newpoly);
     return newpoly;
   };
   ctx = {};
@@ -2081,7 +2132,6 @@
     }
     c4 = c1;
     globPolys = [paintPolyhedron(c4)];
-    console.log("face count from ", c4.face.length, "to", uniteFaces(c4).face.length, "should be", 6 * 8 + 6);
     old_centers = _.map(globPolys[0].centers(), function(x) {
       return x;
     });
@@ -2089,6 +2139,9 @@
       return x;
     });
     drawShape();
+    try {
+      uniteFaces(clone(c4));
+    } catch (_e) {}
     $("#spec").change(function(e) {
       specs = $("#spec").val().split(/\s+/g).slice(0, 2);
       globPolys = _.map(specs, function(x) {

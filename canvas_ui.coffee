@@ -400,17 +400,18 @@ $( -> #wait for page to load
   #console.log c4
   #globPolys = [paintPolyhedron(ambo c4)]
 
-
-  console.log "face count from " , c4.face.length, "to", uniteFaces(c4).face.length, "should be", 6*8+6
-
-  #globPolys = [paintPolyhedron(uniteFaces(c4))]
+  #console.log "face count from " , c4.face.length, "to", uniteFaces(c4).face.length, "should be", 6*8+6
 
   old_centers = _.map(globPolys[0].centers(),(x)->x)
   old_normals = _.map(globPolys[0].normals(),(x)->x)
 
+  #globPolys = [paintPolyhedron(uniteFaces(c4))]
+
+
   # draw it
   drawShape()
-
+  try
+    uniteFaces(clone c4)
 
   # Event Handlers
   # ----------------------------------------------------

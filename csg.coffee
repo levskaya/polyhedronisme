@@ -124,23 +124,18 @@ edgesToFace = (edges)->
   face=[]
   edict={}
   for e in edges
-    #console.log "e2f" ,e
     edict[e[0]] =e[1]
   v0=edges[0][0]
   v =edges[0][1]
-  #console.log v,v0
-  #face.push v0
   face.push v
   itCTR=0
   while v isnt v0
-    #console.log v
     v = edict[v]
     face.push v
     itCTR++
     if itCTR>1000 #protect against infinite recursion during mistakes
       console.log "Bad edges to face join, have a neverending face:", edges
       break
-  #console.log "e2f",edges,"->",face
   face
 
 uniquifyedges = (edgelist)->
@@ -163,7 +158,6 @@ faceprint = (face) ->
 joinFaces = (faces)->
   alledges=[]
   alledges=(_.reduce( _.map(faces,faceToEdges) , ((memo,x)->memo.concat(x)), alledges))[0..]
-  #console.log faces, alledges.length, alledges[0..]
   newedges=[]
   while alledges.length>0
     e=alledges.pop()
@@ -178,53 +172,116 @@ joinFaces = (faces)->
     else
         newedges.push e
 
-  #console.log _.map(faces,faceprint),"joinFaces", _.map(newedges,faceprint)
   edgesToFace newedges
 
 uniteFaces = (poly)->
-  face_idx = [0..poly.face.length-1]
+  # use dual of mesh to determine face to face connectivity
   dpoly = dual poly
-  #for f in dpoly.face
-  #  if f.length<4
-  #    console.log faceprint f
   edict={}
   for e in dpoly.getEdges()
     edict[e[0]]=[]
   for e in dpoly.getEdges()
     edict[e[0]].push(e[1])
     edict[e[1]].push(e[0])
-
-  normals = poly.normals()
-
-  facepiles=[]
-  facepile=[]
-  #totally unoptimized N*(N-1)/2 comps ~N^2!
-  Fi = face_idx.pop()
-  facepile.push Fi
-  unused_faces=[]
-  itCTR=0
-  while face_idx.length>0 and itCTR<1000000
-    itCTR++
-    Fi2 = face_idx.pop()
-    #if mag(sub(unit(normals[Fi]),unit(normals[Fi2])))<1E-6
-      #console.log Fi,edict[Fi],Fi2
-    if mag(sub(unit(normals[Fi]),unit(normals[Fi2])))<1E-6 and (edict[Fi].indexOf(Fi2) isnt -1)
-      facepile.push Fi2
+  isNeighbor = (Fi,Fi2) ->
+    if edict[Fi].indexOf(Fi2) isnt -1
+      true
     else
-      unused_faces.unshift Fi2
-    if face_idx.length is 0 and unused_faces.length > 0
-      face_idx=unused_faces
-      unused_faces=[]
-      console.log Fi,"pile",facepile.length
-      facepiles.push _.map(facepile,(idx)->poly.face[idx])#facepile
-      facepile=[]
-      Fi = face_idx.pop()
-      facepile.push Fi
+      false
 
-  #console.log facepiles
-  #console.log _.map(facepiles,joinFaces)
-  newfaces=_.map(facepiles,joinFaces)
+  # use normals to classify faces into co-normal sets to minimize wasted comparisons
+  normals = poly.normals()
+  normhash = (norm)-> round(100*norm[0])+"~"+round(100*norm[1])+"~"+round(100*norm[2])
+  face_sets=[]
+  ndict={}
+  face_idx = [0..poly.face.length-1]
+  for idx in face_idx
+    hash=normhash(normals[idx])
+    if ndict[hash] then ndict[hash].push(idx) else ndict[hash]=[idx]
+  console.log "ndict" , ndict
+  for k,v of ndict
+    face_sets.push(clone v)
+    console.log clone v
+
+  joinsets=[]
+  #loop facesets
+  for face_set in face_sets
+    connected_set=[]
+    while face_set.length > 0
+      connected_set.push 0
+      for j in [0..face_set.length-1]
+        if j in connected_set then continue #already grabbed this one
+        for t in connected_set #compare against every face already in set
+          if isNeighbor(face_set[j],face_set[t]) #face neighbors?
+            #console.log face_set[j],"<->",face_set[t], ".",clone face_set
+            connected_set.push j #add to connected set
+            j=0 #have to go back to beginning to rescan
+            break
+
+      console.log connected_set.sort(((a,b)->(a-b))).reverse(), clone face_set
+      joinset=[] #pop the entire connected set out of face_set
+      for t in connected_set.sort(((a,b)->(a-b))).reverse()
+        joinset.push face_set.splice(t,1)[0]
+
+      #console.log "joinset", joinset
+      joinsets.push joinset
+      connected_set=[]
+  for j in joinsets
+    console.log j
+  faces_to_join = _.map(joinsets, ((x)->_.map(x,(i)->poly.face[i])) )
+  #console.log joinsets
+  newfaces=_.map(faces_to_join,joinFaces)
   newpoly = new polyhedron()
   newpoly.xyz = clone poly.xyz
   newpoly.face = newfaces
+  console.log newpoly
   newpoly
+
+
+# uniteFaces = (poly)->
+#   face_idx = [0..poly.face.length-1]
+#   dpoly = dual poly
+#   edict={}
+#   for e in dpoly.getEdges()
+#     edict[e[0]]=[]
+#   for e in dpoly.getEdges()
+#     edict[e[0]].push(e[1])
+#     edict[e[1]].push(e[0])
+
+#   normals = poly.normals()
+
+#   facepiles=[]
+#   facepile=[]
+#   #totally unoptimized N*(N-1)/2 comps ~N^2!
+#   Fi = face_idx.pop()
+#   facepile.push Fi
+#   unused_faces=[]
+#   itCTR=0
+#   while face_idx.length>0 and itCTR<1000000
+#     itCTR++
+#     Fi2 = face_idx.pop()
+#     #if mag(sub(unit(normals[Fi]),unit(normals[Fi2])))<1E-6
+#       #console.log Fi,edict[Fi],Fi2
+#     if mag(sub(unit(normals[Fi]),unit(normals[Fi2])))<1E-6 and (edict[Fi].indexOf(Fi2) isnt -1)
+#       facepile.push Fi2
+#     else
+#       unused_faces.unshift Fi2
+#     if face_idx.length is 0 and unused_faces.length > 0
+#       face_idx=unused_faces
+#       unused_faces=[]
+#       console.log Fi,"pile",facepile.length
+#       facepiles.push _.map(facepile,(idx)->poly.face[idx])#facepile
+#       facepile=[]
+#       Fi = face_idx.pop()
+#       facepile.push Fi
+
+#   #console.log facepiles
+#   #console.log _.map(facepiles,joinFaces)
+#   newfaces=_.map(facepiles,joinFaces)
+#   newpoly = new polyhedron()
+#   newpoly.xyz = clone poly.xyz
+#   newpoly.face = newfaces
+#   newpoly
+
+
+
