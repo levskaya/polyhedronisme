@@ -28,6 +28,12 @@ vertColors = (poly) ->
       vertcolors[v] = poly.face_colors[i]
   vertcolors
 
+faceprint = (face) ->
+  str=""
+  for v in face
+    str+="#{v}->"
+  str[0..str.length-3]
+
 class polyhedron
   constructor: () ->      # constructor of initially null polyhedron
     @face = new Array()   # array of faces.          face.length = # faces

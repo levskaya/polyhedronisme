@@ -316,26 +316,27 @@ drawpoly = (poly,tvec) ->
       ctx.stroke()
 
   #plot face-numbers and normal-vectors for debugging --------------------------------------------
-  centers  = _.map( old_centers, (x)->mv3(globRotM,x))
-  normals  = _.map( old_normals, (x)->mv3(globRotM,x))
-  face_labels = ("#{fno}" for fno in [0..centers.length-1])
-  vert_labels = ("#{vno}" for vno in [0..poly.xyz.length-1])
-  for [fno,face] in enumerate(poly.face) # original, unsorted face_indices
-    ctx.textAlign = "center"
-    ctx.fillStyle = "rgba(0,0,0,1)"
-    [x,y] = perspT(add(tvec, centers[fno]),persp_z_max,persp_z_min,persp_ratio,perspective_scale)
-    ctx.fillText(face_labels[fno],x+_2d_x_offset,y+_2d_y_offset)
-  for [fno,face] in enumerate(poly.face) # face normals
-    ctx.strokeStyle = "rgba(0,0,0,1)"
-    ctx.beginPath()
-    [x,y] = perspT(add(tvec, centers[fno]),persp_z_max,persp_z_min,persp_ratio,perspective_scale)
-    ctx.moveTo(x+_2d_x_offset,y+_2d_y_offset)
-    [x,y] = perspT(add(tvec, add(centers[fno],mult(0.1,normals[fno]))),persp_z_max,persp_z_min,persp_ratio,perspective_scale)
-    ctx.lineTo(x+_2d_x_offset,y+_2d_y_offset)
-    ctx.stroke()
-  for [vno,vert] in enumerate(poly.xyz) # vertex indices
-    [x,y] = perspT(add(tvec, poly.xyz[vno]),persp_z_max,persp_z_min,persp_ratio,perspective_scale)
-    #ctx.fillText(vert_labels[vno],x+_2d_x_offset,y+_2d_y_offset)
+  # centers  = _.map( old_centers, (x)->mv3(globRotM,x))
+  # normals  = _.map( old_normals, (x)->mv3(globRotM,x))
+  # face_labels = ("#{fno}" for fno in [0..centers.length-1])
+  # vert_labels = ("#{vno}" for vno in [0..poly.xyz.length-1])
+  # ctx.textAlign = "center"
+  # ctx.fillStyle = "rgba(0,0,0,1)"
+  # for [fno,face] in enumerate(poly.face) # original, unsorted face_indices
+  #   [x,y] = perspT(add(tvec, centers[fno]),persp_z_max,persp_z_min,persp_ratio,perspective_scale)
+  #   #ctx.fillText(face_labels[fno],x+_2d_x_offset,y+_2d_y_offset)
+  # ctx.strokeStyle = "rgba(0,0,0,1)"
+  # for [fno,face] in enumerate(poly.face) # face normals
+  #   ctx.beginPath()
+  #   [x,y] = perspT(add(tvec, centers[fno]),persp_z_max,persp_z_min,persp_ratio,perspective_scale)
+  #   ctx.moveTo(x+_2d_x_offset,y+_2d_y_offset)
+  #   [x,y] = perspT(add(tvec, add(centers[fno],mult(0.1,normals[fno]))),persp_z_max,persp_z_min,persp_ratio,perspective_scale)
+  #   ctx.lineTo(x+_2d_x_offset,y+_2d_y_offset)
+  #   ctx.stroke()
+  # ctx.fillStyle = "rgba(1,1,0,1)"
+  # for [vno,vert] in enumerate(poly.xyz) # vertex indices
+  #   [x,y] = perspT(add(tvec, poly.xyz[vno]),persp_z_max,persp_z_min,persp_ratio,perspective_scale)
+  #   #ctx.fillText("v"+vert_labels[vno],x+_2d_x_offset,y+_2d_y_offset)
   #-----------------------------------------------------------------------------------------------
 
   # reset coords, for setting absolute rotation, as poly is passed by ref
@@ -378,40 +379,61 @@ $( -> #wait for page to load
   # construct the polyhedra from spec
   #globPolys = _.map(specs, (x)->generatePoly(x))
 
-  c0 = cube()
-  c1 = cube()
-  c2 = cube().rescale(.5)
-  for v in c0.xyz
-    #c2.xyz = _.map(c2.xyz, (x)->[x[0]+v[0]/2,x[1]+v[1]/2,x[2]+v[2]/2] )
-    c2.translate(mult(1,v))
-    c1 = csgUnion(c1, c2)
-    c2.translate(mult(-1,v))
-  #console.log c3
-  c4 = c1
-  #c4.xyz = canonicalize(c4,10)
-  globPolys = [paintPolyhedron(c4)]
-
+  #c0 = cube()
   #c1 = cube()
-  #c2 = cube()
-  #c2.xyz = _.map(c2.xyz, (x)-> mv3(rotm(PI/3,PI/3,0),x) )
-  #c3 = cube()
-  #c3.xyz = _.map(c3.xyz, (x)-> mv3(rotm(2*PI/3,2*PI/3,0),x) )
-  #c4 = csgUnion(c3,csgUnion(c1,c2))
-  #console.log c4
-  #globPolys = [paintPolyhedron(ambo c4)]
+  #c2 = cube().rescale(.5)
+  #for v in c0.xyz
+    #c2.xyz = _.map(c2.xyz, (x)->[x[0]+v[0]/2,x[1]+v[1]/2,x[2]+v[2]/2] )
+  #  c2.translate(mult(1.1,v))
+  #  c1 = csgSubtract(c1, c2)
+  #  c2.translate(mult(-1.1,v))
+  #for v in (dual cube()).xyz
+    #c2.xyz = _.map(c2.xyz, (x)->[x[0]+v[0]/2,x[1]+v[1]/2,x[2]+v[2]/2] )
+  #  c2.translate(mult(1.2,v))
+  #  c1 = csgSubtract(c1, c2)
+  #  c2.translate(mult(-1.2,v))
+  #console.log c1
 
-  #console.log "face count from " , c4.face.length, "to", uniteFaces(c4).face.length, "should be", 6*8+6
+  t0 = cube()
+  #t1 = icosahedron()
+  t1 = generatePoly('koC')
+  t2 = cube().rescale(0.5)
+  for v in t0.xyz[0..]
+    ttmp = (clone t2).translate(mult(1.0,v))
+    t1 = csgUnion(t1,ttmp)
+
+
+  globPolys = [paintPolyhedron( ambo uniteFaces meshFix t1)]
+
+  # c1 = cube()
+  # c2 = cube()
+  # c2.xyz = _.map(c2.xyz, (x)-> mv3(rotm(PI/3,PI/3,0),x) )
+  # c3 = cube()
+  # c3.xyz = _.map(c3.xyz, (x)-> mv3(rotm(2*PI/3,2*PI/3,0),x) )
+  # c4 = csgUnion(c3,csgUnion(c1,c2))
+  # #console.log c4
+  # globPolys = [paintPolyhedron(triangulate  c4)]
+
+  #console.log "face count from " , c1.face.length, "to", uniteFaces(c1).face.length, "should be", 6*8+6
+
+
+  #globPolys = [paintPolyhedron(uniteFaces(c1))]
+
+  #c1 = uniteFaces c1
+  #for [i,f] in enumerate clone c1.face
+  #  console.log  i,':', faceprint f
+
 
   old_centers = _.map(globPolys[0].centers(),(x)->x)
   old_normals = _.map(globPolys[0].normals(),(x)->x)
 
-  #globPolys = [paintPolyhedron(uniteFaces(c4))]
-
+  #try
+  #uniteFaces(clone c1)
+  #catch er
+  #  console.log er
 
   # draw it
   drawShape()
-  try
-    uniteFaces(clone c4)
 
   # Event Handlers
   # ----------------------------------------------------

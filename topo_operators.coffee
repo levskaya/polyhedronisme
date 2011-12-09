@@ -26,8 +26,8 @@
 class polyflag
   constructor: ->
     @flags= new Object() # flags[face][vertex] = next vertex of flag; symbolic triples
-    @verts= new Object() # XYZ coordinates
-    @xyzs = new Object() # [symbolic names] holds vertex index
+    @verts= new Object() # [symbolic names] holds vertex index
+    @xyzs = new Object() # XYZ coordinates
 
   newV: (name, xyz) ->
     if @verts[name] is undefined
@@ -274,6 +274,7 @@ dual = (poly) ->
       # THIS ASSUMES that no 2 faces that share an edge share it in the same orientation!
       # which of course never happens for proper manifold meshes, so get your meshes right.
       face[v1]["v#{v2}"] = "#{i}"
+      #if v1 is 14 then console.log 14,"v#{v2}","#{i}"
       v1=v2 # current becomes previous
 
   centers = poly.centers()
@@ -290,11 +291,15 @@ dual = (poly) ->
 
   dpoly = flag.topoly() # build topological dual from flags
 
+  console.log 'dual poly', dpoly
+
   # match F index ordering to V index ordering on dual
   sortF = []
   for f in dpoly.face
+    #console.log f[0],f[1],f[2]
     k = intersect(poly.face[f[0]],poly.face[f[1]],poly.face[f[2]])
     sortF[k] = f
+
   dpoly.face = sortF
 
   if poly.name[0] isnt "d"

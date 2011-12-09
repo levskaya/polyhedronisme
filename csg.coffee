@@ -64,22 +64,33 @@ meshFix = (poly)->
   faces = poly.face
   verts = poly.xyz
 
+  #length of random colinear vertex midV along edge bounded by fromV -> toV
+  lengthAlong = (fromV,toV,midV) -> dot(unit(sub(toV, fromV)), sub(midV, fromV))
+
   newfaces=[]
   for f in faces
     newf=[]
-    edge0=verts[f[f.length-1]]
+    edge0=verts[f[f.length-1]] #edge beginning
     for v in f
-      edge1=verts[v]
-      for [vno,testv] in enumerate(verts)
-        if edge_vert_isect(edge0,edge1,testv)
-          newf.push vno
-      newf.push v
-      edge0=edge1
+      edge1=verts[v] #edge ending
+      tmpv=[]
+      for [vno,testv] in enumerate(verts)     # across -all- verts in polyhedron
+        if edge_vert_isect(edge0,edge1,testv) # do I intersect this edge?
+          tmpv.push vno
+
+      # sort vertices intersecting this edge by dist from begin -> end of edge
+      # this is to preserve clockwise face orientation!
+      tmpv.sort((a,b)->lengthAlong(edge0,edge1,verts[a])-lengthAlong(edge0,edge1,verts[b]))
+      for newv in tmpv
+        newf.push newv
+      newf.push v # add original edge vertex
+      edge0=edge1 # scooch along to next edge of face
+
     newfaces.push newf
 
   newpoly = new polyhedron()
   newpoly.face = newfaces
-  newpoly.xyz = clone verts
+  newpoly.xyz  = clone verts
   newpoly
 
 #convert CSG BSP tree back into a coherent polygon mesh
@@ -98,7 +109,8 @@ CSGToPoly = (csgpoly)->
   poly.xyz = verts
 
   # fix edge vertex inclusion problem, return result
-  meshFix poly
+  #meshFix poly
+  poly
 
 csgUnion = (polyA,polyB)->
   csgA = polyToCSG(polyA)
@@ -120,6 +132,9 @@ csgSubtract = (polyA,polyB)->
   CSGToPoly csgresult
 
 
+# Co-planar neighboring plane segment glue-back-together routines
+# ===============================================================================
+
 edgesToFace = (edges)->
   face=[]
   edict={}
@@ -138,22 +153,27 @@ edgesToFace = (edges)->
       break
   face
 
-uniquifyedges = (edgelist)->
-  uniqverts=[]
-  uniqverts.push vertlist[0]
-  for v in vertlist
-    already_present=false
-    for u in uniqverts
-      if mag(sub(v,u))<1E-6 then already_present = true
-    unless already_present
-      uniqverts.push v
-  uniqverts
+simpleFaceCheck = (faces)->
+  alledges=(_.reduce( _.map(faces,faceToEdges) , ((memo,x)->memo.concat(x)), []))
+  newedges=[]
+  while alledges.length>0
+    e=alledges.pop()
+    nuked=false
+    if alledges.length > 0
+      for [i,e2] in enumerate(alledges)
+        if e[0] is e2[1] and e[1] is e2[0]
+          nuked=true
+          alledges.splice(i,1) #knock out the other annihilating edge
+      unless nuked
+        newedges.push e
+    else
+        newedges.push e
 
-faceprint = (face) ->
-  str=""
-  for v in face
-    str+="#{v}->"
-  str[0..str.length-3]
+  new_face = edgesToFace newedges
+  if newedges.length > new_face.length
+    false
+  else
+    true
 
 joinFaces = (faces)->
   alledges=[]
@@ -175,6 +195,20 @@ joinFaces = (faces)->
   edgesToFace newedges
 
 uniteFaces = (poly)->
+  # use normals to classify faces into co-normal sets to minimize wasted comparisons
+  normals = poly.normals()
+  normhash = (norm)-> round(100*norm[0])+"~"+round(100*norm[1])+"~"+round(100*norm[2])
+  face_sets=[]
+  ndict={}
+  face_idx = [0..poly.face.length-1]
+  for idx in face_idx
+    hash=normhash(normals[idx])
+    if ndict[hash] then ndict[hash].push(idx) else ndict[hash]=[idx]
+  #console.log "ndict" , ndict
+  for k,v of ndict
+    face_sets.push(clone v)
+    #console.log clone v
+
   # use dual of mesh to determine face to face connectivity
   dpoly = dual poly
   edict={}
@@ -189,26 +223,12 @@ uniteFaces = (poly)->
     else
       false
 
-  # use normals to classify faces into co-normal sets to minimize wasted comparisons
-  normals = poly.normals()
-  normhash = (norm)-> round(100*norm[0])+"~"+round(100*norm[1])+"~"+round(100*norm[2])
-  face_sets=[]
-  ndict={}
-  face_idx = [0..poly.face.length-1]
-  for idx in face_idx
-    hash=normhash(normals[idx])
-    if ndict[hash] then ndict[hash].push(idx) else ndict[hash]=[idx]
-  console.log "ndict" , ndict
-  for k,v of ndict
-    face_sets.push(clone v)
-    console.log clone v
-
   joinsets=[]
-  #loop facesets
+  #loop over the normal-sorted facesets
   for face_set in face_sets
     connected_set=[]
     while face_set.length > 0
-      connected_set.push 0
+      connected_set.push 0 #always start at the first face left
       for j in [0..face_set.length-1]
         if j in connected_set then continue #already grabbed this one
         for t in connected_set #compare against every face already in set
@@ -218,70 +238,35 @@ uniteFaces = (poly)->
             j=0 #have to go back to beginning to rescan
             break
 
-      console.log connected_set.sort(((a,b)->(a-b))).reverse(), clone face_set
+      #console.log connected_set.sort(((a,b)->(a-b))).reverse(), clone face_set
       joinset=[] #pop the entire connected set out of face_set
       for t in connected_set.sort(((a,b)->(a-b))).reverse()
         joinset.push face_set.splice(t,1)[0]
-
-      #console.log "joinset", joinset
-      joinsets.push joinset
       connected_set=[]
-  for j in joinsets
-    console.log j
+
+      # !!! NEED to do something for special, common case where the face set to
+      # merge together is -cyclic- representing an internal piece of a face having
+      # been subtracted out.  The only way to deal _simply_ with this (w.o. implementing
+      # complex multi-path polyhedral faces) is to simply leave out one of the faces in the
+      # cycle of face-neighbors
+      if simpleFaceCheck _.map(joinset,(i)->poly.face[i])
+        #console.log "joinset", joinset
+        joinsets.push joinset
+      else
+        #console.log "cycle!",joinset
+        for splitidx in [0..joinset.length-1]
+          if simpleFaceCheck(_.map(joinset[0..splitidx],(i)->poly.face[i])) and simpleFaceCheck(_.map(joinset[splitidx..],(i)->poly.face[i]))
+            break
+        joinsets.push joinset[0..splitidx]
+        joinsets.push joinset[splitidx+1..]
+
+  #for j in joinsets
+  #  console.log j
   faces_to_join = _.map(joinsets, ((x)->_.map(x,(i)->poly.face[i])) )
   #console.log joinsets
   newfaces=_.map(faces_to_join,joinFaces)
   newpoly = new polyhedron()
   newpoly.xyz = clone poly.xyz
   newpoly.face = newfaces
-  console.log newpoly
+  #console.log newpoly
   newpoly
-
-
-# uniteFaces = (poly)->
-#   face_idx = [0..poly.face.length-1]
-#   dpoly = dual poly
-#   edict={}
-#   for e in dpoly.getEdges()
-#     edict[e[0]]=[]
-#   for e in dpoly.getEdges()
-#     edict[e[0]].push(e[1])
-#     edict[e[1]].push(e[0])
-
-#   normals = poly.normals()
-
-#   facepiles=[]
-#   facepile=[]
-#   #totally unoptimized N*(N-1)/2 comps ~N^2!
-#   Fi = face_idx.pop()
-#   facepile.push Fi
-#   unused_faces=[]
-#   itCTR=0
-#   while face_idx.length>0 and itCTR<1000000
-#     itCTR++
-#     Fi2 = face_idx.pop()
-#     #if mag(sub(unit(normals[Fi]),unit(normals[Fi2])))<1E-6
-#       #console.log Fi,edict[Fi],Fi2
-#     if mag(sub(unit(normals[Fi]),unit(normals[Fi2])))<1E-6 and (edict[Fi].indexOf(Fi2) isnt -1)
-#       facepile.push Fi2
-#     else
-#       unused_faces.unshift Fi2
-#     if face_idx.length is 0 and unused_faces.length > 0
-#       face_idx=unused_faces
-#       unused_faces=[]
-#       console.log Fi,"pile",facepile.length
-#       facepiles.push _.map(facepile,(idx)->poly.face[idx])#facepile
-#       facepile=[]
-#       Fi = face_idx.pop()
-#       facepile.push Fi
-
-#   #console.log facepiles
-#   #console.log _.map(facepiles,joinFaces)
-#   newfaces=_.map(facepiles,joinFaces)
-#   newpoly = new polyhedron()
-#   newpoly.xyz = clone poly.xyz
-#   newpoly.face = newfaces
-#   newpoly
-
-
-

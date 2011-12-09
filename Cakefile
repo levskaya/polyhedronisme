@@ -40,10 +40,13 @@ task 'build', 'Build single application file from source files', ->
           throw err if err
           console.log 'Done.'
 
+          #invoke 'minify'
+
 task 'minify', 'Minify the resulting application file after build', ->
   exec "yuicompressor -o \"#{jsMinFile}\" #{jsFile}", (err, stdout, stderr) ->
     throw err if err
     console.log stdout + stderr
+    console.log 'Minified.'
 
 #option '-e', '--environment [ENVIRONMENT_NAME]', 'set the environment for `task:withDefaults`'
 #task 'task:withDefaults', 'Description of task', (options) ->

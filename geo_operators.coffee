@@ -48,7 +48,7 @@ recenter = (xyzs, edges) ->
   polycenter = mult(1/edges.length, polycenter)
   _.map(xyzs, (x)->sub(x, polycenter) ) # subtract off any deviation from center
 
-# rescales maximum radius of polyhedron to 1
+# rescales maximum radius of polyhedron to 1 or by optional scalxse factor
 rescale = (xyzs, scale) ->
   polycenter = [0,0,0]
   maxExtent = _.max(_.map(xyzs,(x)->mag(x)))
