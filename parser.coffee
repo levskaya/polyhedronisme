@@ -9,6 +9,67 @@
 # Parser Routines
 #===================================================================================================
 
+PEG_parser_spec = '''
+/* series of opspecs */
+start  = opspec+
+
+/* opspec one of:
+ A  - single letter
+ A3 - single letter and float
+ B(5,4.3,3) - function call format w. float args
+*/
+opspec =
+   let:opcode args:opargs {return {"op":let,"args":args};}
+/ let:opcode float:float     {return {"op":let,"args":[float]};}
+/ let:opcode                     {return {"op":let,"args":[]};}
+
+/*
+parentheses surrounding comma-delimited list of floats i.e.
+( 1 , 3.2, 4 ) or (1) or (2,3)
+*/
+opargs = "("
+           num:( float:float ","? {return float} )+
+         ")" {return num;}
+
+/* just a letter */
+opcode = op:[a-zA-Z] {return op;}
+
+/* standard numerical types */
+int   = digits:[0-9]+   { return parseInt(digits.join(""), 10);  }
+float = digits:[0-9.]+  { return parseFloat(digits.join(""), 10); }
+'''
+op_parser = PEG.buildParser PEG_parser_spec
+
+#applies func fn to array args i.e. f, [1,2,3] -> f(1,2,3)
+dispatch = (fn, args) -> fn.apply(this, args || [])
+
+basemap = {
+  "T": tetrahedron
+  "O": octahedron
+  "C": cube
+  "I": icosahedron
+  "D": dodecahedron
+  "P": prism     #takes integer arg
+  "A": antiprism #takes integer arg
+  "Y": pyramid   #takes integer arg
+  }
+
+opmap = {
+  "d": dual
+  "k": kisN
+  "a": ambo
+  "g": gyro
+  "p": propellor
+  "r": reflect
+  "n": insetN
+  "x": extrudeN
+  "l": stellaN
+  "z": triangulate
+  "K": canonicalXYZ
+  "C": canonicalize
+  "A": adjustXYZ
+  }
+
 specreplacements = [
   [/e/g, "aa"],   # e --> aa   (abbr. for explode)
   [/b/g, "ta"],   # b --> ta   (abbr. for bevel)
@@ -33,50 +94,26 @@ getOps = (notation) ->
   expanded
 
 # create polyhedron from notation
-generatePoly = (notation) ->
-  poly = new polyhedron()
-  n=0
+newgeneratePoly = (notation) ->
+  #poly = new polyhedron()
 
-  ops = getOps(notation)
-  if ops.search(/([0-9]+)$/) != -1
-    n = 1 * RegExp.lastParen
-    ops = ops.slice(0, -RegExp.lastParen.length)
+  ops_spec = getOps(notation)
+  oplist = op_parser.parse(ops_spec).reverse()
 
-  switch ops.slice(-1)
-    when "T" then poly = tetrahedron()
-    when "O" then poly = octahedron()
-    when "C" then poly = cube()
-    when "I" then poly = icosahedron()
-    when "D" then poly = dodecahedron()
-    when "P" then poly = prism(n)
-    when "A" then poly = antiprism(n)
-    when "Y" then poly = pyramid(n)
-    else return
+  op = oplist.shift()
+  basefunc = basemap[op["op"]]
+  baseargs = op["args"]
+  poly     = dispatch basefunc, baseargs
 
-  while ops != ""
-    n=0
-    if ops.search(/([0-9]+)$/) != -1
-      n = 1 * RegExp.lastParen
-      ops = ops.slice(0, -RegExp.lastParen.length)
-    switch ops.slice(-1)
-      # geometrical operators
-      when "d" then poly     = dual(poly)
-      when "k" then poly     = kisN(poly, n)
-      when "a" then poly     = ambo(poly)
-      when "g" then poly     = gyro(poly)
-      when "p" then poly     = propellor(poly)
-      when "r" then poly     = reflect(poly)
-      # canonicalization operators
-      when "K" then poly.xyz = canonicalXYZ(poly, if n is 0 then 1 else n)
-      when "C" then poly.xyz = canonicalize(poly, if n is 0 then 1 else n)
-      when "A" then poly.xyz =    adjustXYZ(poly, if n is 0 then 1 else n)
-      # experimental
-      when "n" then poly     = insetN(poly, n)
-      when "x" then poly     = extrudeN(poly, n)
-      when "l" then poly     = stellaN(poly, n)
-      when "z" then poly     = triangulate(poly,false)
+  console.log "base", poly
 
-    ops = ops.slice(0,-1);  # remove last character
+  for op in oplist
+    opfunc = opmap[op["op"]]
+    opargs = [poly].concat(op["args"])
+    console.log opargs
+    poly   = dispatch opfunc, opargs
+
+  console.log "final", poly
 
   # Recenter polyhedra at origin (rarely needed)
   poly.xyz = recenter(poly.xyz, poly.getEdges())

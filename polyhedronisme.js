@@ -1,5 +1,5 @@
 (function() {
-  var BG_CLEAR, BG_COLOR, CANVAS_HEIGHT, CANVAS_WIDTH, COLOR_METHOD, DEFAULT_RECIPES, LastMouseX, LastMouseY, LastSphVec, MOUSEDOWN, PALETTE, PI, PaintMode, abs, acos, add, adjustXYZ, ambo, animateShape, antiprism, asin, atan, calcCentroid, canonicalXYZ, canonicalize, clear, clone, colorassign, convexarea, copyVecArray, cos, cross, ctx, ctx_linewidth, cube, def_palette, diagsToTris, dodecahedron, dot, drawShape, drawpoly, dual, edgeDist, extrudeN, eye3, faceToEdges, floor, generatePoly, getDiagonals, getOps, getVec2VecRotM, globPolys, globRotM, globlastRotM, globtime, gyro, hextofloats, icosahedron, init, insetN, intersect, invperspT, kisN, mag, mag2, midpoint, mm3, mult, mv3, normal, octahedron, oneThird, orthogonal, paintPolyhedron, palette, parseurl, perspT, persp_ratio, persp_z_max, persp_z_min, perspective_scale, planarize, polyflag, polyhedron, pow, prism, project2dface, propellor, pyramid, random, randomchoice, recenter, reciprocal, reciprocalC, reciprocalN, reflect, rescale, rotm, round, rwb_palette, rwbg_palette, saveText, sin, sortfaces, specreplacements, sqrt, stellaN, sub, tan, tangentPoint, tangentify, testrig, tetrahedron, topolog, triEq, triangulate, tween, unit, vec_rotm, vertColors, _2d_x_offset, _2d_y_offset, _mult;
+  var BG_CLEAR, BG_COLOR, CANVAS_HEIGHT, CANVAS_WIDTH, COLOR_METHOD, DEFAULT_RECIPES, LastMouseX, LastMouseY, LastSphVec, MOUSEDOWN, PALETTE, PEG_parser_spec, PI, PaintMode, abs, acos, add, adjustXYZ, ambo, animateShape, antiprism, asin, atan, basemap, calcCentroid, canonicalXYZ, canonicalize, clear, clone, colorassign, convexarea, copyVecArray, cos, cross, ctx, ctx_linewidth, cube, def_palette, diagsToTris, dispatch, dodecahedron, dot, drawShape, drawpoly, dual, edgeDist, extrudeN, eye3, faceToEdges, floor, getDiagonals, getOps, getVec2VecRotM, globPolys, globRotM, globlastRotM, globtime, gyro, hextofloats, icosahedron, init, insetN, intersect, invperspT, kisN, mag, mag2, midpoint, mm3, mult, mv3, newgeneratePoly, normal, octahedron, oldgeneratePoly, oneThird, op_parser, opmap, orthogonal, paintPolyhedron, palette, parseurl, perspT, persp_ratio, persp_z_max, persp_z_min, perspective_scale, planarize, polyflag, polyhedron, pow, prism, project2dface, propellor, pyramid, random, randomchoice, recenter, reciprocal, reciprocalC, reciprocalN, reflect, rescale, rotm, round, rwb_palette, rwbg_palette, saveText, sin, sortfaces, specreplacements, sqrt, stellaN, sub, tan, tangentPoint, tangentify, testrig, tetrahedron, topolog, triEq, triangulate, tween, unit, vec_rotm, vertColors, _2d_x_offset, _2d_y_offset, _mult;
 
   random = Math.random;
 
@@ -293,10 +293,10 @@
 
   polyhedron = (function() {
 
-    function polyhedron() {
-      this.face = new Array();
-      this.xyz = new Array();
-      this.name = "null polyhedron";
+    function polyhedron(verts, faces, name) {
+      this.face = faces || new Array();
+      this.xyz = verts || new Array();
+      this.name = name || "null polyhedron";
     }
 
     polyhedron.prototype.data = function() {
@@ -541,7 +541,7 @@
     for (i = 0, _ref5 = n - 1; 0 <= _ref5 ? i <= _ref5 : i >= _ref5; 0 <= _ref5 ? i++ : i--) {
       poly.face.push([i, (i + 1) % n, (i + 1) % n + n, i + n]);
     }
-    poly.xyz = adjustXYZ(poly, 1);
+    poly = adjustXYZ(poly, 1);
     return poly;
   };
 
@@ -575,7 +575,7 @@
       poly.face.push([i, (i + 1) % n, i + n]);
       poly.face.push([i, i + n, (n + i - 1) % n + n]);
     }
-    poly.xyz = adjustXYZ(poly, 1);
+    poly = adjustXYZ(poly, 1);
     return poly;
   };
 
@@ -597,7 +597,7 @@
     for (i = 0, _ref3 = n - 1; 0 <= _ref3 ? i <= _ref3 : i >= _ref3; 0 <= _ref3 ? i++ : i--) {
       poly.face.push([i, (i + 1) % n, n]);
     }
-    poly.xyz = canonicalXYZ(poly, 3);
+    poly = canonicalXYZ(poly, 3);
     return poly;
   };
 
@@ -667,6 +667,7 @@
 
   kisN = function(poly, n) {
     var apex, centers, f, flag, fname, foundAny, i, newpoly, normals, p, v, v1, v2, _i, _len, _len2, _len3, _ref, _ref2;
+    n || (n = 0);
     console.log("Taking kis of " + (n === 0 ? "" : n) + "-sided faces of " + poly.name + "...");
     flag = new polyflag();
     _ref = poly.xyz;
@@ -866,6 +867,7 @@
 
   insetN = function(poly, n) {
     var centers, f, flag, fname, foundAny, i, newpoly, normals, p, v, v1, v2, _i, _j, _len, _len2, _len3, _len4, _len5, _ref, _ref2, _ref3;
+    n || (n = 0);
     console.log("Taking inset of " + (n === 0 ? "" : n) + "-sided faces of " + poly.name + "...");
     flag = new polyflag();
     _ref = poly.xyz;
@@ -915,6 +917,7 @@
 
   extrudeN = function(poly, n) {
     var centers, f, flag, foundAny, i, newpoly, normals, p, v, v1, v2, _i, _j, _len, _len2, _len3, _len4, _len5, _ref, _ref2, _ref3;
+    n || (n = 0);
     console.log("Taking extrusion of " + (n === 0 ? "" : n) + "-sided faces of " + poly.name + "...");
     flag = new polyflag();
     _ref = poly.xyz;
@@ -1078,7 +1081,8 @@
   };
 
   canonicalize = function(poly, Niter) {
-    var edges, faces, i, maxChange, newVs, oldVs;
+    var edges, faces, i, maxChange, newVs, newpoly, oldVs;
+    Niter || (Niter = 1);
     console.log("Canonicalizing " + poly.name + "...");
     faces = poly.face;
     edges = poly.getEdges();
@@ -1097,7 +1101,9 @@
       if (maxChange < 1e-8) break;
     }
     console.log("[canonicalization done, last |deltaV|=" + maxChange + "]");
-    return newVs;
+    newpoly = new polyhedron(newVs, poly.face, poly.name);
+    console.log("canonicalize", newpoly);
+    return newpoly;
   };
 
   reciprocalC = function(poly) {
@@ -1138,24 +1144,26 @@
 
   canonicalXYZ = function(poly, nIterations) {
     var count, dpoly, _ref;
+    nIterations || (nIterations = 1);
     dpoly = dual(poly);
     console.log("Pseudo-canonicalizing " + poly.name + "...");
     for (count = 0, _ref = nIterations - 1; 0 <= _ref ? count <= _ref : count >= _ref; 0 <= _ref ? count++ : count--) {
       dpoly.xyz = reciprocalN(poly);
       poly.xyz = reciprocalN(dpoly);
     }
-    return poly.xyz;
+    return new polyhedron(poly.xyz, poly.face, poly.name);
   };
 
   adjustXYZ = function(poly, nIterations) {
     var count, dpoly, _ref;
+    nIterations || (nIterations = 1);
     dpoly = dual(poly);
     console.log("Planarizing " + poly.name + "...");
     for (count = 0, _ref = nIterations - 1; 0 <= _ref ? count <= _ref : count >= _ref; 0 <= _ref ? count++ : count--) {
       dpoly.xyz = reciprocalC(poly);
       poly.xyz = reciprocalC(dpoly);
     }
-    return poly.xyz;
+    return new polyhedron(poly.xyz, poly.face, poly.name);
   };
 
   getDiagonals = function(verts) {
@@ -1415,6 +1423,169 @@
     return console.log("===== Done Testing Basic Ops =====");
   };
 
+  PEG_parser_spec = '/* series of opspecs */\nstart  = opspec+\n\n/* opspec one of:\n A  - single letter\n A3 - single letter and float\n B(5,4.3,3) - function call format w. float args\n*/\nopspec =\n   let:opcode args:opargs {return {"op":let,"args":args};}\n/ let:opcode float:float     {return {"op":let,"args":[float]};}\n/ let:opcode                     {return {"op":let,"args":[]};}\n\n/*\nparentheses surrounding comma-delimited list of floats i.e.\n( 1 , 3.2, 4 ) or (1) or (2,3)\n*/\nopargs = "("\n           num:( float:float ","? {return float} )+\n         ")" {return num;}\n\n/* just a letter */\nopcode = op:[a-zA-Z] {return op;}\n\n/* standard numerical types */\nint   = digits:[0-9]+   { return parseInt(digits.join(""), 10);  }\nfloat = digits:[0-9.]+  { return parseFloat(digits.join(""), 10); }';
+
+  op_parser = PEG.buildParser(PEG_parser_spec);
+
+  dispatch = function(fn, args) {
+    return fn.apply(this, args || []);
+  };
+
+  basemap = {
+    "T": tetrahedron,
+    "O": octahedron,
+    "C": cube,
+    "I": icosahedron,
+    "D": dodecahedron,
+    "P": prism,
+    "A": antiprism,
+    "Y": pyramid
+  };
+
+  opmap = {
+    "d": dual,
+    "k": kisN,
+    "a": ambo,
+    "g": gyro,
+    "p": propellor,
+    "r": reflect,
+    "n": insetN,
+    "x": extrudeN,
+    "l": stellaN,
+    "z": triangulate,
+    "K": canonicalXYZ,
+    "C": canonicalize,
+    "A": adjustXYZ
+  };
+
+  specreplacements = [[/e/g, "aa"], [/b/g, "ta"], [/o/g, "jj"], [/m/g, "kj"], [/t(\d*)/g, "dk$1d"], [/j/g, "dad"], [/s/g, "dgd"], [/dd/g, ""], [/ad/g, "a"], [/gd/g, "g"], [/aO/g, "aC"], [/aI/g, "aD"], [/gO/g, "gC"], [/gI/g, "gD"]];
+
+  getOps = function(notation) {
+    var equiv, expanded, orig, _i, _len, _ref;
+    expanded = notation;
+    for (_i = 0, _len = specreplacements.length; _i < _len; _i++) {
+      _ref = specreplacements[_i], orig = _ref[0], equiv = _ref[1];
+      expanded = expanded.replace(orig, equiv);
+    }
+    console.log("" + notation + " executed as " + expanded);
+    return expanded;
+  };
+
+  newgeneratePoly = function(notation) {
+    var baseargs, basefunc, op, opargs, opfunc, oplist, ops_spec, poly, _i, _len;
+    ops_spec = getOps(notation);
+    oplist = op_parser.parse(ops_spec).reverse();
+    op = oplist.shift();
+    basefunc = basemap[op["op"]];
+    baseargs = op["args"];
+    poly = dispatch(basefunc, baseargs);
+    console.log("base", poly);
+    for (_i = 0, _len = oplist.length; _i < _len; _i++) {
+      op = oplist[_i];
+      opfunc = opmap[op["op"]];
+      opargs = [poly].concat(op["args"]);
+      console.log(opargs);
+      poly = dispatch(opfunc, opargs);
+    }
+    console.log("final", poly);
+    poly.xyz = recenter(poly.xyz, poly.getEdges());
+    poly.xyz = rescale(poly.xyz);
+    poly = paintPolyhedron(poly);
+    return poly;
+  };
+
+  oldgeneratePoly = function(notation) {
+    var n, ops, poly;
+    poly = new polyhedron();
+    n = 0;
+    console.log(op_parser.parse(notation).reverse());
+    ops = getOps(notation);
+    if (ops.search(/([0-9]+)$/) !== -1) {
+      n = 1 * RegExp.lastParen;
+      ops = ops.slice(0, -RegExp.lastParen.length);
+    }
+    switch (ops.slice(-1)) {
+      case "T":
+        poly = tetrahedron();
+        break;
+      case "O":
+        poly = octahedron();
+        break;
+      case "C":
+        poly = cube();
+        break;
+      case "I":
+        poly = icosahedron();
+        break;
+      case "D":
+        poly = dodecahedron();
+        break;
+      case "P":
+        poly = prism(n);
+        break;
+      case "A":
+        poly = antiprism(n);
+        break;
+      case "Y":
+        poly = pyramid(n);
+        break;
+      default:
+        return;
+    }
+    while (ops !== "") {
+      n = void 0;
+      if (ops.search(/([0-9]+)$/) !== -1) {
+        n = 1 * RegExp.lastParen;
+        ops = ops.slice(0, -RegExp.lastParen.length);
+      }
+      switch (ops.slice(-1)) {
+        case "d":
+          poly = dual(poly);
+          break;
+        case "k":
+          poly = kisN(poly, n);
+          break;
+        case "a":
+          poly = ambo(poly);
+          break;
+        case "g":
+          poly = gyro(poly);
+          break;
+        case "p":
+          poly = propellor(poly);
+          break;
+        case "r":
+          poly = reflect(poly);
+          break;
+        case "K":
+          poly = canonicalXYZ(poly, n);
+          break;
+        case "C":
+          poly = canonicalize(poly, n);
+          break;
+        case "A":
+          poly = adjustXYZ(poly, n);
+          break;
+        case "n":
+          poly = insetN(poly, n);
+          break;
+        case "x":
+          poly = extrudeN(poly, n);
+          break;
+        case "l":
+          poly = stellaN(poly, n);
+          break;
+        case "z":
+          poly = triangulate(poly);
+      }
+      ops = ops.slice(0, -1);
+    }
+    poly.xyz = recenter(poly.xyz, poly.getEdges());
+    poly.xyz = rescale(poly.xyz);
+    poly = paintPolyhedron(poly);
+    return poly;
+  };
+
   ctx = {};
 
   CANVAS_WIDTH = 500;
@@ -1535,110 +1706,6 @@
       }
       poly.face_colors.push(clr);
     }
-    return poly;
-  };
-
-  specreplacements = [[/e/g, "aa"], [/b/g, "ta"], [/o/g, "jj"], [/m/g, "kj"], [/t(\d*)/g, "dk$1d"], [/j/g, "dad"], [/s/g, "dgd"], [/dd/g, ""], [/ad/g, "a"], [/gd/g, "g"], [/aO/g, "aC"], [/aI/g, "aD"], [/gO/g, "gC"], [/gI/g, "gD"]];
-
-  getOps = function(notation) {
-    var equiv, expanded, orig, _i, _len, _ref;
-    expanded = notation;
-    for (_i = 0, _len = specreplacements.length; _i < _len; _i++) {
-      _ref = specreplacements[_i], orig = _ref[0], equiv = _ref[1];
-      expanded = expanded.replace(orig, equiv);
-    }
-    console.log("" + notation + " executed as " + expanded);
-    return expanded;
-  };
-
-  generatePoly = function(notation) {
-    var n, ops, poly;
-    poly = new polyhedron();
-    n = 0;
-    ops = getOps(notation);
-    if (ops.search(/([0-9]+)$/) !== -1) {
-      n = 1 * RegExp.lastParen;
-      ops = ops.slice(0, -RegExp.lastParen.length);
-    }
-    switch (ops.slice(-1)) {
-      case "T":
-        poly = tetrahedron();
-        break;
-      case "O":
-        poly = octahedron();
-        break;
-      case "C":
-        poly = cube();
-        break;
-      case "I":
-        poly = icosahedron();
-        break;
-      case "D":
-        poly = dodecahedron();
-        break;
-      case "P":
-        poly = prism(n);
-        break;
-      case "A":
-        poly = antiprism(n);
-        break;
-      case "Y":
-        poly = pyramid(n);
-        break;
-      default:
-        return;
-    }
-    while (ops !== "") {
-      n = 0;
-      if (ops.search(/([0-9]+)$/) !== -1) {
-        n = 1 * RegExp.lastParen;
-        ops = ops.slice(0, -RegExp.lastParen.length);
-      }
-      switch (ops.slice(-1)) {
-        case "d":
-          poly = dual(poly);
-          break;
-        case "k":
-          poly = kisN(poly, n);
-          break;
-        case "a":
-          poly = ambo(poly);
-          break;
-        case "g":
-          poly = gyro(poly);
-          break;
-        case "p":
-          poly = propellor(poly);
-          break;
-        case "r":
-          poly = reflect(poly);
-          break;
-        case "K":
-          poly.xyz = canonicalXYZ(poly, n === 0 ? 1 : n);
-          break;
-        case "C":
-          poly.xyz = canonicalize(poly, n === 0 ? 1 : n);
-          break;
-        case "A":
-          poly.xyz = adjustXYZ(poly, n === 0 ? 1 : n);
-          break;
-        case "n":
-          poly = insetN(poly, n);
-          break;
-        case "x":
-          poly = extrudeN(poly, n);
-          break;
-        case "l":
-          poly = stellaN(poly, n);
-          break;
-        case "z":
-          poly = triangulate(poly, false);
-      }
-      ops = ops.slice(0, -1);
-    }
-    poly.xyz = recenter(poly.xyz, poly.getEdges());
-    poly.xyz = rescale(poly.xyz);
-    poly = paintPolyhedron(poly);
     return poly;
   };
 
@@ -1809,13 +1876,13 @@
       $("#spec").val(specs);
     }
     globPolys = _.map(specs, function(x) {
-      return generatePoly(x);
+      return newgeneratePoly(x);
     });
     drawShape();
     $("#spec").change(function(e) {
       specs = $("#spec").val().split(/\s+/g).slice(0, 2);
       globPolys = _.map(specs, function(x) {
-        return generatePoly(x);
+        return newgeneratePoly(x);
       });
       return drawShape();
     });
@@ -1830,7 +1897,6 @@
       MOUSEDOWN = true;
       LastMouseX = e.clientX - $(this).offset().left;
       LastMouseY = e.clientY - ($(this).offset().top - $(window).scrollTop());
-      console.log(LastMouseX, LastMouseY);
       tmpvec = invperspT(LastMouseX, LastMouseY, _2d_x_offset, _2d_y_offset, persp_z_max, persp_z_min, persp_ratio, perspective_scale);
       if (tmpvec[0] * tmpvec[1] * tmpvec[2] * 0 === 0) LastSphVec = tmpvec;
       return globlastRotM = clone(globRotM);
@@ -1848,7 +1914,7 @@
       e.preventDefault();
       if (MOUSEDOWN) {
         MouseX = e.clientX - $(this).offset().left;
-        MouseY = e.clientY - $(this).offset().top;
+        MouseY = e.clientY - ($(this).offset().top - $(window).scrollTop());
         SphVec = invperspT(MouseX, MouseY, _2d_x_offset, _2d_y_offset, persp_z_max, persp_z_min, persp_ratio, perspective_scale);
         if (SphVec[0] * SphVec[1] * SphVec[2] * 0 === 0 && LastSphVec[0] * LastSphVec[1] * LastSphVec[2] * 0 === 0) {
           globRotM = mm3(getVec2VecRotM(LastSphVec, SphVec), globlastRotM);

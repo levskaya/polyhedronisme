@@ -97,6 +97,7 @@ class polyflag
 # only kis n-sided faces, but n==0 means kiss all.
 #
 kisN = (poly, n)->
+  n or= 0
   console.log "Taking kis of #{if n==0 then "" else n}-sided faces of #{poly.name}..."
 
   flag = new polyflag()
@@ -305,6 +306,7 @@ dual = (poly) ->
 # insetN
 # ------------------------------------------------------------------------------------------
 insetN = (poly, n)->
+  n or= 0
   console.log "Taking inset of #{if n==0 then "" else n}-sided faces of #{poly.name}..."
 
   flag = new polyflag()
@@ -350,6 +352,7 @@ insetN = (poly, n)->
 # ExtrudeN
 # ------------------------------------------------------------------------------------------
 extrudeN = (poly, n)->
+  n or= 0
   console.log "Taking extrusion of #{if n==0 then "" else n}-sided faces of #{poly.name}..."
 
   flag = new polyflag()

@@ -15,6 +15,7 @@ appFiles  = [
   'geo_operators'  # geometrical refiners/operators
   'triangulate'    # 2d delauney triangulation routine
   'testing'        # random testing funcs
+  'parser'         # recipe parser
   'canvas_ui'      # 2d renderer and simple UI
 ]
 outFile   = 'polyhedronisme.coffee'

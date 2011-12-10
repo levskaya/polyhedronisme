@@ -29,16 +29,16 @@ vertColors = (poly) ->
   vertcolors
 
 class polyhedron
-  constructor: () ->      # constructor of initially null polyhedron
-    @face = new Array()   # array of faces.          face.length = # faces
-    @xyz  = new Array()   # array of vertex coords.  xyz.length = # of vertices
-    @name = "null polyhedron"
+  constructor: (verts,faces,name) ->      # constructor of initially null polyhedron
+    @face = faces or new Array()   # array of faces.          face.length = # faces
+    @xyz  = verts or new Array()   # array of vertex coords.  xyz.length = # of vertices
+    @name = name  or "null polyhedron"
 
   data: () ->   # informative string
     nEdges = @face.length + @xyz.length - 2 # E = V + F - 2
     "(#{@face.length} faces, #{nEdges} edges, #{@xyz.length} vertices)"
 
-  getEdges: () ->
+  getEdges: ->
     finalset={}
     uniqedges=[]
     alledges = _.map(@face, faceToEdges)
@@ -286,12 +286,12 @@ prism = (n) ->
   for i in [0..n-1] # vertex #'s n...2n-1 around other
     poly.xyz.push [-cos(i*theta), -sin(i*theta), h]
 
-  poly.face.push [n-1..0] #top
+  poly.face.push [n-1..0]   #top
   poly.face.push [n..2*n-1] #bottom
   for i in [0..n-1] #n square sides
     poly.face.push [i, (i+1)%n, (i+1)%n+n, i+n]
 
-  poly.xyz = adjustXYZ(poly,1)
+  poly = adjustXYZ(poly,1)
   poly
 
 antiprism = (n) ->
@@ -310,13 +310,13 @@ antiprism = (n) ->
   for i in [0..n-1] # vertex #'s n...2n-1 around other
     poly.xyz.push [r * cos((i+0.5)*theta), r * sin((i+0.5)*theta), -h]
 
-  poly.face.push [n-1..0]  #top
+  poly.face.push [n-1..0]   #top
   poly.face.push [n..2*n-1] #bottom
   for i in [0..n-1] #2n triangular sides
     poly.face.push [i, (i+1)%n, i+n]
     poly.face.push [i, i+n, ((n+i-1)%n+n)]
 
-  poly.xyz = adjustXYZ(poly,1)
+  poly = adjustXYZ(poly,1)
   poly
 
 pyramid = (n) ->
@@ -333,6 +333,6 @@ pyramid = (n) ->
   for i in [0..n-1] # n triangular sides
     poly.face.push [i, (i+1)%n, n]
 
-  poly.xyz = canonicalXYZ(poly,3)
+  poly = canonicalXYZ(poly,3)
   poly
 

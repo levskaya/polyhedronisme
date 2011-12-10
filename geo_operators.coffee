@@ -71,6 +71,7 @@ planarize = (xyzs, faces) ->
 
 # combines above three constraint adjustments in iterative cycle
 canonicalize = (poly, Niter) ->
+  Niter or= 1
   console.log "Canonicalizing #{poly.name}..."
   faces = poly.face
   edges = poly.getEdges()
@@ -89,8 +90,10 @@ canonicalize = (poly, Niter) ->
   # more experience will tell what to do
   #newVs = rescale(newVs)
   console.log "[canonicalization done, last |deltaV|="+maxChange+"]"
-  newVs
-
+  #newVs
+  newpoly=new polyhedron(newVs, poly.face, poly.name)
+  console.log "canonicalize" , newpoly
+  newpoly
 
 # Hacky Canonicalization Algorithm
 # --------------------------------------------------------------------
@@ -127,6 +130,7 @@ reciprocalN = (poly) ->
   ans
 
 canonicalXYZ = (poly, nIterations) ->
+  nIterations or= 1
   dpoly = dual(poly)
   console.log "Pseudo-canonicalizing #{poly.name}..."
 
@@ -135,10 +139,12 @@ canonicalXYZ = (poly, nIterations) ->
     dpoly.xyz = reciprocalN(poly)
     poly.xyz  = reciprocalN(dpoly)
 
-  poly.xyz
+  new polyhedron(poly.xyz, poly.face, poly.name)
+
 
 # quick planarization
 adjustXYZ = (poly, nIterations) ->
+  nIterations or= 1
   dpoly = dual(poly) # v's of dual are in order of arg's f's
   console.log "Planarizing #{poly.name}..."
 
@@ -147,6 +153,6 @@ adjustXYZ = (poly, nIterations) ->
     dpoly.xyz = reciprocalC(poly)
     poly.xyz  = reciprocalC(dpoly)
 
-  poly.xyz
+  new polyhedron(poly.xyz, poly.face, poly.name)
 
 

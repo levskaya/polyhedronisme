@@ -271,7 +271,7 @@ $( -> #wait for page to load
     $("#spec").val(specs)
 
   # construct the polyhedra from spec
-  globPolys = _.map(specs, (x)->generatePoly(x))
+  globPolys = _.map(specs, (x)->newgeneratePoly(x))
 
   # draw it
   drawShape()
@@ -283,7 +283,7 @@ $( -> #wait for page to load
   # when spec changes in input, parse and draw new polyhedra
   $("#spec").change((e) ->
     specs = $("#spec").val().split(/\s+/g)[0..1] #only allow one recipe for now
-    globPolys = _.map(specs, (x)->generatePoly(x) )
+    globPolys = _.map(specs, (x)->newgeneratePoly(x) )
     #animateShape()
     #window.location.replace("?recipe="+specs[0])
     drawShape()
