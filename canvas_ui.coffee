@@ -303,13 +303,13 @@ $( -> #wait for page to load
     #this works, but is janky
     #window.location = canvas.toDataURL("image/png")
     spec = $("#spec").val().split(/\s+/g)[0]
-    filename = "polyhedronisme-"+spec+".png"
+    filename = "polyhedronisme-"+spec.replace(/\([^\)]+\)/g, "")+".png"
     canvas.toBlob( (blob)->saveAs(blob, filename) )
   )
   $("#objsavebutton").click((e)->
     objtxt = globPolys[0].toOBJ()
     spec = $("#spec").val().split(/\s+/g)[0]
-    filename = "polyhedronisme-"+spec+".obj"
+    filename = "polyhedronisme-"+spec.replace(/\([^\)]+\)/g, "")+".obj"
     saveText(objtxt,filename)
   )
   $("#x3dsavebutton").click((e)->
@@ -317,7 +317,7 @@ $( -> #wait for page to load
     x3dtxt = triangulated.toVRML()
     spec = $("#spec").val().split(/\s+/g)[0]
     #filename = "polyhedronisme-"+spec+".x3d"
-    filename = "polyhedronisme-"+spec+".wrl"
+    filename = "polyhedronisme-"+spec.replace(/\([^\)]+\)/g, "")+".wrl"
     saveText(x3dtxt,filename)
   )
 

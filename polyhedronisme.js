@@ -1862,7 +1862,7 @@
       var canvas, filename, spec;
       canvas = $("#poly")[0];
       spec = $("#spec").val().split(/\s+/g)[0];
-      filename = "polyhedronisme-" + spec + ".png";
+      filename = "polyhedronisme-" + spec.replace(/\([^\)]+\)/g, "") + ".png";
       return canvas.toBlob(function(blob) {
         return saveAs(blob, filename);
       });
@@ -1871,7 +1871,7 @@
       var filename, objtxt, spec;
       objtxt = globPolys[0].toOBJ();
       spec = $("#spec").val().split(/\s+/g)[0];
-      filename = "polyhedronisme-" + spec + ".obj";
+      filename = "polyhedronisme-" + spec.replace(/\([^\)]+\)/g, "") + ".obj";
       return saveText(objtxt, filename);
     });
     return $("#x3dsavebutton").click(function(e) {
@@ -1879,7 +1879,7 @@
       triangulated = triangulate(globPolys[0], true);
       x3dtxt = triangulated.toVRML();
       spec = $("#spec").val().split(/\s+/g)[0];
-      filename = "polyhedronisme-" + spec + ".wrl";
+      filename = "polyhedronisme-" + spec.replace(/\([^\)]+\)/g, "") + ".wrl";
       return saveText(x3dtxt, filename);
     });
   });
