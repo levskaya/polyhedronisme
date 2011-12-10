@@ -32,7 +32,7 @@ vertColors = (poly) ->
 #===================================================================================================
 
 #def_palette  = ["#ff3333","#33ff33","#3333ff","#ffff33","#ff33ff","#33ffff","#dddddd","#555555","#dd0000","#00dd00","#0000dd"]
-rwb_palette  = ["#ff7777","#dddddd","#889999","fff0e5","#aa3333","#ff0000","#ffffff","#aaaaaa"]
+rwb_palette  = ["#ff7777","#dddddd","#889999","#fff0e5","#aa3333","#ff0000","#ffffff","#aaaaaa"]
 #rwbg_palette = ["#ff8888","#ffeeee","#88ff88","#dd7777","#ff2222","#22ff22","#ee4422","#aaaaaa"]
 
 # converts #xxxxxx / #xxx format into list of [r,g,b] floats
