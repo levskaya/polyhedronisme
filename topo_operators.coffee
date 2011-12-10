@@ -96,8 +96,9 @@ class polyflag
 # same base vertices.
 # only kis n-sided faces, but n==0 means kiss all.
 #
-kisN = (poly, n)->
+kisN = (poly, n, apexdist)->
   n or= 0
+  apexdist or= 0.1
   console.log "Taking kis of #{if n==0 then "" else n}-sided faces of #{poly.name}..."
 
   flag = new polyflag()
@@ -116,7 +117,7 @@ kisN = (poly, n)->
         foundAny = true
         apex = "apex#{i}"
         fname = "#{i}#{v1}"
-        flag.newV apex, add(centers[i],mult(0.2,normals[i])) # new vertices in centers of n-sided face
+        flag.newV apex, add(centers[i],mult(apexdist,normals[i])) # new vertices in centers of n-sided face
         flag.newFlag fname,   v1,   v2 # the old edge of original face
         flag.newFlag fname,   v2, apex # up to apex of pyramid
         flag.newFlag fname, apex,   v1 # and back down again
@@ -305,8 +306,11 @@ dual = (poly) ->
 
 # insetN
 # ------------------------------------------------------------------------------------------
-insetN = (poly, n)->
+insetN = (poly, n, inset_dist, popout_dist)->
   n or= 0
+  inset_dist  or= 0.5
+  popout_dist or= -0.2
+
   console.log "Taking inset of #{if n==0 then "" else n}-sided faces of #{poly.name}..."
 
   flag = new polyflag()
@@ -319,7 +323,7 @@ insetN = (poly, n)->
   for f,i in poly.face #new inset vertex for every vert in face
     if f.length is n or n is 0
       for v in f
-        flag.newV "f"+i+"v"+v, add(midpoint(poly.xyz[v],centers[i]),mult(-0.2,normals[i]))
+        flag.newV "f"+i+"v"+v, add(tween(poly.xyz[v],centers[i],inset_dist),mult(popout_dist,normals[i]))
 
   foundAny = false                 # alert if don't find any
   for f,i in poly.face
@@ -391,7 +395,7 @@ extrudeN = (poly, n)->
 
   newpoly = flag.topoly()
   newpoly.name = "x" + (if n is 0 then "" else n) + poly.name
-  console.log newpoly
+  #console.log newpoly
   #newpoly.xyz = adjustXYZ(newpoly, 3)
   #newpoly.xyz = canonicalXYZ(newpoly, 3)  # this tends to make results look like shit
   newpoly

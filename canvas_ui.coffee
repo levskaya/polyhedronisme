@@ -94,7 +94,7 @@ paintPolyhedron = (poly) ->
       clr = palette f.length-3
 
     poly.face_colors.push clr
-
+  console.log _.toArray(colormemory).length+" face classes"
   poly
 
 

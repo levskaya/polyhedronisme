@@ -9,6 +9,8 @@
 # Parser Routines
 #===================================================================================================
 
+# fairly straightforward Parser Expression Grammar spec for simple
+# operator-chain-on-base-polyhedra recipes
 PEG_parser_spec = '''
 /* series of opspecs */
 start  = opspec+
@@ -35,8 +37,8 @@ opargs = "("
 opcode = op:[a-zA-Z] {return op;}
 
 /* standard numerical types */
-int   = digits:[0-9]+   { return parseInt(digits.join(""), 10);  }
-float = digits:[0-9.]+  { return parseFloat(digits.join(""), 10); }
+int   = digits:[0-9-]+   { return parseInt(digits.join(""), 10);  }
+float = digits:[0-9.-]+  { return parseFloat(digits.join(""), 10); }
 '''
 op_parser = PEG.buildParser PEG_parser_spec
 
@@ -70,6 +72,7 @@ opmap = {
   "A": adjustXYZ
   }
 
+#list of basic equivalences, easier to replace before parsing
 specreplacements = [
   [/e/g, "aa"],   # e --> aa   (abbr. for explode)
   [/b/g, "ta"],   # b --> ta   (abbr. for bevel)
@@ -105,15 +108,15 @@ newgeneratePoly = (notation) ->
   baseargs = op["args"]
   poly     = dispatch basefunc, baseargs
 
-  console.log "base", poly
+  #console.log "base", poly
 
   for op in oplist
     opfunc = opmap[op["op"]]
     opargs = [poly].concat(op["args"])
-    console.log opargs
+    #console.log opargs
     poly   = dispatch opfunc, opargs
 
-  console.log "final", poly
+  #console.log "final", poly
 
   # Recenter polyhedra at origin (rarely needed)
   poly.xyz = recenter(poly.xyz, poly.getEdges())
