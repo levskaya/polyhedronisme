@@ -278,7 +278,7 @@ drawpoly = (poly,tvec) ->
   # z sort faces
   sortfaces(poly)
 
-  for [fno,face] in enumerate(poly.face)
+  for face,fno in poly.face
     ctx.beginPath()
     # move to first vertex of face
     v0 = face[face.length-1]
@@ -315,7 +315,7 @@ drawpoly = (poly,tvec) ->
       ctx.strokeStyle = "rgba(0,0,0, .8)"
       ctx.stroke()
 
-  #for [fno,face] in enumerate(poly.face)
+  #for face,fno in poly.face
   #  ctx.textAlign = "center"
   #  ctx.fillStyle = "rgba(0,0,0,1)"
   #  [x,y] = perspT(add(tvec, centers[fno]),persp_z_max,persp_z_min,persp_ratio,perspective_scale)
@@ -329,7 +329,7 @@ drawpoly = (poly,tvec) ->
 # -----------------------------------------------------------------------------------
 drawShape = ->
   clear()
-  for [i,p] in enumerate(globPolys)
+  for p,i in globPolys
     drawpoly(p,[0+3*i,0,3])
 
 
@@ -338,7 +338,7 @@ drawShape = ->
 animateShape = ->
   clear()
   globtheta=(2*Math.PI)/180.0*globtime.getSeconds()*0.1
-  for [i,p] in enumerate(globPolys)
+  for p,i in globPolys
     drawpoly(p,[0+3*i,0,3])
   setTimeout(animateShape, 100)
 

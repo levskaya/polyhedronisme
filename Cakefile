@@ -13,12 +13,12 @@ appFiles  = [
   'polyhedron'     # core mesh functions
   'topo_operators' # flagset->polyhedron constructor and topological operators
   'geo_operators'  # geometrical refiners/operators
-  'triangulate'       # 2d delauney triangulation routine
+  'triangulate'    # 2d delauney triangulation routine
   'testing'        # random testing funcs
   'canvas_ui'      # 2d renderer and simple UI
 ]
-outFile = 'polyhedronisme.coffee'
-jsFile = 'polyhedronisme.js'
+outFile   = 'polyhedronisme.coffee'
+jsFile    = 'polyhedronisme.js'
 jsMinFile = 'polyhedronisme.min.js'
 
 task 'build', 'Build single application file from source files', ->

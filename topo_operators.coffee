@@ -100,14 +100,14 @@ kisN = (poly, n)->
   console.log "Taking kis of #{if n==0 then "" else n}-sided faces of #{poly.name}..."
 
   flag = new polyflag()
-  for [i,p] in enumerate(poly.xyz)
+  for p,i in poly.xyz
     # each old vertex is a new vertex
     flag.newV "v#{i}", p
 
   normals = poly.normals()
   centers = poly.centers()
   foundAny = false                 # alert if don't find any
-  for [i,f] in enumerate(poly.face)
+  for f,i in poly.face
     v1 = "v"+f[f.length-1]
     for v in f
       v2 = "v"+v
@@ -147,7 +147,7 @@ ambo = (poly)->
 
   flag = new polyflag()
 
-  for [i,f] in enumerate(poly.face)
+  for f,i in poly.face
     [v1, v2] = f[-2..-1]
     for v3 in f
       if v1 < v2 # vertices are the midpoints of all edges of original poly
@@ -177,16 +177,16 @@ gyro = (poly)->
 
   flag = new polyflag()
 
-  for [i,v] in enumerate(poly.xyz)
+  for v,i in poly.xyz
     flag.newV "v"+i, unit(v)  # each old vertex is a new vertex
 
   centers = poly.centers() # new vertices in center of each face
-  for [i,f] in enumerate(poly.face)
+  for f,i in poly.face
     flag.newV "center"+i, unit(centers[i])
 
-  for [i,f] in enumerate(poly.face)
+  for f,i in poly.face
     [v1, v2] = f[-2..-1]
-    for [j,v] in enumerate(f)
+    for v,j in f
       v3 = v
       flag.newV(v1+"~"+v2, oneThird(poly.xyz[v1],poly.xyz[v2]))  # new v in face
       fname = i+"f"+v1
@@ -214,10 +214,10 @@ propellor = (poly) ->
 
   flag = new polyflag()
 
-  for [i,v] in enumerate(poly.xyz)
+  for v,i in poly.xyz
     flag.newV("v"+i, unit(v))  # each old vertex is a new vertex
 
-  for [i,f] in enumerate(poly.face)
+  for f,i in poly.face
     [v1, v2] = f[-2..-1]
     for v in f
       v3 = "#{v}"
@@ -268,7 +268,7 @@ dual = (poly) ->
   for i in [0..poly.xyz.length-1]
     face[i] = {} # create empty associative table
 
-  for [i,f] in enumerate(poly.face)
+  for f,i in poly.face
     v1 = f[f.length-1] #previous vertex
     for v2 in f
       # THIS ASSUMES that no 2 faces that share an edge share it in the same orientation!
@@ -280,7 +280,7 @@ dual = (poly) ->
   for i in [0..poly.face.length-1]
     flag.newV("#{i}",centers[i])
 
-  for [i,f] in enumerate(poly.face)
+  for f,i in poly.face
     v1 = f[f.length-1] #previous vertex
     for v2 in f
       flag.newFlag(v1, face[v2]["v#{v1}"], "#{i}")
@@ -308,19 +308,19 @@ insetN = (poly, n)->
   console.log "Taking inset of #{if n==0 then "" else n}-sided faces of #{poly.name}..."
 
   flag = new polyflag()
-  for [i,p] in enumerate(poly.xyz)
+  for p,i in poly.xyz
     # each old vertex is a new vertex
     flag.newV "v#{i}", p
 
   normals = poly.normals()
   centers = poly.centers()
-  for [i,f] in enumerate(poly.face) #new inset vertex for every vert in face
+  for f,i in poly.face #new inset vertex for every vert in face
     if f.length is n or n is 0
       for v in f
         flag.newV "f"+i+"v"+v, add(midpoint(poly.xyz[v],centers[i]),mult(-0.2,normals[i]))
 
   foundAny = false                 # alert if don't find any
-  for [i,f] in enumerate(poly.face)
+  for f,i in poly.face
     v1 = "v"+f[f.length-1]
     for v in f
       v2 = "v"+v
@@ -353,20 +353,20 @@ extrudeN = (poly, n)->
   console.log "Taking extrusion of #{if n==0 then "" else n}-sided faces of #{poly.name}..."
 
   flag = new polyflag()
-  for [i,p] in enumerate(poly.xyz)
+  for p,i in poly.xyz
     # each old vertex is a new vertex
     flag.newV "v#{i}", p
 
   normals = poly.normals()
   centers = poly.centers()
-  for [i,f] in enumerate(poly.face) #new inset vertex for every vert in face
+  for f,i in poly.face #new inset vertex for every vert in face
     if f.length is n or n is 0
       for v in f
         #flag.newV "f"+i+"v"+v, add(midpoint(poly.xyz[v],centers[i]),mult(-0.2,normals[i]))
         flag.newV "f"+i+"v"+v, add(poly.xyz[v], mult(0.3,normals[i]))
 
   foundAny = false                 # alert if don't find any
-  for [i,f] in enumerate(poly.face)
+  for f,i in poly.face
     v1 = "v"+f[f.length-1]
     for v in f
       v2 = "v"+v
@@ -402,11 +402,11 @@ stellaN = (poly)->
   centers = poly.centers()  # calculate face centers
 
   flag = new polyflag()
-  for [i,p] in enumerate(poly.xyz)
+  for p,i in poly.xyz
     flag.newV "v#{i}", p      # each old vertex is a new vertex
 
   # iterate over triplets of faces v1,v2,v3
-  for [i,f] in enumerate(poly.face)
+  for f,i in poly.face
     v1 = "v"+f[f.length-2]
     v2 = "v"+f[f.length-1]
     vert1 = poly.xyz[f[f.length-2]]

@@ -23,7 +23,7 @@ faceToEdges = (face) ->
 
 vertColors = (poly) ->
   vertcolors=[]
-  for [i,f] in enumerate(poly.face)
+  for f,i in poly.face
     for v in f
       vertcolors[v] = poly.face_colors[i]
   vertcolors
@@ -89,7 +89,7 @@ class polyhedron
       objstr += "vn #{norm[0]} #{norm[1]} #{norm[2]}\n"
 
     objstr += "#face defs \n"
-    for [i,f] in enumerate(@face)
+    for f,i in @face
       objstr += "f "
       for v in f
         objstr += "#{v+1}//#{i+1} "

@@ -171,12 +171,12 @@ triangulate = (poly, colors)->
   newpoly.xyz = clone poly.xyz
   newpoly.face_colors = [ ]
   # iterate over triplets of faces v1,v2,v3
-  for [i,f] in enumerate(poly.face)
+  for f,i in poly.face
     if f.length > 3
       TwoDface = project2dface(poly.xyz[v] for v in f)
       diags = getDiagonals(TwoDface)
       tris  = diagsToTris(f,diags)
-      for [j,tri] in enumerate(tris)
+      for tri,j in tris
         newpoly.face.push [ f[tri[0]], f[tri[1]], f[tri[2]] ]
         if colors then newpoly.face_colors.push poly.face_colors[i]
     else
