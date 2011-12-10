@@ -393,8 +393,8 @@ $( -> #wait for page to load
     e.preventDefault()
     MOUSEDOWN=true
     LastMouseX=e.clientX-$(this).offset().left #relative mouse coords
-    LastMouseY=e.clientY-$(this).offset().top
-
+    LastMouseY=e.clientY-($(this).offset().top-$(window).scrollTop())
+    console.log LastMouseX, LastMouseY
     #calculate inverse projection of point to sphere
     tmpvec=invperspT(LastMouseX,LastMouseY,_2d_x_offset,_2d_y_offset,persp_z_max,persp_z_min,persp_ratio,perspective_scale)
     if tmpvec[0]*tmpvec[1]*tmpvec[2]*0 is 0  #quick NaN check
@@ -414,7 +414,7 @@ $( -> #wait for page to load
     e.preventDefault()
     if MOUSEDOWN
       MouseX=e.clientX-$(this).offset().left
-      MouseY=e.clientY-$(this).offset().top
+      MouseY=e.clientY-($(this).offset().top-$(window).scrollTop())
       SphVec=invperspT(MouseX,MouseY,_2d_x_offset,_2d_y_offset,persp_z_max,persp_z_min,persp_ratio,perspective_scale)
 
       # quick NaN check

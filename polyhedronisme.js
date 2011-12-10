@@ -1829,7 +1829,8 @@
       e.preventDefault();
       MOUSEDOWN = true;
       LastMouseX = e.clientX - $(this).offset().left;
-      LastMouseY = e.clientY - $(this).offset().top;
+      LastMouseY = e.clientY - ($(this).offset().top - $(window).scrollTop());
+      console.log(LastMouseX, LastMouseY);
       tmpvec = invperspT(LastMouseX, LastMouseY, _2d_x_offset, _2d_y_offset, persp_z_max, persp_z_min, persp_ratio, perspective_scale);
       if (tmpvec[0] * tmpvec[1] * tmpvec[2] * 0 === 0) LastSphVec = tmpvec;
       return globlastRotM = clone(globRotM);
