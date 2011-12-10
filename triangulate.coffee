@@ -169,7 +169,7 @@ triangulate = (poly, colors)->
 
   newpoly = new polyhedron()
   newpoly.xyz = clone poly.xyz
-  newpoly.face_colors = [ ]
+  newpoly.face_class = [ ]
   # iterate over triplets of faces v1,v2,v3
   for f,i in poly.face
     if f.length > 3
@@ -178,9 +178,9 @@ triangulate = (poly, colors)->
       tris  = diagsToTris(f,diags)
       for tri,j in tris
         newpoly.face.push [ f[tri[0]], f[tri[1]], f[tri[2]] ]
-        if colors then newpoly.face_colors.push poly.face_colors[i]
+        if colors then newpoly.face_class.push poly.face_class[i]
     else
       newpoly.face.push [ f[0], f[1], f[2] ]
-      if colors then newpoly.face_colors.push poly.face_colors[i]
+      if colors then newpoly.face_class.push poly.face_class[i]
   newpoly.name = poly.name # don't change the name for export
   newpoly

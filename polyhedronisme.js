@@ -1469,7 +1469,7 @@
     console.log("Triangulating faces of " + poly.name + "...");
     newpoly = new polyhedron();
     newpoly.xyz = clone(poly.xyz);
-    newpoly.face_colors = [];
+    newpoly.face_class = [];
     _ref = poly.face;
     for (i = 0, _len = _ref.length; i < _len; i++) {
       f = _ref[i];
@@ -1488,11 +1488,11 @@
         for (j = 0, _len2 = tris.length; j < _len2; j++) {
           tri = tris[j];
           newpoly.face.push([f[tri[0]], f[tri[1]], f[tri[2]]]);
-          if (colors) newpoly.face_colors.push(poly.face_colors[i]);
+          if (colors) newpoly.face_class.push(poly.face_class[i]);
         }
       } else {
         newpoly.face.push([f[0], f[1], f[2]]);
-        if (colors) newpoly.face_colors.push(poly.face_colors[i]);
+        if (colors) newpoly.face_class.push(poly.face_class[i]);
       }
     }
     newpoly.name = poly.name;

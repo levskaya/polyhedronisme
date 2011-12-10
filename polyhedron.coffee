@@ -261,7 +261,7 @@ class polyhedron
                         [
                    '''
     # per-face Color
-    for cl in @face_class#vertColors(this)
+    for cl in @face_class
       clr=palette cl
       x3dstr+="#{clr[0]} #{clr[1]} #{clr[2]} ,"
     x3dstr=x3dstr[0..-2]
