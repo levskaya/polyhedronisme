@@ -25,8 +25,90 @@ vertColors = (poly) ->
   vertcolors=[]
   for f,i in poly.face
     for v in f
-      vertcolors[v] = poly.face_colors[i]
+      vertcolors[v] = poly.face_class[i]
   vertcolors
+
+# Polyhedra Coloring Functions
+#===================================================================================================
+
+#def_palette  = ["#ff3333","#33ff33","#3333ff","#ffff33","#ff33ff","#33ffff","#dddddd","#555555","#dd0000","#00dd00","#0000dd"]
+rwb_palette  = ["#ff7777","#dddddd","#889999","fff0e5","#aa3333","#ff0000","#ffffff","#aaaaaa"]
+#rwbg_palette = ["#ff8888","#ffeeee","#88ff88","#dd7777","#ff2222","#22ff22","#ee4422","#aaaaaa"]
+
+# converts #xxxxxx / #xxx format into list of [r,g,b] floats
+hextofloats = (hexstr)->
+  if hexstr[0] is "#"
+    hexstr = hexstr[1..]
+  if hexstr.length is 3
+    rgb = hexstr.split('').map(       (c)->parseInt(c+c, 16)/255 )
+  else
+    rgb = hexstr.match(/.{2}/g).map(  (c)->parseInt(c, 16)/255 )
+  rgb
+
+PALETTE = rwb_palette #GLOBAL
+palette = (n) ->
+  if n < PALETTE.length
+    hextofloats(PALETTE[n])
+  else
+    hextofloats(PALETTE[PALETTE.length-1])
+
+paintPolyhedron = (poly) ->
+  # Color the faces of the polyhedra for display
+  poly.face_class = []
+  colormemory={}
+
+  #memoized color assignment to faces of similar areas
+  colorassign = (ar, colormemory) ->
+    hash = round(100*ar)
+    if hash of colormemory
+      return colormemory[hash]
+    else
+      fclr = _.toArray(colormemory).length #palette _.toArray(colormemory).length
+      colormemory[hash] = fclr
+      return fclr
+
+  for f in poly.face
+    if COLOR_METHOD is "area"
+      # color by face area (quick proxy for different kinds of faces) convexarea
+      face_verts = (poly.xyz[v] for v in f)
+      clr = colorassign(convexarea(face_verts), colormemory)
+    else
+      # color by face-sidedness
+      clr = f.length-3
+
+    poly.face_class.push clr
+  console.log _.toArray(colormemory).length+" face classes"
+  poly
+
+# z sorts faces of poly
+# -------------------------------------------------------------------------
+sortfaces = (poly) ->
+  #smallestZ = (x) -> _.sortBy(x,(a,b)->a[2]-b[2])[0]
+  #closests = (smallestZ(poly.xyz[v] for v in f) for f in poly.face)
+  centroids  = poly.centers()
+  normals    = poly.normals()
+  ray_origin = [0,0, (persp_z_max * persp_ratio - persp_z_min)/(1-persp_ratio)]
+  #console.log ray_origin
+
+  # sort by binary-space partition: are you on same side as view-origin or not?
+  # !!! there is something wrong with this. even triangulated surfaces have artifacts.
+  planesort = (a,b)->
+    #console.log dot(sub(ray_origin,a[0]),a[1]), dot(sub(b[0],a[0]),a[1])
+    -dot(sub(ray_origin,a[0]),a[1])*dot(sub(b[0],a[0]),a[1])
+
+  # sort by centroid z-depth: not correct but more stable heuristic w. weird non-planar "polygons"
+  zcentroidsort = (a,b)->
+    a[0][2]-b[0][2]
+
+  zsortIndex = _.zip(centroids, normals, [0..poly.face.length-1])
+    #.sort(planesort)
+    .sort(zcentroidsort)
+    .map((x)->x[2])
+
+  # sort all face-associated properties
+  poly.face = (poly.face[idx] for idx in zsortIndex)
+  poly.face_class = (poly.face_class[idx] for idx in zsortIndex)
+
 
 class polyhedron
   constructor: (verts,faces,name) ->      # constructor of initially null polyhedron
@@ -121,7 +203,8 @@ class polyhedron
 
     # per-face Color
     x3dstr+='<Color color="'
-    for clr in vertColors(this)#@face_colors
+    for cl in vertColors(this)#@face_class
+      clr=palette cl
       x3dstr+="#{clr[0]} #{clr[1]} #{clr[2]} "
     x3dstr+='"/>'
 
@@ -178,7 +261,8 @@ class polyhedron
                         [
                    '''
     # per-face Color
-    for clr in @face_colors#vertColors(this)
+    for cl in @face_class#vertColors(this)
+      clr=palette cl
       x3dstr+="#{clr[0]} #{clr[1]} #{clr[2]} ,"
     x3dstr=x3dstr[0..-2]
     x3dstr+='''

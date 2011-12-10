@@ -1,5 +1,5 @@
 (function() {
-  var BG_CLEAR, BG_COLOR, CANVAS_HEIGHT, CANVAS_WIDTH, COLOR_METHOD, DEFAULT_RECIPES, LastMouseX, LastMouseY, LastSphVec, MOUSEDOWN, PALETTE, PEG_parser_spec, PI, PaintMode, abs, acos, add, adjustXYZ, ambo, animateShape, antiprism, asin, atan, basemap, calcCentroid, canonicalXYZ, canonicalize, clear, clone, colorassign, convexarea, copyVecArray, cos, cross, ctx, ctx_linewidth, cube, def_palette, diagsToTris, dispatch, dodecahedron, dot, drawShape, drawpoly, dual, edgeDist, extrudeN, eye3, faceToEdges, floor, getDiagonals, getOps, getVec2VecRotM, globPolys, globRotM, globlastRotM, globtime, gyro, hextofloats, icosahedron, init, insetN, intersect, invperspT, kisN, mag, mag2, midpoint, mm3, mult, mv3, newgeneratePoly, normal, octahedron, oneThird, op_parser, opmap, orthogonal, paintPolyhedron, palette, parseurl, perspT, persp_ratio, persp_z_max, persp_z_min, perspective_scale, planarize, polyflag, polyhedron, pow, prism, project2dface, propellor, pyramid, random, randomchoice, recenter, reciprocal, reciprocalC, reciprocalN, reflect, rescale, rotm, round, rwb_palette, rwbg_palette, saveText, sin, sortfaces, specreplacements, sqrt, stellaN, sub, tan, tangentPoint, tangentify, testrig, tetrahedron, topolog, triEq, triangulate, tween, unit, vec_rotm, vertColors, _2d_x_offset, _2d_y_offset, _mult;
+  var BG_CLEAR, BG_COLOR, CANVAS_HEIGHT, CANVAS_WIDTH, COLOR_METHOD, DEFAULT_RECIPES, LastMouseX, LastMouseY, LastSphVec, MOUSEDOWN, PALETTE, PEG_parser_spec, PI, PaintMode, abs, acos, add, adjustXYZ, ambo, animateShape, antiprism, asin, atan, basemap, calcCentroid, canonicalXYZ, canonicalize, clear, clone, convexarea, copyVecArray, cos, cross, ctx, ctx_linewidth, cube, def_palette, diagsToTris, dispatch, dodecahedron, dot, drawShape, drawpoly, dual, edgeDist, extrudeN, eye3, faceToEdges, floor, getDiagonals, getOps, getVec2VecRotM, globPolys, globRotM, globlastRotM, globtime, gyro, hextofloats, icosahedron, init, insetN, intersect, invperspT, kisN, mag, mag2, midpoint, mm3, mult, mv3, newgeneratePoly, normal, octahedron, oneThird, op_parser, opmap, orthogonal, paintPolyhedron, palette, parseurl, perspT, persp_ratio, persp_z_max, persp_z_min, perspective_scale, planarize, polyflag, polyhedron, pow, prism, project2dface, propellor, pyramid, random, randomchoice, recenter, reciprocal, reciprocalC, reciprocalN, reflect, rescale, rotm, round, rwb_palette, rwbg_palette, saveText, sin, sortfaces, specreplacements, sqrt, stellaN, sub, tan, tangentPoint, tangentify, testrig, tetrahedron, topolog, triEq, triangulate, tween, unit, vec_rotm, vertColors, _2d_x_offset, _2d_y_offset, _mult;
 
   random = Math.random;
 
@@ -285,10 +285,117 @@
       f = _ref[i];
       for (_i = 0, _len2 = f.length; _i < _len2; _i++) {
         v = f[_i];
-        vertcolors[v] = poly.face_colors[i];
+        vertcolors[v] = poly.face_class[i];
       }
     }
     return vertcolors;
+  };
+
+  def_palette = ["#ff3333", "#33ff33", "#3333ff", "#ffff33", "#ff33ff", "#33ffff", "#dddddd", "#555555", "#dd0000", "#00dd00", "#0000dd"];
+
+  rwb_palette = ["#ff7777", "#dddddd", "#889999", "fff0e5", "#aa3333", "#ff0000", "#ffffff", "#aaaaaa"];
+
+  rwbg_palette = ["#ff8888", "#ffeeee", "#88ff88", "#dd7777", "#ff2222", "#22ff22", "#ee4422", "#aaaaaa"];
+
+  hextofloats = function(hexstr) {
+    var rgb;
+    if (hexstr[0] === "#") hexstr = hexstr.slice(1);
+    if (hexstr.length === 3) {
+      rgb = hexstr.split('').map(function(c) {
+        return parseInt(c + c, 16) / 255;
+      });
+    } else {
+      rgb = hexstr.match(/.{2}/g).map(function(c) {
+        return parseInt(c, 16) / 255;
+      });
+    }
+    return rgb;
+  };
+
+  PALETTE = rwb_palette;
+
+  palette = function(n) {
+    if (n < PALETTE.length) {
+      return hextofloats(PALETTE[n]);
+    } else {
+      return hextofloats(PALETTE[PALETTE.length - 1]);
+    }
+  };
+
+  paintPolyhedron = function(poly) {
+    var clr, colorassign, colormemory, f, face_verts, v, _i, _len, _ref;
+    poly.face_class = [];
+    colormemory = {};
+    colorassign = function(ar, colormemory) {
+      var fclr, hash;
+      hash = round(100 * ar);
+      if (hash in colormemory) {
+        return colormemory[hash];
+      } else {
+        fclr = _.toArray(colormemory).length;
+        colormemory[hash] = fclr;
+        return fclr;
+      }
+    };
+    _ref = poly.face;
+    for (_i = 0, _len = _ref.length; _i < _len; _i++) {
+      f = _ref[_i];
+      if (COLOR_METHOD === "area") {
+        face_verts = (function() {
+          var _j, _len2, _results;
+          _results = [];
+          for (_j = 0, _len2 = f.length; _j < _len2; _j++) {
+            v = f[_j];
+            _results.push(poly.xyz[v]);
+          }
+          return _results;
+        })();
+        clr = colorassign(convexarea(face_verts), colormemory);
+      } else {
+        clr = f.length - 3;
+      }
+      poly.face_class.push(clr);
+    }
+    console.log(_.toArray(colormemory).length + " face classes");
+    return poly;
+  };
+
+  sortfaces = function(poly) {
+    var centroids, idx, normals, planesort, ray_origin, zcentroidsort, zsortIndex, _i, _ref, _results;
+    centroids = poly.centers();
+    normals = poly.normals();
+    ray_origin = [0, 0, (persp_z_max * persp_ratio - persp_z_min) / (1 - persp_ratio)];
+    planesort = function(a, b) {
+      return -dot(sub(ray_origin, a[0]), a[1]) * dot(sub(b[0], a[0]), a[1]);
+    };
+    zcentroidsort = function(a, b) {
+      return a[0][2] - b[0][2];
+    };
+    zsortIndex = _.zip(centroids, normals, (function() {
+      _results = [];
+      for (var _i = 0, _ref = poly.face.length - 1; 0 <= _ref ? _i <= _ref : _i >= _ref; 0 <= _ref ? _i++ : _i--){ _results.push(_i); }
+      return _results;
+    }).apply(this)).sort(zcentroidsort).map(function(x) {
+      return x[2];
+    });
+    poly.face = (function() {
+      var _j, _len, _results2;
+      _results2 = [];
+      for (_j = 0, _len = zsortIndex.length; _j < _len; _j++) {
+        idx = zsortIndex[_j];
+        _results2.push(poly.face[idx]);
+      }
+      return _results2;
+    })();
+    return poly.face_class = (function() {
+      var _j, _len, _results2;
+      _results2 = [];
+      for (_j = 0, _len = zsortIndex.length; _j < _len; _j++) {
+        idx = zsortIndex[_j];
+        _results2.push(poly.face_class[idx]);
+      }
+      return _results2;
+    })();
   };
 
   polyhedron = (function() {
@@ -404,7 +511,7 @@
     };
 
     polyhedron.prototype.toX3D = function() {
-      var SCALE_FACTOR, clr, f, v, x3dstr, _i, _j, _k, _l, _len, _len2, _len3, _len4, _ref, _ref2, _ref3;
+      var SCALE_FACTOR, cl, clr, f, v, x3dstr, _i, _j, _k, _l, _len, _len2, _len3, _len4, _ref, _ref2, _ref3;
       SCALE_FACTOR = .01;
       x3dstr = '<?xml version="1.0" encoding ="UTF-8"?>\n<X3D profile="Interchange" version="3.0">\n<head>\n<component name="Rendering" level="3"/>\n<meta name="generator" content="Polyhedronisme"/>\n<meta name="version" content="0.1.0"/>\n</head>\n<Scene>\n<Shape>\n<IndexedFaceSet normalPerVertex="false" coordIndex="';
       _ref = this.face;
@@ -420,7 +527,8 @@
       x3dstr += '<Color color="';
       _ref2 = vertColors(this);
       for (_k = 0, _len3 = _ref2.length; _k < _len3; _k++) {
-        clr = _ref2[_k];
+        cl = _ref2[_k];
+        clr = palette(cl);
         x3dstr += "" + clr[0] + " " + clr[1] + " " + clr[2] + " ";
       }
       x3dstr += '"/>';
@@ -436,7 +544,7 @@
     };
 
     polyhedron.prototype.toVRML = function() {
-      var SCALE_FACTOR, clr, f, v, x3dstr, _i, _j, _k, _l, _len, _len2, _len3, _len4, _ref, _ref2, _ref3;
+      var SCALE_FACTOR, cl, clr, f, v, x3dstr, _i, _j, _k, _l, _len, _len2, _len3, _len4, _ref, _ref2, _ref3;
       SCALE_FACTOR = .01;
       x3dstr = '#VRML V2.0 utf8\n#Generated by Polyhedronisme\nNavigationInfo {\n	type [ "EXAMINE", "ANY" ]\n}\nTransform {\n  scale 1 1 1\n  translation 0 0 0\n  children\n  [\n    Shape\n    {\n      geometry IndexedFaceSet\n      {\n        creaseAngle .5\n        solid FALSE\n        coord Coordinate\n        {\n          point\n          [';
       _ref = this.xyz;
@@ -446,9 +554,10 @@
       }
       x3dstr = x3dstr.slice(0, -1);
       x3dstr += '    ]\n}\ncolor Color\n{\n  color\n  [';
-      _ref2 = this.face_colors;
+      _ref2 = this.face_class;
       for (_j = 0, _len2 = _ref2.length; _j < _len2; _j++) {
-        clr = _ref2[_j];
+        cl = _ref2[_j];
+        clr = palette(cl);
         x3dstr += "" + clr[0] + " " + clr[1] + " " + clr[2] + " ,";
       }
       x3dstr = x3dstr.slice(0, -1);
@@ -1547,76 +1656,6 @@
     return saveAs(bb.getBlob("text/plain;charset=" + document.characterSet), filename);
   };
 
-  def_palette = ["#ff3333", "#33ff33", "#3333ff", "#ffff33", "#ff33ff", "#33ffff", "#dddddd", "#555555", "#dd0000", "#00dd00", "#0000dd"];
-
-  rwb_palette = ["#ff8888", "#dddddd", "#777777", "#aa3333", "#ff0000", "#ffffff", "#aaaaaa"];
-
-  rwbg_palette = ["#ff8888", "#ffeeee", "#88ff88", "#dd7777", "#ff2222", "#22ff22", "#ee4422", "#aaaaaa"];
-
-  hextofloats = function(hexstr) {
-    var rgb;
-    if (hexstr[0] === "#") hexstr = hexstr.slice(1);
-    if (hexstr.length === 3) {
-      rgb = hexstr.split('').map(function(c) {
-        return parseInt(c + c, 16) / 255;
-      });
-    } else {
-      rgb = hexstr.match(/.{2}/g).map(function(c) {
-        return parseInt(c, 16) / 255;
-      });
-    }
-    return rgb;
-  };
-
-  PALETTE = rwb_palette;
-
-  palette = function(n) {
-    if (n < PALETTE.length) {
-      return hextofloats(PALETTE[n]);
-    } else {
-      return hextofloats(PALETTE[PALETTE.length - 1]);
-    }
-  };
-
-  colorassign = function(ar, colormemory) {
-    var fclr, hash;
-    hash = round(100 * ar);
-    if (hash in colormemory) {
-      return colormemory[hash];
-    } else {
-      fclr = palette(_.toArray(colormemory).length);
-      colormemory[hash] = fclr;
-      return fclr;
-    }
-  };
-
-  paintPolyhedron = function(poly) {
-    var clr, colormemory, f, face_verts, v, _i, _len, _ref;
-    poly.face_colors = [];
-    colormemory = {};
-    _ref = poly.face;
-    for (_i = 0, _len = _ref.length; _i < _len; _i++) {
-      f = _ref[_i];
-      if (COLOR_METHOD === "area") {
-        face_verts = (function() {
-          var _j, _len2, _results;
-          _results = [];
-          for (_j = 0, _len2 = f.length; _j < _len2; _j++) {
-            v = f[_j];
-            _results.push(poly.xyz[v]);
-          }
-          return _results;
-        })();
-        clr = colorassign(convexarea(face_verts), colormemory);
-      } else {
-        clr = palette(f.length - 3);
-      }
-      poly.face_colors.push(clr);
-    }
-    console.log(_.toArray(colormemory).length + " face classes");
-    return poly;
-  };
-
   parseurl = function() {
     var a, d, e, q, r, urlParams;
     urlParams = {};
@@ -1658,44 +1697,6 @@
     }
   };
 
-  sortfaces = function(poly) {
-    var centroids, idx, normals, planesort, ray_origin, zcentroidsort, zsortIndex, _i, _ref, _results;
-    centroids = poly.centers();
-    normals = poly.normals();
-    ray_origin = [0, 0, (persp_z_max * persp_ratio - persp_z_min) / (1 - persp_ratio)];
-    planesort = function(a, b) {
-      return -dot(sub(ray_origin, a[0]), a[1]) * dot(sub(b[0], a[0]), a[1]);
-    };
-    zcentroidsort = function(a, b) {
-      return a[0][2] - b[0][2];
-    };
-    zsortIndex = _.zip(centroids, normals, (function() {
-      _results = [];
-      for (var _i = 0, _ref = poly.face.length - 1; 0 <= _ref ? _i <= _ref : _i >= _ref; 0 <= _ref ? _i++ : _i--){ _results.push(_i); }
-      return _results;
-    }).apply(this)).sort(zcentroidsort).map(function(x) {
-      return x[2];
-    });
-    poly.face = (function() {
-      var _j, _len, _results2;
-      _results2 = [];
-      for (_j = 0, _len = zsortIndex.length; _j < _len; _j++) {
-        idx = zsortIndex[_j];
-        _results2.push(poly.face[idx]);
-      }
-      return _results2;
-    })();
-    return poly.face_colors = (function() {
-      var _j, _len, _results2;
-      _results2 = [];
-      for (_j = 0, _len = zsortIndex.length; _j < _len; _j++) {
-        idx = zsortIndex[_j];
-        _results2.push(poly.face_colors[idx]);
-      }
-      return _results2;
-    })();
-  };
-
   drawpoly = function(poly, tvec) {
     var clr, face, face_verts, fno, illum, oldxyz, v, v0, x, y, _i, _len, _len2, _ref, _ref2, _ref3;
     tvec || (tvec = [3, 3, 3]);
@@ -1718,7 +1719,7 @@
         _ref3 = perspT(add(tvec, poly.xyz[v]), persp_z_max, persp_z_min, persp_ratio, perspective_scale), x = _ref3[0], y = _ref3[1];
         ctx.lineTo(x + _2d_x_offset, y + _2d_y_offset);
       }
-      clr = poly.face_colors[fno];
+      clr = palette(poly.face_class[fno]);
       face_verts = (function() {
         var _j, _len3, _results;
         _results = [];
@@ -1783,6 +1784,9 @@
       specs = [randomchoice(DEFAULT_RECIPES)];
       $("#spec").val(specs);
     }
+    $("#palette").val(PALETTE.reduce(function(x, y) {
+      return x + " " + y;
+    }));
     globPolys = _.map(specs, function(x) {
       return newgeneratePoly(x);
     });
@@ -1792,6 +1796,10 @@
       globPolys = _.map(specs, function(x) {
         return newgeneratePoly(x);
       });
+      return drawShape();
+    });
+    $("#palette").change(function(e) {
+      PALETTE = $(this).val().split(/\s+/g);
       return drawShape();
     });
     $("#poly").mousewheel(function(e, delta, deltaX, deltaY) {

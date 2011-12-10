@@ -40,7 +40,10 @@ LastMouseY=0
 LastSphVec=[1,0,0] #for 3d trackball
 
 # random grabbag of polyhedra
-DEFAULT_RECIPES = ["C2dakD","oC20kkkT","kn4C40A0dA4","opD","lT","lK5oC","knD","dn6x4K5bT","oox4P7","n18n18n9n9n9soxY9"]
+DEFAULT_RECIPES = [
+  "C2dakD","oC20kkkT","kn4C40A0dA4","opD",
+  "lT","lK5oC","knD","dn6x4K5bT","oox4P7",
+  "n18n18n9n9n9soxY9"]
 
 # File-saving objects used to export txt/canvas-png
 saveText = (text, filename) ->
@@ -48,55 +51,6 @@ saveText = (text, filename) ->
   bb = new BB()
   bb.append(text)
   saveAs(bb.getBlob("text/plain;charset="+document.characterSet), filename)
-
-
-# Polyhedra Coloring Functions
-#===================================================================================================
-
-def_palette  = ["#ff3333","#33ff33","#3333ff","#ffff33","#ff33ff","#33ffff","#dddddd","#555555","#dd0000","#00dd00","#0000dd"]
-rwb_palette  = ["#ff8888","#dddddd","#777777","#aa3333","#ff0000","#ffffff","#aaaaaa"]
-rwbg_palette = ["#ff8888","#ffeeee","#88ff88","#dd7777","#ff2222","#22ff22","#ee4422","#aaaaaa"]
-
-# converts #xxxxxx / #xxx format into list of [r,g,b] floats
-hextofloats = (hexstr)->
-  if hexstr[0] is "#"
-    hexstr = hexstr[1..]
-  if hexstr.length is 3
-    rgb = hexstr.split('').map(       (c)->parseInt(c+c, 16)/255 )
-  else
-    rgb = hexstr.match(/.{2}/g).map(  (c)->parseInt(c, 16)/255 )
-  rgb
-
-PALETTE = rwb_palette
-palette = (n) -> if n < PALETTE.length then hextofloats(PALETTE[n]) else hextofloats(PALETTE[PALETTE.length-1])
-
-#memoized color assignment to faces of similar areas
-colorassign = (ar, colormemory) ->
-  hash = round(100*ar)
-  if hash of colormemory
-    return colormemory[hash]
-  else
-    fclr = palette _.toArray(colormemory).length
-    colormemory[hash] = fclr
-    return fclr
-
-paintPolyhedron = (poly) ->
-  # Color the faces of the polyhedra for display
-  poly.face_colors = []
-  colormemory={}
-  for f in poly.face
-    if COLOR_METHOD is "area"
-      # color by face area (quick proxy for different kinds of faces) convexarea
-      face_verts = (poly.xyz[v] for v in f)
-      clr = colorassign(convexarea(face_verts), colormemory)
-    else
-      # color by face-sidedness
-      clr = palette f.length-3
-
-    poly.face_colors.push clr
-  console.log _.toArray(colormemory).length+" face classes"
-  poly
-
 
 # parses URL string for polyhedron recipe, for bookmarking
 # should use #! href format instead
@@ -111,11 +65,8 @@ parseurl = () ->
     urlParams[d(e[1])] = d(e[2])
   urlParams
 
-
-
-#===================================================================================================
 # Drawing Functions
-#===================================================================================================
+#==================================================================================================
 
 # init canvas element
 # -------------------------------------------------------------------------------
@@ -143,35 +94,6 @@ clear = ->
     ctx.clearRect 0, 0, CANVAS_WIDTH, CANVAS_HEIGHT
     ctx.fillStyle = BG_COLOR
     ctx.fillRect 0, 0, CANVAS_WIDTH, CANVAS_HEIGHT
-
-# z sorts faces of poly
-# -------------------------------------------------------------------------
-sortfaces = (poly) ->
-  #smallestZ = (x) -> _.sortBy(x,(a,b)->a[2]-b[2])[0]
-  #closests = (smallestZ(poly.xyz[v] for v in f) for f in poly.face)
-  centroids  = poly.centers()
-  normals    = poly.normals()
-  ray_origin = [0,0, (persp_z_max * persp_ratio - persp_z_min)/(1-persp_ratio)]
-  #console.log ray_origin
-
-  # sort by binary-space partition: are you on same side as view-origin or not?
-  # !!! there is something wrong with this. even triangulated surfaces have artifacts.
-  planesort = (a,b)->
-    #console.log dot(sub(ray_origin,a[0]),a[1]), dot(sub(b[0],a[0]),a[1])
-    -dot(sub(ray_origin,a[0]),a[1])*dot(sub(b[0],a[0]),a[1])
-
-  # sort by centroid z-depth: not correct but more stable heuristic w. weird non-planar "polygons"
-  zcentroidsort = (a,b)->
-    a[0][2]-b[0][2]
-
-  zsortIndex = _.zip(centroids, normals, [0..poly.face.length-1])
-    #.sort(planesort)
-    .sort(zcentroidsort)
-    .map((x)->x[2])
-
-  # sort all face-associated properties
-  poly.face = (poly.face[idx] for idx in zsortIndex)
-  poly.face_colors = (poly.face_colors[idx] for idx in zsortIndex)
 
 
 # main drawing routine for polyhedra
@@ -202,7 +124,7 @@ drawpoly = (poly,tvec) ->
       ctx.lineTo(x+_2d_x_offset, y+_2d_y_offset)
 
     # use pre-computed colors
-    clr = poly.face_colors[fno]
+    clr = palette poly.face_class[fno]
 
     # shade based on simple cosine illumination factor
     face_verts = (poly.xyz[v] for v in face)
@@ -270,6 +192,9 @@ $( -> #wait for page to load
     specs=[randomchoice(DEFAULT_RECIPES)]
     $("#spec").val(specs)
 
+  # set initial palette spec
+  $("#palette").val( PALETTE.reduce((x,y)->x+" "+y) )
+
   # construct the polyhedra from spec
   globPolys = _.map(specs, (x)->newgeneratePoly(x))
 
@@ -286,6 +211,12 @@ $( -> #wait for page to load
     globPolys = _.map(specs, (x)->newgeneratePoly(x) )
     #animateShape()
     #window.location.replace("?recipe="+specs[0])
+    drawShape()
+  )
+
+  # when spec changes in input, parse and draw new polyhedra
+  $("#palette").change((e) ->
+    PALETTE = $(this).val().split(/\s+/g)
     drawShape()
   )
 

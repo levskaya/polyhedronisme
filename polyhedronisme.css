@@ -43,11 +43,17 @@ div.container {
     margin-right: auto;
     width: 300px;
 }
+#palette {
+    margin-left: auto;
+    margin-right: auto;
+    width: 300px;
+}
 
 .canvaswrapper {
     text-align:   center;
     margin-right: auto;
     margin-left:  auto;
+    box-shadow: 0 0 1px #aaa;
 }
 
 .controlswrapper {
@@ -61,7 +67,9 @@ div.container {
     margin-right: auto;
     margin-left:  auto;
 }
-
+label {
+    font-variant: small-caps;
+}
 .leftside {
     display: block;
     float: left;
