@@ -11,24 +11,24 @@
 to2Dfaces = (poly,tvec) ->
   tvec ||= [3,3,3]
 
-  rotxyz = _.map(poly.xyz, (x)->mv3(globRotM,x))
+  poly.xyz = _.map(poly.xyz, (x)->mv3(globRotM,x))
+
+  normals = _.map(poly.normals(), (x)->mv3(globRotM,x))
 
   # z sort faces
   sortfaces(poly)
+  poly.face = poly.face.reverse()
 
   twoDfaces = []
   facecolors=[]
   for face,fno in poly.face
     twoDface=[]
-    # move to first vertex of face
-    v0 = face[face.length-1]
-    [x,y] = perspT(add(tvec,poly.xyz[v0]), persp_z_max,persp_z_min,persp_ratio,perspective_scale)
-    twoDface.push [x+_2d_x_offset, y+_2d_y_offset]
     # loop around face, defining polygon
     for v in face
       [x,y] = perspT(add(tvec,poly.xyz[v]),persp_z_max,persp_z_min,persp_ratio,perspective_scale)
       twoDface.push [x+_2d_x_offset, y+_2d_y_offset]
     twoDfaces.push twoDface
+    console.log "twoDface", _.map(twoDface,(ar)->" ["+ar[0]+","+ar[1]+"] ")
 
     # use pre-computed colors
     clr = palette poly.face_class[fno]
@@ -83,6 +83,7 @@ Test2DSegmentSegment = ( a, b, c, d ) ->
       # of cd) cancels out.
       t = a3 / (a3 - a4)
       p = [ a[0] + t * (b[0] - a[0]) , a[1] + t * (b[1] - a[1]) ]
+      #console.log "ISECT: ",p[0]+" "+p[1]
       return p
 
   # Segments not intersecting (or collinear)
@@ -100,27 +101,34 @@ twoDpolygonarea = (xys) ->
 
 clockwisepoly = (xys) -> twoDpolygonarea(xys)>0
 
+idxof = (vlist, vtest)->
+  #console.log "idxof",vlist, vtest
+  for v,i in vlist
+    if abs(v[0]-vtest[0])+abs(v[1]-vtest[1]) < 1e-6
+      return i
+  -1
 
 intersectionGraph=(_2dfaceA, _2dfaceB)->
   verts = []
   for v in _2dfaceA
-    if verts.indexOf(v) is -1
+    if idxof(verts,v) is -1
       verts.push v
   for v in _2dfaceB
-    if verts.indexOf(v) is -1
+    if idxof(verts,v) is -1
       verts.push v
 
+  #console.log _2dfaceA
   edgesA = []
-  idx0 = verts.indexOf(_2dfaceA[_2dfaceA.length-1])
+  idx0 = idxof(verts, _2dfaceA[_2dfaceA.length-1])
   for v in _2dfaceA
-    idx=verts.indexOf(v)
-    edgesA.push [idx0,idx]
+    idx=idxof(verts,v)
+    edgesA.push [idx0, idx]
     idx0=idx
 
   edgesB = []
-  idx0 = verts.indexOf(_2dfaceB[_2dfaceB.length-1])
+  idx0 = idxof(verts,_2dfaceB[_2dfaceB.length-1])
   for v in _2dfaceB
-    idx=verts.indexOf(v)
+    idx=idxof(verts,v)
     edgesB.push [idx0,idx]
     idx0=idx
 
@@ -134,32 +142,36 @@ intersectionGraph=(_2dfaceA, _2dfaceB)->
       if p=Test2DSegmentSegment(verts[eA[0]],verts[eA[1]],verts[eB[0]],verts[eB[1]])
         newvertsA[i].push p
         newvertsB[j].push p
-        if verts.indexOf(p) is -1 then verts.push p
-        intersectpts.push verts.indexOf(p)
+        if idxof(verts,p) is -1 then verts.push p
+        intersectpts.push idxof(verts,p)
+
+  #console.log "isectpts", intersectpts
 
   newedgesA = []
-  for eA,i in newvertsA
+  for vA,i in newvertsA
     if newvertsA[i].length > 0
-      newvertsA[i].sort((pa,pb)->mag(pa-verts[eA[0]])-mag(pb-verts[eA[0]]))#sort new points on edge along edge direction
+      newvertsA[i].sort((pa,pb)->mag(pa-verts[edgesA[i][0]])-mag(pb-verts[edgesA[i][0]]))#sort new points on edge along edge direction
       #add new subedges
-      newedgesA.push [eA[0],verts.indexOf(newvertsA[i][0])]
+      newedgesA.push [edgesA[i][0], idxof(verts,newvertsA[i][0])]
       for v,k in newvertsA[i][1..]
-        newedgesA.push [verts.indexOf(newvertsA[i][k-1]),verts.indexOf(newvertsA[i][k])]
-      newedgesA.push [verts.indexOf(newvertsA[i][newvertsA[i].length-1]),eA[1]]
+        newedgesA.push [idxof(verts,newvertsA[i][k]),idxof(verts,newvertsA[i][k+1])]
+      newedgesA.push [idxof(verts,newvertsA[i][newvertsA[i].length-1]), edgesA[i][1]]
     else
       #no new subedges, add original
-      newedgesA.push eA
+      newedgesA.push edgesA[i]
 
   newedgesB = []
-  for eB,i in newvertsB
+  for vB,i in newvertsB
     if newvertsB[i].length > 0
-      newvertsB[i].sort((pa,pb)->mag(pa-verts[eB[0]])-mag(pb-verts[eB[0]]))
-      newedgesB.push [eB[0],verts.indexOf(newvertsB[i][0])]
+      newvertsB[i].sort((pa,pb)->mag(pa-verts[edgesB[i][0]])-mag(pb-verts[edgesB[i][0]]))
+      newedgesB.push [edgesB[i][0],idxof(verts,newvertsB[i][0])]
       for v,k in newvertsB[i][1..]
-        newedgesB.push [verts.indexOf(newvertsB[i][k-1]),verts.indexOf(newvertsB[i][k])]
-      newedgesB.push [verts.indexOf(newvertsB[i][newvertsB[i].length-1]),eB[1]]
+        newedgesB.push [idxof(verts,newvertsB[i][k]),idxof(verts,newvertsB[i][k+1])]
+      newedgesB.push [idxof(verts,newvertsB[i][newvertsB[i].length-1]),edgesB[i][1]]
     else
-      newedgesB.push eB
+      newedgesB.push edgesB[i]
+
+  #console.log "intersectionGraph",  edgesA, newedgesA, newedgesB
 
   [verts, newedgesA, newedgesB, intersectpts]
 
@@ -167,28 +179,27 @@ intersectionGraph=(_2dfaceA, _2dfaceB)->
 pointInPoly=(_2dfaceA, pt)->
   verts = []
   for v in _2dfaceA
-    if verts.indexOf(v) is -1
+    if idxof(verts,v) is -1
       verts.push v
 
   edgesA = []
-  idx0 = verts.indexOf(_2dfaceA[_2dfaceA.length-1])
+  idx0 = idxof(verts,_2dfaceA[_2dfaceA.length-1])
   for v in _2dfaceA
-    idx=verts.indexOf(v)
+    idx=idxof(verts,v)
     edgesA.push [idx0,idx]
     idx0=idx
-
-  newvertsA = ([] for i in [0..edgesA.length-1])
 
   isects=0
   for eA in edgesA
     if Test2DSegmentSegment(verts[eA[0]],verts[eA[1]],pt, [pt[0],10000])
       isects++
 
+  console.log "pointInpoly called : "+isects, (isects%2!=0)
+
   if isects%2==0 then false else true
 
 
 AminusB = (A, B)->
-
   # get intersection vertices and new edges from A and B overlap
   [verts, newedgesA, newedgesB, intersectpts] = intersectionGraph(A,B.reverse())
 
@@ -214,7 +225,7 @@ AminusB = (A, B)->
     newpoly=[]
     movingpt = pt
     sullied[movingpt+state]=true
-    newpoly.push movingpt
+    #newpoly.push movingpt
 
     itrCTR=0
     while movingpt isnt pt and itrCTR<1000
@@ -229,11 +240,14 @@ AminusB = (A, B)->
 
     newpolys.push (verts[idx] for idx in newpoly)
 
+  #console.log "AminusB", newpolys
   #return only correctly oriented polygons
   _.filter(newpolys, clockwisepoly)
 
 
 getSVG = (poly) ->
+  console.log poly.data()
+
   [twoDfaces, facecolors] = to2Dfaces(poly)
 
   frontfaces=[]
@@ -248,4 +262,25 @@ getSVG = (poly) ->
 
     frontfaces = frontfaces.concat fset
 
+  frontfaces = frontfaces.reverse()
+
   console.log frontfaces.length, frontfaces
+
+  svg_open="""<?xml version="1.0" encoding="utf-8"?>
+  <!DOCTYPE svg PUBLIC "-//W3C//DTD SVG 1.1 Tiny//EN" "http://www.w3.org/Graphics/SVG/1.1/DTD/svg11-tiny.dtd">
+  <svg version="1.1" baseProfile="tiny" id="Layer_1" xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink"
+           x="0px" y="0px" width="1024px" height="768px" viewBox="0 0 1024 768" overflow="inherit" xml:space="preserve">
+
+  """
+  svg_close="""</svg>"""
+
+  svgtxt=svg_open
+  for f in frontfaces
+    svgtxt+='<path fill="#25DF00" stroke="#000000" d="'
+    svgtxt+='M'+f[0][0]+","+f[0][1]
+    for v in f[1..]
+      svgtxt+='L'+v[0]+","+v[1]
+    svgtxt+='z"/>\n'
+  svgtxt+=svg_close
+
+  console.log svgtxt

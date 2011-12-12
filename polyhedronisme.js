@@ -1,5 +1,5 @@
 (function() {
-  var BG_CLEAR, BG_COLOR, CANVAS_HEIGHT, CANVAS_WIDTH, COLOR_METHOD, DEFAULT_RECIPES, LN10, LastMouseX, LastMouseY, LastSphVec, MOUSEDOWN, PALETTE, PEG_parser_spec, PI, PaintMode, abs, acos, add, adjustXYZ, ambo, animateShape, antiprism, asin, atan, basemap, calcCentroid, canonicalXYZ, canonicalize, clear, clone, convexarea, copyVecArray, cos, cross, ctx, ctx_linewidth, cube, diagsToTris, dispatch, dodecahedron, dot, drawShape, drawpoly, dual, edgeDist, extrudeN, eye3, faceSignature, faceToEdges, floor, getDiagonals, getOps, getVec2VecRotM, globPolys, globRotM, globlastRotM, globtime, gyro, hextofloats, icosahedron, init, insetN, intersect, invperspT, kisN, log, log10, mag, mag2, midpoint, mm3, mult, mv3, newgeneratePoly, normal, octahedron, oneThird, op_parser, opmap, orthogonal, paintPolyhedron, palette, parseurl, perspT, persp_ratio, persp_z_max, persp_z_min, perspective_scale, planarize, polyflag, polyhedron, pow, prism, project2dface, propellor, pyramid, random, randomchoice, recenter, reciprocal, reciprocalC, reciprocalN, reflect, rescale, rotm, round, rwb_palette, saveText, sigfigs, sin, sortfaces, specreplacements, sqrt, stellaN, sub, tan, tangentPoint, tangentify, testrig, tetrahedron, topolog, triEq, triangulate, tween, unit, vec_rotm, vertColors, _2d_x_offset, _2d_y_offset, _mult;
+  var AminusB, BG_CLEAR, BG_COLOR, CANVAS_HEIGHT, CANVAS_WIDTH, COLOR_METHOD, DEFAULT_RECIPES, LN10, LastMouseX, LastMouseY, LastSphVec, MOUSEDOWN, PALETTE, PEG_parser_spec, PI, PaintMode, Signed2DTriArea, Test2DSegmentSegment, abs, acos, add, adjustXYZ, ambo, animateShape, antiprism, asin, atan, basemap, calcCentroid, canonicalXYZ, canonicalize, clear, clockwisepoly, clone, convexarea, copyVecArray, cos, cross, ctx, ctx_linewidth, cube, diagsToTris, dispatch, dodecahedron, dot, drawShape, drawpoly, dual, edgeDist, extrudeN, eye3, faceSignature, faceToEdges, floor, getDiagonals, getOps, getSVG, getVec2VecRotM, globPolys, globRotM, globlastRotM, globtime, gyro, hextofloats, icosahedron, idxof, init, insetN, intersect, intersectionGraph, invperspT, kisN, log, log10, mag, mag2, midpoint, mm3, mult, mv3, newgeneratePoly, normal, octahedron, oneThird, op_parser, opmap, orthogonal, paintPolyhedron, palette, parseurl, perspT, persp_ratio, persp_z_max, persp_z_min, perspective_scale, planarize, pointInPoly, polyflag, polyhedron, pow, prism, project2dface, propellor, pyramid, random, randomchoice, recenter, reciprocal, reciprocalC, reciprocalN, reflect, rescale, rotm, round, rwb_palette, saveText, sigfigs, sin, sortfaces, specreplacements, sqrt, stellaN, sub, tan, tangentPoint, tangentify, testrig, tetrahedron, to2Dfaces, topolog, triEq, triangulate, tween, twoDpolygonarea, unit, vec_rotm, vertColors, _2d_x_offset, _2d_y_offset, _mult;
 
   random = Math.random;
 
@@ -1913,6 +1913,7 @@
     });
     $("#pngsavebutton").click(function(e) {
       var canvas, filename, spec;
+      getSVG(clone(globPolys[0]));
       canvas = $("#poly")[0];
       spec = $("#spec").val().split(/\s+/g)[0];
       filename = "polyhedronisme-" + spec.replace(/\([^\)]+\)/g, "") + ".png";
@@ -1936,5 +1937,313 @@
       return saveText(x3dtxt, filename);
     });
   });
+
+  to2Dfaces = function(poly, tvec) {
+    var clr, face, face_verts, facecolors, fno, illum, normals, twoDface, twoDfaces, v, x, y, _i, _len, _len2, _ref, _ref2;
+    tvec || (tvec = [3, 3, 3]);
+    poly.xyz = _.map(poly.xyz, function(x) {
+      return mv3(globRotM, x);
+    });
+    normals = _.map(poly.normals(), function(x) {
+      return mv3(globRotM, x);
+    });
+    sortfaces(poly);
+    poly.face = poly.face.reverse();
+    twoDfaces = [];
+    facecolors = [];
+    _ref = poly.face;
+    for (fno = 0, _len = _ref.length; fno < _len; fno++) {
+      face = _ref[fno];
+      twoDface = [];
+      for (_i = 0, _len2 = face.length; _i < _len2; _i++) {
+        v = face[_i];
+        _ref2 = perspT(add(tvec, poly.xyz[v]), persp_z_max, persp_z_min, persp_ratio, perspective_scale), x = _ref2[0], y = _ref2[1];
+        twoDface.push([x + _2d_x_offset, y + _2d_y_offset]);
+      }
+      twoDfaces.push(twoDface);
+      console.log("twoDface", _.map(twoDface, function(ar) {
+        return " [" + ar[0] + "," + ar[1] + "] ";
+      }));
+      clr = palette(poly.face_class[fno]);
+      face_verts = (function() {
+        var _j, _len3, _results;
+        _results = [];
+        for (_j = 0, _len3 = face.length; _j < _len3; _j++) {
+          v = face[_j];
+          _results.push(poly.xyz[v]);
+        }
+        return _results;
+      })();
+      illum = dot(normal(face_verts), unit([1, -1, 0]));
+      clr = mult((illum / 2.0 + .5) * 0.7 + 0.3, clr);
+      facecolors.push(clr);
+    }
+    return [twoDfaces, facecolors];
+  };
+
+  Signed2DTriArea = function(a, b, c) {
+    return (a[0] - c[0]) * (b[1] - c[1]) - (a[1] - c[1]) * (b[0] - c[0]);
+  };
+
+  Test2DSegmentSegment = function(a, b, c, d) {
+    var a1, a2, a3, a4, p, t;
+    a1 = Signed2DTriArea(a, b, d);
+    a2 = Signed2DTriArea(a, b, c);
+    if (a1 !== 0.0 && a2 !== 0.0 && a1 * a2 < 0.0) {
+      a3 = Signed2DTriArea(c, d, a);
+      a4 = Signed2DTriArea(c, d, b);
+      if (a3 * a4 < 0.0) {
+        t = a3 / (a3 - a4);
+        p = [a[0] + t * (b[0] - a[0]), a[1] + t * (b[1] - a[1])];
+        return p;
+      }
+    }
+    return false;
+  };
+
+  twoDpolygonarea = function(xys) {
+    var area, v1, v2, _i, _len, _ref;
+    area = 0.0;
+    v1 = xys[0];
+    _ref = xys.slice(1);
+    for (_i = 0, _len = _ref.length; _i < _len; _i++) {
+      v2 = _ref[_i];
+      area += (v1[0] + v2[0]) * (v1[1] - v2[1]);
+      v1 = v2;
+    }
+    return area * 0.5;
+  };
+
+  clockwisepoly = function(xys) {
+    return twoDpolygonarea(xys) > 0;
+  };
+
+  idxof = function(vlist, vtest) {
+    var i, v, _len;
+    for (i = 0, _len = vlist.length; i < _len; i++) {
+      v = vlist[i];
+      if (abs(v[0] - vtest[0]) + abs(v[1] - vtest[1]) < 1e-6) return i;
+    }
+    return -1;
+  };
+
+  intersectionGraph = function(_2dfaceA, _2dfaceB) {
+    var eA, eB, edgesA, edgesB, i, idx, idx0, intersectpts, j, k, newedgesA, newedgesB, newvertsA, newvertsB, p, v, vA, vB, verts, _i, _j, _k, _l, _len, _len10, _len2, _len3, _len4, _len5, _len6, _len7, _len8, _len9, _ref, _ref2;
+    verts = [];
+    for (_i = 0, _len = _2dfaceA.length; _i < _len; _i++) {
+      v = _2dfaceA[_i];
+      if (idxof(verts, v) === -1) verts.push(v);
+    }
+    for (_j = 0, _len2 = _2dfaceB.length; _j < _len2; _j++) {
+      v = _2dfaceB[_j];
+      if (idxof(verts, v) === -1) verts.push(v);
+    }
+    edgesA = [];
+    idx0 = idxof(verts, _2dfaceA[_2dfaceA.length - 1]);
+    for (_k = 0, _len3 = _2dfaceA.length; _k < _len3; _k++) {
+      v = _2dfaceA[_k];
+      idx = idxof(verts, v);
+      edgesA.push([idx0, idx]);
+      idx0 = idx;
+    }
+    edgesB = [];
+    idx0 = idxof(verts, _2dfaceB[_2dfaceB.length - 1]);
+    for (_l = 0, _len4 = _2dfaceB.length; _l < _len4; _l++) {
+      v = _2dfaceB[_l];
+      idx = idxof(verts, v);
+      edgesB.push([idx0, idx]);
+      idx0 = idx;
+    }
+    newvertsA = (function() {
+      var _ref, _results;
+      _results = [];
+      for (i = 0, _ref = edgesA.length - 1; 0 <= _ref ? i <= _ref : i >= _ref; 0 <= _ref ? i++ : i--) {
+        _results.push([]);
+      }
+      return _results;
+    })();
+    newvertsB = (function() {
+      var _ref, _results;
+      _results = [];
+      for (i = 0, _ref = edgesB.length - 1; 0 <= _ref ? i <= _ref : i >= _ref; 0 <= _ref ? i++ : i--) {
+        _results.push([]);
+      }
+      return _results;
+    })();
+    intersectpts = [];
+    for (i = 0, _len5 = edgesA.length; i < _len5; i++) {
+      eA = edgesA[i];
+      for (j = 0, _len6 = edgesB.length; j < _len6; j++) {
+        eB = edgesB[j];
+        if (p = Test2DSegmentSegment(verts[eA[0]], verts[eA[1]], verts[eB[0]], verts[eB[1]])) {
+          newvertsA[i].push(p);
+          newvertsB[j].push(p);
+          if (idxof(verts, p) === -1) verts.push(p);
+          intersectpts.push(idxof(verts, p));
+        }
+      }
+    }
+    newedgesA = [];
+    for (i = 0, _len7 = newvertsA.length; i < _len7; i++) {
+      vA = newvertsA[i];
+      if (newvertsA[i].length > 0) {
+        newvertsA[i].sort(function(pa, pb) {
+          return mag(pa - verts[edgesA[i][0]]) - mag(pb - verts[edgesA[i][0]]);
+        });
+        newedgesA.push([edgesA[i][0], idxof(verts, newvertsA[i][0])]);
+        _ref = newvertsA[i].slice(1);
+        for (k = 0, _len8 = _ref.length; k < _len8; k++) {
+          v = _ref[k];
+          newedgesA.push([idxof(verts, newvertsA[i][k]), idxof(verts, newvertsA[i][k + 1])]);
+        }
+        newedgesA.push([idxof(verts, newvertsA[i][newvertsA[i].length - 1]), edgesA[i][1]]);
+      } else {
+        newedgesA.push(edgesA[i]);
+      }
+    }
+    newedgesB = [];
+    for (i = 0, _len9 = newvertsB.length; i < _len9; i++) {
+      vB = newvertsB[i];
+      if (newvertsB[i].length > 0) {
+        newvertsB[i].sort(function(pa, pb) {
+          return mag(pa - verts[edgesB[i][0]]) - mag(pb - verts[edgesB[i][0]]);
+        });
+        newedgesB.push([edgesB[i][0], idxof(verts, newvertsB[i][0])]);
+        _ref2 = newvertsB[i].slice(1);
+        for (k = 0, _len10 = _ref2.length; k < _len10; k++) {
+          v = _ref2[k];
+          newedgesB.push([idxof(verts, newvertsB[i][k]), idxof(verts, newvertsB[i][k + 1])]);
+        }
+        newedgesB.push([idxof(verts, newvertsB[i][newvertsB[i].length - 1]), edgesB[i][1]]);
+      } else {
+        newedgesB.push(edgesB[i]);
+      }
+    }
+    return [verts, newedgesA, newedgesB, intersectpts];
+  };
+
+  pointInPoly = function(_2dfaceA, pt) {
+    var eA, edgesA, idx, idx0, isects, v, verts, _i, _j, _k, _len, _len2, _len3;
+    verts = [];
+    for (_i = 0, _len = _2dfaceA.length; _i < _len; _i++) {
+      v = _2dfaceA[_i];
+      if (idxof(verts, v) === -1) verts.push(v);
+    }
+    edgesA = [];
+    idx0 = idxof(verts, _2dfaceA[_2dfaceA.length - 1]);
+    for (_j = 0, _len2 = _2dfaceA.length; _j < _len2; _j++) {
+      v = _2dfaceA[_j];
+      idx = idxof(verts, v);
+      edgesA.push([idx0, idx]);
+      idx0 = idx;
+    }
+    isects = 0;
+    for (_k = 0, _len3 = edgesA.length; _k < _len3; _k++) {
+      eA = edgesA[_k];
+      if (Test2DSegmentSegment(verts[eA[0]], verts[eA[1]], pt, [pt[0], 10000])) {
+        isects++;
+      }
+    }
+    console.log("pointInpoly called : " + isects, isects % 2 !== 0);
+    if (isects % 2 === 0) {
+      return false;
+    } else {
+      return true;
+    }
+  };
+
+  AminusB = function(A, B) {
+    var Agraph, Bgraph, e, idx, intersectpts, itrCTR, movingpt, newedgesA, newedgesB, newpoly, newpolys, pt, state, sullied, verts, _i, _j, _k, _len, _len2, _len3, _ref;
+    _ref = intersectionGraph(A, B.reverse()), verts = _ref[0], newedgesA = _ref[1], newedgesB = _ref[2], intersectpts = _ref[3];
+    Agraph = {};
+    for (_i = 0, _len = newedgesA.length; _i < _len; _i++) {
+      e = newedgesA[_i];
+      Agraph[e[0]] = e[1];
+    }
+    Bgraph = {};
+    for (_j = 0, _len2 = newedgesB.length; _j < _len2; _j++) {
+      e = newedgesB[_j];
+      Bgraph[e[0]] = e[1];
+    }
+    sullied = {};
+    if (intersectpts.length === 0) {
+      if (pointInPoly(B, A[0])) {
+        return [];
+      } else {
+        return [A];
+      }
+    }
+    newpolys = [];
+    for (_k = 0, _len3 = intersectpts.length; _k < _len3; _k++) {
+      pt = intersectpts[_k];
+      state = "B";
+      if (sullied[pt + state]) continue;
+      newpoly = [];
+      movingpt = pt;
+      sullied[movingpt + state] = true;
+      itrCTR = 0;
+      while (movingpt !== pt && itrCTR < 1000) {
+        if (Agraph[pt] && Bgraph[pt]) state = state === "A" ? "B" : "A";
+        if (state === "A") {
+          movingpt = Agraph[movingpt];
+        } else {
+          movingpt = Bgraph[movingpt];
+        }
+        newpoly.push(movingpt);
+        sullied[movingpt + state] = true;
+      }
+      newpolys.push((function() {
+        var _l, _len4, _results;
+        _results = [];
+        for (_l = 0, _len4 = newpoly.length; _l < _len4; _l++) {
+          idx = newpoly[_l];
+          _results.push(verts[idx]);
+        }
+        return _results;
+      })());
+    }
+    return _.filter(newpolys, clockwisepoly);
+  };
+
+  getSVG = function(poly) {
+    var f, fA, fB, facecolors, frontfaces, fset, fsetnew, svg_close, svg_open, svgtxt, twoDfaces, v, _i, _j, _k, _l, _len, _len2, _len3, _len4, _len5, _m, _ref, _ref2, _ref3;
+    console.log(poly.data());
+    _ref = to2Dfaces(poly), twoDfaces = _ref[0], facecolors = _ref[1];
+    frontfaces = [];
+    frontfaces.push(twoDfaces[0]);
+    _ref2 = twoDfaces.slice(1);
+    for (_i = 0, _len = _ref2.length; _i < _len; _i++) {
+      fA = _ref2[_i];
+      fset = [fA];
+      for (_j = 0, _len2 = frontfaces.length; _j < _len2; _j++) {
+        fB = frontfaces[_j];
+        fsetnew = [];
+        for (_k = 0, _len3 = fset.length; _k < _len3; _k++) {
+          f = fset[_k];
+          fsetnew = fsetnew.concat(AminusB(f, fB));
+        }
+        fset = fsetnew;
+      }
+      frontfaces = frontfaces.concat(fset);
+    }
+    frontfaces = frontfaces.reverse();
+    console.log(frontfaces.length, frontfaces);
+    svg_open = "<?xml version=\"1.0\" encoding=\"utf-8\"?>\n<!DOCTYPE svg PUBLIC \"-//W3C//DTD SVG 1.1 Tiny//EN\" \"http://www.w3.org/Graphics/SVG/1.1/DTD/svg11-tiny.dtd\">\n<svg version=\"1.1\" baseProfile=\"tiny\" id=\"Layer_1\" xmlns=\"http://www.w3.org/2000/svg\" xmlns:xlink=\"http://www.w3.org/1999/xlink\"\n         x=\"0px\" y=\"0px\" width=\"1024px\" height=\"768px\" viewBox=\"0 0 1024 768\" overflow=\"inherit\" xml:space=\"preserve\">\n";
+    svg_close = "</svg>";
+    svgtxt = svg_open;
+    for (_l = 0, _len4 = frontfaces.length; _l < _len4; _l++) {
+      f = frontfaces[_l];
+      svgtxt += '<path fill="#25DF00" stroke="#000000" d="';
+      svgtxt += 'M' + f[0][0] + "," + f[0][1];
+      _ref3 = f.slice(1);
+      for (_m = 0, _len5 = _ref3.length; _m < _len5; _m++) {
+        v = _ref3[_m];
+        svgtxt += 'L' + v[0] + "," + v[1];
+      }
+      svgtxt += 'z"/>\n';
+    }
+    svgtxt += svg_close;
+    return console.log(svgtxt);
+  };
 
 }).call(this);

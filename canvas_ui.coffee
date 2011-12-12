@@ -299,6 +299,7 @@ $( -> #wait for page to load
   # ---------------------------------------
 
   $("#pngsavebutton").click((e)->
+    getSVG(clone globPolys[0])
     canvas=$("#poly")[0]
     #this works, but is janky
     #window.location = canvas.toDataURL("image/png")
