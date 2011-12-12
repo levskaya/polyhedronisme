@@ -17,6 +17,7 @@ appFiles  = [
   'testing'        # random testing funcs
   'parser'         # recipe parser
   'canvas_ui'      # 2d renderer and simple UI
+  'svg_generation' # 2d export to SVG
 ]
 outFile   = 'polyhedronisme.coffee'
 jsFile    = 'polyhedronisme.js'
