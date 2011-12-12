@@ -445,7 +445,7 @@ stellaN = (poly)->
       [vert1,vert2]=[vert2,vert3]
 
   newpoly = flag.topoly()
-  newpoly.name = "*" + poly.name
+  newpoly.name = "l" + poly.name
   #newpoly.xyz = adjustXYZ(newpoly, 3)
   #newpoly.xyz = canonicalXYZ(newpoly, 3)  # this tends to make results look like shit
   newpoly

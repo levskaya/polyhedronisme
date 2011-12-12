@@ -119,7 +119,7 @@ newgeneratePoly = (notation) ->
   #console.log "final", poly
 
   # Recenter polyhedra at origin (rarely needed)
-  poly.xyz = recenter(poly.xyz, poly.getEdges())
+  poly.xyz = recenter(poly.xyz, poly.edges())
   poly.xyz = rescale(poly.xyz)
 
   # Color the faces of the polyhedra for display

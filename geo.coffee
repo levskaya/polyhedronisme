@@ -29,6 +29,15 @@ atan  = Math.atan
 pow   = Math.pow
 abs   = Math.abs
 PI    = Math.PI
+LN10  = Math.LN10
+log   = Math.log
+pow   = Math.pow
+log10 = (x)-> log(x)/LN10
+
+#returns string w. nsigs digits ignoring magnitude
+sigfigs = (N, nsigs)->
+  normed = pow(10,log10(N)-floor(log10(N)))
+  "#{round(normed*(nsigs-1))}"
 
 # for python-style enumerated for-in loops
 #  - should use "for [i,x] in AR then do (i,x)->" idiom instead
@@ -142,6 +151,23 @@ convexarea = (xyzs) ->
       area += mag( cross(sub(v2,v1), sub(v3,v1)) )
       v2 = v3 # shift over one
     area
+
+#returns array of ~3sigfig angle
+faceSignature = (xyzs) ->
+    cross_array = []
+    [v1,v2] = xyzs[0..1]
+    for v3 in xyzs[2..]
+      #area of sub-triangle
+      cross_array.push mag( cross(sub(v2,v1), sub(v3,v1)) )
+      v2 = v3 # shift over one
+
+    cross_array.sort((a,b)->a-b) #sort for uniqueness
+
+    sig="" # turn it into a string
+    (sig+=sigfigs(x,2) for x in cross_array)
+    # hack to make reflected faces share the same signature
+    (sig+=sigfigs(x,2) for x in cross_array.reverse())
+    sig
 
 # projects 3d polyhedral face to 2d polygon
 # for triangulation and face display

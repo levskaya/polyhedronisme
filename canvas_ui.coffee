@@ -29,7 +29,7 @@ globtime = new Date() # for animation
 
 BG_CLEAR = true # clear background or colored?
 BG_COLOR = "rgba(255,255,255,1.0)" # background color
-COLOR_METHOD = "area"
+COLOR_METHOD = "signature" #"area"
 PaintMode = "fillstroke"
 ctx_linewidth = 0.5 # for outline of faces
 

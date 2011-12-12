@@ -74,7 +74,7 @@ canonicalize = (poly, Niter) ->
   Niter or= 1
   console.log "Canonicalizing #{poly.name}..."
   faces = poly.face
-  edges = poly.getEdges()
+  edges = poly.edges()
   newVs = poly.xyz
   maxChange=1.0 # convergence tracker
   for i in [0..Niter]

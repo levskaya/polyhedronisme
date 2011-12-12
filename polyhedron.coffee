@@ -31,9 +31,7 @@ vertColors = (poly) ->
 # Polyhedra Coloring Functions
 #===================================================================================================
 
-#def_palette  = ["#ff3333","#33ff33","#3333ff","#ffff33","#ff33ff","#33ffff","#dddddd","#555555","#dd0000","#00dd00","#0000dd"]
 rwb_palette  = ["#ff7777","#dddddd","#889999","#fff0e5","#aa3333","#ff0000","#ffffff","#aaaaaa"]
-#rwbg_palette = ["#ff8888","#ffeeee","#88ff88","#dd7777","#ff2222","#22ff22","#ee4422","#aaaaaa"]
 
 # converts #xxxxxx / #xxx format into list of [r,g,b] floats
 hextofloats = (hexstr)->
@@ -72,6 +70,9 @@ paintPolyhedron = (poly) ->
       # color by face area (quick proxy for different kinds of faces) convexarea
       face_verts = (poly.xyz[v] for v in f)
       clr = colorassign(convexarea(face_verts), colormemory)
+    else if COLOR_METHOD is "signature"
+      face_verts = (poly.xyz[v] for v in f)
+      clr = colorassign(faceSignature(face_verts), colormemory)
     else
       # color by face-sidedness
       clr = f.length-3
@@ -120,7 +121,7 @@ class polyhedron
     nEdges = @face.length + @xyz.length - 2 # E = V + F - 2
     "(#{@face.length} faces, #{nEdges} edges, #{@xyz.length} vertices)"
 
-  getEdges: ->
+  edges: ->
     finalset={}
     uniqedges=[]
     alledges = _.map(@face, faceToEdges)

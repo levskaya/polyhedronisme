@@ -1,5 +1,5 @@
 (function() {
-  var BG_CLEAR, BG_COLOR, CANVAS_HEIGHT, CANVAS_WIDTH, COLOR_METHOD, DEFAULT_RECIPES, LastMouseX, LastMouseY, LastSphVec, MOUSEDOWN, PALETTE, PEG_parser_spec, PI, PaintMode, abs, acos, add, adjustXYZ, ambo, animateShape, antiprism, asin, atan, basemap, calcCentroid, canonicalXYZ, canonicalize, clear, clone, convexarea, copyVecArray, cos, cross, ctx, ctx_linewidth, cube, diagsToTris, dispatch, dodecahedron, dot, drawShape, drawpoly, dual, edgeDist, extrudeN, eye3, faceToEdges, floor, getDiagonals, getOps, getVec2VecRotM, globPolys, globRotM, globlastRotM, globtime, gyro, hextofloats, icosahedron, init, insetN, intersect, invperspT, kisN, mag, mag2, midpoint, mm3, mult, mv3, newgeneratePoly, normal, octahedron, oneThird, op_parser, opmap, orthogonal, paintPolyhedron, palette, parseurl, perspT, persp_ratio, persp_z_max, persp_z_min, perspective_scale, planarize, polyflag, polyhedron, pow, prism, project2dface, propellor, pyramid, random, randomchoice, recenter, reciprocal, reciprocalC, reciprocalN, reflect, rescale, rotm, round, rwb_palette, saveText, sin, sortfaces, specreplacements, sqrt, stellaN, sub, tan, tangentPoint, tangentify, testrig, tetrahedron, topolog, triEq, triangulate, tween, unit, vec_rotm, vertColors, _2d_x_offset, _2d_y_offset, _mult;
+  var BG_CLEAR, BG_COLOR, CANVAS_HEIGHT, CANVAS_WIDTH, COLOR_METHOD, DEFAULT_RECIPES, LN10, LastMouseX, LastMouseY, LastSphVec, MOUSEDOWN, PALETTE, PEG_parser_spec, PI, PaintMode, abs, acos, add, adjustXYZ, ambo, animateShape, antiprism, asin, atan, basemap, calcCentroid, canonicalXYZ, canonicalize, clear, clone, convexarea, copyVecArray, cos, cross, ctx, ctx_linewidth, cube, diagsToTris, dispatch, dodecahedron, dot, drawShape, drawpoly, dual, edgeDist, extrudeN, eye3, faceSignature, faceToEdges, floor, getDiagonals, getOps, getVec2VecRotM, globPolys, globRotM, globlastRotM, globtime, gyro, hextofloats, icosahedron, init, insetN, intersect, invperspT, kisN, log, log10, mag, mag2, midpoint, mm3, mult, mv3, newgeneratePoly, normal, octahedron, oneThird, op_parser, opmap, orthogonal, paintPolyhedron, palette, parseurl, perspT, persp_ratio, persp_z_max, persp_z_min, perspective_scale, planarize, polyflag, polyhedron, pow, prism, project2dface, propellor, pyramid, random, randomchoice, recenter, reciprocal, reciprocalC, reciprocalN, reflect, rescale, rotm, round, rwb_palette, saveText, sigfigs, sin, sortfaces, specreplacements, sqrt, stellaN, sub, tan, tangentPoint, tangentify, testrig, tetrahedron, topolog, triEq, triangulate, tween, unit, vec_rotm, vertColors, _2d_x_offset, _2d_y_offset, _mult;
 
   random = Math.random;
 
@@ -26,6 +26,22 @@
   abs = Math.abs;
 
   PI = Math.PI;
+
+  LN10 = Math.LN10;
+
+  log = Math.log;
+
+  pow = Math.pow;
+
+  log10 = function(x) {
+    return log(x) / LN10;
+  };
+
+  sigfigs = function(N, nsigs) {
+    var normed;
+    normed = pow(10, log10(N) - floor(log10(N)));
+    return "" + (round(normed * (nsigs - 1)));
+  };
 
   clone = function(obj) {
     var key, newInstance;
@@ -162,6 +178,32 @@
       v2 = v3;
     }
     return area;
+  };
+
+  faceSignature = function(xyzs) {
+    var cross_array, sig, v1, v2, v3, x, _i, _j, _k, _len, _len2, _len3, _ref, _ref2, _ref3;
+    cross_array = [];
+    _ref = xyzs.slice(0, 2), v1 = _ref[0], v2 = _ref[1];
+    _ref2 = xyzs.slice(2);
+    for (_i = 0, _len = _ref2.length; _i < _len; _i++) {
+      v3 = _ref2[_i];
+      cross_array.push(mag(cross(sub(v2, v1), sub(v3, v1))));
+      v2 = v3;
+    }
+    cross_array.sort(function(a, b) {
+      return a - b;
+    });
+    sig = "";
+    for (_j = 0, _len2 = cross_array.length; _j < _len2; _j++) {
+      x = cross_array[_j];
+      sig += sigfigs(x, 2);
+    }
+    _ref3 = cross_array.reverse();
+    for (_k = 0, _len3 = _ref3.length; _k < _len3; _k++) {
+      x = _ref3[_k];
+      sig += sigfigs(x, 2);
+    }
+    return sig;
   };
 
   project2dface = function(verts) {
@@ -347,6 +389,17 @@
           return _results;
         })();
         clr = colorassign(convexarea(face_verts), colormemory);
+      } else if (COLOR_METHOD === "signature") {
+        face_verts = (function() {
+          var _j, _len2, _results;
+          _results = [];
+          for (_j = 0, _len2 = f.length; _j < _len2; _j++) {
+            v = f[_j];
+            _results.push(poly.xyz[v]);
+          }
+          return _results;
+        })();
+        clr = colorassign(faceSignature(face_verts), colormemory);
       } else {
         clr = f.length - 3;
       }
@@ -408,7 +461,7 @@
       return "(" + this.face.length + " faces, " + nEdges + " edges, " + this.xyz.length + " vertices)";
     };
 
-    polyhedron.prototype.getEdges = function() {
+    polyhedron.prototype.edges = function() {
       var a, alledges, b, e, edgeset, finalset, hash, uniqedges, _i, _j, _len, _len2;
       finalset = {};
       uniqedges = [];
@@ -1109,7 +1162,7 @@
       }
     }
     newpoly = flag.topoly();
-    newpoly.name = "*" + poly.name;
+    newpoly.name = "l" + poly.name;
     return newpoly;
   };
 
@@ -1192,7 +1245,7 @@
     Niter || (Niter = 1);
     console.log("Canonicalizing " + poly.name + "...");
     faces = poly.face;
-    edges = poly.getEdges();
+    edges = poly.edges();
     newVs = poly.xyz;
     maxChange = 1.0;
     for (i = 0; 0 <= Niter ? i <= Niter : i >= Niter; 0 <= Niter ? i++ : i--) {
@@ -1592,7 +1645,7 @@
       opargs = [poly].concat(op["args"]);
       poly = dispatch(opfunc, opargs);
     }
-    poly.xyz = recenter(poly.xyz, poly.getEdges());
+    poly.xyz = recenter(poly.xyz, poly.edges());
     poly.xyz = rescale(poly.xyz);
     poly = paintPolyhedron(poly);
     return poly;
@@ -1628,7 +1681,7 @@
 
   BG_COLOR = "rgba(255,255,255,1.0)";
 
-  COLOR_METHOD = "area";
+  COLOR_METHOD = "signature";
 
   PaintMode = "fillstroke";
 
