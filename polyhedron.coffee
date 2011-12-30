@@ -89,17 +89,13 @@ sortfaces = (poly) ->
   centroids  = poly.centers()
   normals    = poly.normals()
   ray_origin = [0,0, (persp_z_max * persp_ratio - persp_z_min)/(1-persp_ratio)]
-  #console.log ray_origin
 
-  # sort by binary-space partition: are you on same side as view-origin or not?
+  # sort by plane partition: are you on same side as view-origin or not?
   # !!! there is something wrong with this. even triangulated surfaces have artifacts.
-  planesort = (a,b)->
-    #console.log dot(sub(ray_origin,a[0]),a[1]), dot(sub(b[0],a[0]),a[1])
-    -dot(sub(ray_origin,a[0]),a[1])*dot(sub(b[0],a[0]),a[1])
+  # planesort = (a,b)->
 
   # sort by centroid z-depth: not correct but more stable heuristic w. weird non-planar "polygons"
-  zcentroidsort = (a,b)->
-    a[0][2]-b[0][2]
+  zcentroidsort = (a,b) -> a[0][2]-b[0][2]
 
   zsortIndex = _.zip(centroids, normals, [0..poly.face.length-1])
     #.sort(planesort)

@@ -112,7 +112,11 @@ drawpoly = (poly,tvec) ->
   # z sort faces
   sortfaces(poly)
 
+  #for face culling
+  #normals = poly.normals()
+
   for face,fno in poly.face
+    #if dot(normals[fno],[0,0,1]) < 0 then continue
     ctx.beginPath()
     # move to first vertex of face
     v0 = face[face.length-1]

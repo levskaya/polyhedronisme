@@ -410,13 +410,10 @@
   };
 
   sortfaces = function(poly) {
-    var centroids, idx, normals, planesort, ray_origin, zcentroidsort, zsortIndex, _i, _ref, _results;
+    var centroids, idx, normals, ray_origin, zcentroidsort, zsortIndex, _i, _ref, _results;
     centroids = poly.centers();
     normals = poly.normals();
     ray_origin = [0, 0, (persp_z_max * persp_ratio - persp_z_min) / (1 - persp_ratio)];
-    planesort = function(a, b) {
-      return -dot(sub(ray_origin, a[0]), a[1]) * dot(sub(b[0], a[0]), a[1]);
-    };
     zcentroidsort = function(a, b) {
       return a[0][2] - b[0][2];
     };
