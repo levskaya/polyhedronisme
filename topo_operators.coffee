@@ -375,7 +375,7 @@ hollow = (poly, n, inset_dist, thickness)->
     #if f.length is n or n is 0
     for v in f
       flag.newV "fin"+i+"v"+v, tween(poly.xyz[v],centers[i],inset_dist)
-      flag.newV "findown"+i+"v"+v, add(tween(poly.xyz[v],centers[i],inset_dist),mult(-1*thickness,normals[i]))
+      #flag.newV "findown"+i+"v"+v, add(tween(poly.xyz[v],centers[i],inset_dist),mult(-1*thickness,normals[i]))
 
   #foundAny = false                 # alert if don't find any
   for f,i in poly.face
@@ -391,16 +391,22 @@ hollow = (poly, n, inset_dist, thickness)->
       flag.newFlag fname, "fin"+i+v1,  v1
 
       fname = "sides"+i + v1
-      flag.newFlag fname, "fin"+i+v1,     "fin"+i+v2
-      flag.newFlag fname, "fin"+i+v2,     "findown"+i+v2
-      flag.newFlag fname, "findown"+i+v2, "findown"+i+v1
-      flag.newFlag fname, "findown"+i+v1, "fin"+i+v1
+      flag.newFlag fname,  "down"+v2,  "down"+v1
+      flag.newFlag fname,  "down"+v1,  "fin"+i+v1
+      flag.newFlag fname,  "fin"+i+v1, "fin"+i+v2
+      flag.newFlag fname,  "fin"+i+v2, "down"+v2
 
-      fname = "bottom"+i + v1
-      flag.newFlag fname,  "down"+v2,      "down"+v1
-      flag.newFlag fname,  "down"+v1,      "findown"+i+v1
-      flag.newFlag fname,  "findown"+i+v1, "findown"+i+v2
-      flag.newFlag fname,  "findown"+i+v2, "down"+v2
+      #fname = "sides"+i + v1
+      #flag.newFlag fname, "fin"+i+v1,     "fin"+i+v2
+      #flag.newFlag fname, "fin"+i+v2,     "findown"+i+v2
+      #flag.newFlag fname, "findown"+i+v2, "findown"+i+v1
+      #flag.newFlag fname, "findown"+i+v1, "fin"+i+v1
+
+      #fname = "bottom"+i + v1
+      #flag.newFlag fname,  "down"+v2,      "down"+v1
+      #flag.newFlag fname,  "down"+v1,      "findown"+i+v1
+      #flag.newFlag fname,  "findown"+i+v1, "findown"+i+v2
+      #flag.newFlag fname,  "findown"+i+v2, "down"+v2
 
       #new inset, extruded face
       #flag.newFlag "ex"+i, "fin"+i+v1,  "fin"+i+v2
@@ -421,50 +427,50 @@ hollow = (poly, n, inset_dist, thickness)->
 
 # ExtrudeN
 # ------------------------------------------------------------------------------------------
-# extrudeN = (poly, n)->
-#   n or= 0
-#   console.log "Taking extrusion of #{if n==0 then "" else n}-sided faces of #{poly.name}..."
+extrudeN = (poly, n)->
+  n or= 0
+  console.log "Taking extrusion of #{if n==0 then "" else n}-sided faces of #{poly.name}..."
 
-#   flag = new polyflag()
-#   for p,i in poly.xyz
-#     # each old vertex is a new vertex
-#     flag.newV "v#{i}", p
+  flag = new polyflag()
+  for p,i in poly.xyz
+    # each old vertex is a new vertex
+    flag.newV "v#{i}", p
 
-#   normals = poly.normals()
-#   centers = poly.centers()
-#   for f,i in poly.face #new inset vertex for every vert in face
-#     if f.length is n or n is 0
-#       for v in f
-#         #flag.newV "f"+i+"v"+v, add(midpoint(poly.xyz[v],centers[i]),mult(-0.2,normals[i]))
-#         flag.newV "f"+i+"v"+v, add(poly.xyz[v], mult(0.3,normals[i]))
+  normals = poly.normals()
+  centers = poly.centers()
+  for f,i in poly.face #new inset vertex for every vert in face
+    if f.length is n or n is 0
+      for v in f
+        #flag.newV "f"+i+"v"+v, add(midpoint(poly.xyz[v],centers[i]),mult(-0.2,normals[i]))
+        flag.newV "f"+i+"v"+v, add(poly.xyz[v], mult(0.3,normals[i]))
 
-#   foundAny = false                 # alert if don't find any
-#   for f,i in poly.face
-#     v1 = "v"+f[f.length-1]
-#     for v in f
-#       v2 = "v"+v
-#       if f.length is n or n is 0
-#         foundAny = true
-#         #fname = i+v1
-#         flag.newFlag i+v1,       v1,       v2
-#         flag.newFlag i+v1,       v2, "f"+i+v2
-#         flag.newFlag i+v1, "f"+i+v2, "f"+i+v1
-#         flag.newFlag i+v1, "f"+i+v1,       v1
-#         #new inset, extruded face
-#         flag.newFlag "ex"+i, "f"+i+v1,  "f"+i+v2
-#       else
-#         flag.newFlag i, v1, v2  # same old flag, if non-n
-#       v1=v2  # current becomes previous
+  foundAny = false                 # alert if don't find any
+  for f,i in poly.face
+    v1 = "v"+f[f.length-1]
+    for v in f
+      v2 = "v"+v
+      if f.length is n or n is 0
+        foundAny = true
+        #fname = i+v1
+        flag.newFlag i+v1,       v1,       v2
+        flag.newFlag i+v1,       v2, "f"+i+v2
+        flag.newFlag i+v1, "f"+i+v2, "f"+i+v1
+        flag.newFlag i+v1, "f"+i+v1,       v1
+        #new inset, extruded face
+        flag.newFlag "ex"+i, "f"+i+v1,  "f"+i+v2
+      else
+        flag.newFlag i, v1, v2  # same old flag, if non-n
+      v1=v2  # current becomes previous
 
-#   if not foundAny
-#     console.log "No #{n}-fold components were found."
+  if not foundAny
+    console.log "No #{n}-fold components were found."
 
-#   newpoly = flag.topoly()
-#   newpoly.name = "x" + (if n is 0 then "" else n) + poly.name
-#   #console.log newpoly
-#   #newpoly.xyz = adjustXYZ(newpoly, 3)
-#   #newpoly.xyz = canonicalXYZ(newpoly, 3)  # this tends to make results look like shit
-#   newpoly
+  newpoly = flag.topoly()
+  newpoly.name = "x" + (if n is 0 then "" else n) + poly.name
+  #console.log newpoly
+  #newpoly.xyz = adjustXYZ(newpoly, 3)
+  #newpoly.xyz = canonicalXYZ(newpoly, 3)  # this tends to make results look like shit
+  newpoly
 
 
 # StellaN

@@ -59,7 +59,8 @@
   <label>palette <input id="palette"></input></label>
 </div>
 
-<p>The specification consists of a space-delimited series of polyhedral recipes.  Each recipe looks like: </p>
+<p>This is a toy for building complex 3D polyhedral shapes from simple
+ones by "recipes".  A recipe looks like: </p>
 
   <p>[<b>op</b>][<b>op</b>] ... [<b>op</b>][<b>base</b>] <i>no spaces,
   just a string of characters</i> </p>
@@ -67,14 +68,14 @@
   <p>where [<b>base</b>] is one of</p>
 
   <ul>
-    <li>T - tetrahedron</li>
-    <li>C - cube</li>
-    <li>O - octahedron</li>
-    <li>I - icosahedron</li>
-    <li>D - dodecahedron</li>
-    <li>P<i>N</i> - N-sided prism</li>
-    <li>A<i>N</i> - N-sided anti-prism</li>
-    <li>Y<i>N</i> - N-sided pyramid</li>
+    <li><b>T</b> - tetrahedron</li>
+    <li><b>C</b> - cube</li>
+    <li><b>O</b> - octahedron</li>
+    <li><b>I</b> - icosahedron</li>
+    <li><b>D</b> - dodecahedron</li>
+    <li><b>P<i>N</i></b> - N-sided prism</li>
+    <li><b>A<i>N</i></b> - N-sided anti-prism</li>
+    <li><b>Y<i>N</i></b> - N-sided pyramid</li>
   </ul>
 
   <p>and <b>op</b> is one of</p>
@@ -101,10 +102,30 @@
   <li><b>l</b> - ste<b>l</b>lation</li>
   <li><b>n<i>N</i></b> - i<b>n</b>setN </li>
   <li><b>x<i>N</i></b> - e<b>x</b>trudeN </li>
+  <li><b>h</b> - hollow/skeletonize, useful for 3D printing, makes a
+  hollow-faced shell version of the polyhedron, only apply it once in
+  a recipe!</li>
   <li><b>z</b> - triangulate</li>
 </ul>
 
-  <p>there are also two "refinement" operators for the
+<p> There are more complicated, parameterized forms for <b>k</b> and <b>n</b>: </p>
+<ul>
+  <li><b>n</b>(<i>n</i>,<i>inset</i>,<i>depth</i>) - this applies the
+  inset operator on <i>n</i>-sided faces, insetting by <i>inset</i> scaled from
+  0 to 1, and extruding in or out along the normal by <i>depth</i>
+  (can be negative)
+  </li>
+  <li><b>k</b>(<i>n</i>,<i>depth</i>) - this applies the kis operator
+  on <i>n</i>-sided faces, setting the pyramidal height out or in along the normal by <i>depth</i>
+  (can be negative)
+  </li>
+  <li><b>h</b>(<i>0</i>,<i>inset</i>,<i>depth</i>) - this applies the
+  hollowing/skeletonizing operator on all faces, insetting by
+  <i>inset</i> (scaled from 0 to 1), and with a shell thickness of <i>depth</i>
+  </li>
+</ul>
+
+  <p>there are also three "refinement" operators for the
   canonicalization of the polyhedral shape, mainly intended for making
   the more traditional, convex polyhedra more symmetric</p>
 <ul>
@@ -115,10 +136,15 @@
   <li><b>A<i>N</i></b> - convex spherical <b>A</b>djustment. Iterates N times.</li>
 </ul>
 
-<p>these can blow up the geometry of the weirder polyhedra, which can
-be interesting too!</p>
+<p>these will mangle the geometry of the weirder polyhedra, which can
+occasionally result in interesting results!</p>
 
-<p>Some relevant links: </p>
+<h4> 3D Printing </h4>
+<p>You can export these shapes in forms appropriate for 3D printing by
+shapeways. Export in VRML2 format to preserve face colors if you want
+to use their colored fused-sand process.</p>
+
+<p>For more information on these operators and polyhedra: </p>
 <ul>
 <li><a href="http://en.wikipedia.org/wiki/Conway_polyhedron_notation">
   Wikipedia on Conway Polyhedral Notation</a></li>

@@ -29,7 +29,7 @@ globtime = new Date() # for animation
 
 BG_CLEAR = true # clear background or colored?
 BG_COLOR = "rgba(255,255,255,1.0)" # background color
-COLOR_METHOD = "signature" #"area"
+COLOR_METHOD = "area" #"signature"
 PaintMode = "fillstroke"
 ctx_linewidth = 0.5 # for outline of faces
 
@@ -43,7 +43,7 @@ LastSphVec=[1,0,0] #for 3d trackball
 DEFAULT_RECIPES = [
   "C2dakD","oC20kkkT","kn4C40A0dA4","opD",
   "lT","lK5oC","knD","dn6x4K5bT","oox4P7",
-  "n18n18n9n9n9soxY9"]
+  "n18n18n9n9n9soxY9","khD","lhD"]
 
 # File-saving objects used to export txt/canvas-png
 saveText = (text, filename) ->

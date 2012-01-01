@@ -64,7 +64,7 @@ opmap = {
   "p": propellor
   "r": reflect
   "n": insetN
-  #"x": extrudeN
+  "x": extrudeN #redundant
   "l": stellaN
   "z": triangulate
   "h": hollow
