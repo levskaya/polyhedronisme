@@ -64,9 +64,10 @@ opmap = {
   "p": propellor
   "r": reflect
   "n": insetN
-  "x": extrudeN
+  #"x": extrudeN
   "l": stellaN
   "z": triangulate
+  "h": hollow
   "K": canonicalXYZ
   "C": canonicalize
   "A": adjustXYZ

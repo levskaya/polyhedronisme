@@ -1,5 +1,5 @@
 (function() {
-  var AminusB, BG_CLEAR, BG_COLOR, CANVAS_HEIGHT, CANVAS_WIDTH, COLOR_METHOD, DEFAULT_RECIPES, LN10, LastMouseX, LastMouseY, LastSphVec, MOUSEDOWN, PALETTE, PEG_parser_spec, PI, PaintMode, Signed2DTriArea, Test2DSegmentSegment, abs, acos, add, adjustXYZ, ambo, animateShape, antiprism, asin, atan, basemap, calcCentroid, canonicalXYZ, canonicalize, clear, clockwisepoly, clone, convexarea, copyVecArray, cos, cross, ctx, ctx_linewidth, cube, diagsToTris, dispatch, dodecahedron, dot, drawShape, drawpoly, dual, edgeDist, extrudeN, eye3, faceSignature, faceToEdges, floor, getDiagonals, getOps, getSVG, getVec2VecRotM, globPolys, globRotM, globlastRotM, globtime, gyro, hextofloats, icosahedron, idxof, init, insetN, intersect, intersectionGraph, invperspT, kisN, log, log10, mag, mag2, midpoint, mm3, mult, mv3, newgeneratePoly, normal, octahedron, oneThird, op_parser, opmap, orthogonal, paintPolyhedron, palette, parseurl, perspT, persp_ratio, persp_z_max, persp_z_min, perspective_scale, planarize, pointInPoly, polyflag, polyhedron, pow, prism, project2dface, propellor, pyramid, random, randomchoice, recenter, reciprocal, reciprocalC, reciprocalN, reflect, rescale, rotm, round, rwb_palette, saveText, sigfigs, sin, sortfaces, specreplacements, sqrt, stellaN, sub, tan, tangentPoint, tangentify, testrig, tetrahedron, to2Dfaces, topolog, triEq, triangulate, tween, twoDpolygonarea, unit, vec_rotm, vertColors, _2d_x_offset, _2d_y_offset, _mult;
+  var AminusB, BG_CLEAR, BG_COLOR, CANVAS_HEIGHT, CANVAS_WIDTH, COLOR_METHOD, DEFAULT_RECIPES, LN10, LastMouseX, LastMouseY, LastSphVec, MOUSEDOWN, PALETTE, PEG_parser_spec, PI, PaintMode, Signed2DTriArea, Test2DSegmentSegment, abs, acos, add, adjustXYZ, ambo, animateShape, antiprism, asin, atan, basemap, calcCentroid, canonicalXYZ, canonicalize, clear, clockwisepoly, clone, convexarea, copyVecArray, cos, cross, ctx, ctx_linewidth, cube, diagsToTris, dispatch, dodecahedron, dot, drawShape, drawpoly, dual, edgeDist, eye3, faceSignature, faceToEdges, floor, getDiagonals, getOps, getSVG, getVec2VecRotM, globPolys, globRotM, globlastRotM, globtime, gyro, hextofloats, hollow, icosahedron, idxof, init, insetN, intersect, intersectionGraph, invperspT, kisN, log, log10, mag, mag2, midpoint, mm3, mult, mv3, newgeneratePoly, normal, octahedron, oneThird, op_parser, opmap, orthogonal, paintPolyhedron, palette, parseurl, perspT, persp_ratio, persp_z_max, persp_z_min, perspective_scale, planarize, pointInPoly, polyflag, polyhedron, pow, prism, project2dface, propellor, pyramid, random, randomchoice, recenter, reciprocal, reciprocalC, reciprocalN, reflect, rescale, rotm, round, rwb_palette, saveText, sigfigs, sin, sortfaces, specreplacements, sqrt, stellaN, sub, tan, tangentPoint, tangentify, testrig, tetrahedron, to2Dfaces, topolog, triEq, triangulate, tween, twoDpolygonarea, unit, vec_rotm, vertColors, _2d_x_offset, _2d_y_offset, _mult;
 
   random = Math.random;
 
@@ -1073,29 +1073,31 @@
     return newpoly;
   };
 
-  extrudeN = function(poly, n) {
-    var centers, f, flag, foundAny, i, newpoly, normals, p, v, v1, v2, _i, _j, _len, _len2, _len3, _len4, _len5, _ref, _ref2, _ref3;
+  hollow = function(poly, n, inset_dist, thickness) {
+    var centers, dualnormals, f, flag, fname, foundAny, i, newpoly, normals, p, v, v1, v2, _i, _j, _len, _len2, _len3, _len4, _len5, _ref, _ref2, _ref3;
     n || (n = 0);
-    console.log("Taking extrusion of " + (n === 0 ? "" : n) + "-sided faces of " + poly.name + "...");
+    inset_dist || (inset_dist = 0.5);
+    thickness || (thickness = 0.2);
+    console.log("Skeletonizing " + (n === 0 ? "" : n) + "-sided faces of " + poly.name + "...");
+    dualnormals = dual(poly).normals();
+    normals = poly.normals();
+    centers = poly.centers();
     flag = new polyflag();
     _ref = poly.xyz;
     for (i = 0, _len = _ref.length; i < _len; i++) {
       p = _ref[i];
       flag.newV("v" + i, p);
+      flag.newV("downv" + i, add(p, mult(-1 * thickness, dualnormals[i])));
     }
-    normals = poly.normals();
-    centers = poly.centers();
     _ref2 = poly.face;
     for (i = 0, _len2 = _ref2.length; i < _len2; i++) {
       f = _ref2[i];
-      if (f.length === n || n === 0) {
-        for (_i = 0, _len3 = f.length; _i < _len3; _i++) {
-          v = f[_i];
-          flag.newV("f" + i + "v" + v, add(poly.xyz[v], mult(0.3, normals[i])));
-        }
+      for (_i = 0, _len3 = f.length; _i < _len3; _i++) {
+        v = f[_i];
+        flag.newV("fin" + i + "v" + v, tween(poly.xyz[v], centers[i], inset_dist));
+        flag.newV("findown" + i + "v" + v, add(tween(poly.xyz[v], centers[i], inset_dist), mult(-1 * thickness, normals[i])));
       }
     }
-    foundAny = false;
     _ref3 = poly.face;
     for (i = 0, _len4 = _ref3.length; i < _len4; i++) {
       f = _ref3[i];
@@ -1103,22 +1105,27 @@
       for (_j = 0, _len5 = f.length; _j < _len5; _j++) {
         v = f[_j];
         v2 = "v" + v;
-        if (f.length === n || n === 0) {
-          foundAny = true;
-          flag.newFlag(i + v1, v1, v2);
-          flag.newFlag(i + v1, v2, "f" + i + v2);
-          flag.newFlag(i + v1, "f" + i + v2, "f" + i + v1);
-          flag.newFlag(i + v1, "f" + i + v1, v1);
-          flag.newFlag("ex" + i, "f" + i + v1, "f" + i + v2);
-        } else {
-          flag.newFlag(i, v1, v2);
-        }
+        foundAny = true;
+        fname = i + v1;
+        flag.newFlag(fname, v1, v2);
+        flag.newFlag(fname, v2, "fin" + i + v2);
+        flag.newFlag(fname, "fin" + i + v2, "fin" + i + v1);
+        flag.newFlag(fname, "fin" + i + v1, v1);
+        fname = "sides" + i + v1;
+        flag.newFlag(fname, "fin" + i + v1, "fin" + i + v2);
+        flag.newFlag(fname, "fin" + i + v2, "findown" + i + v2);
+        flag.newFlag(fname, "findown" + i + v2, "findown" + i + v1);
+        flag.newFlag(fname, "findown" + i + v1, "fin" + i + v1);
+        fname = "bottom" + i + v1;
+        flag.newFlag(fname, "down" + v2, "down" + v1);
+        flag.newFlag(fname, "down" + v1, "findown" + i + v1);
+        flag.newFlag(fname, "findown" + i + v1, "findown" + i + v2);
+        flag.newFlag(fname, "findown" + i + v2, "down" + v2);
         v1 = v2;
       }
     }
-    if (!foundAny) console.log("No " + n + "-fold components were found.");
     newpoly = flag.topoly();
-    newpoly.name = "x" + (n === 0 ? "" : n) + poly.name;
+    newpoly.name = "h" + poly.name;
     return newpoly;
   };
 
@@ -1607,9 +1614,9 @@
     "p": propellor,
     "r": reflect,
     "n": insetN,
-    "x": extrudeN,
     "l": stellaN,
     "z": triangulate,
+    "h": hollow,
     "K": canonicalXYZ,
     "C": canonicalize,
     "A": adjustXYZ
