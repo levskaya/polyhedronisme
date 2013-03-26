@@ -40,10 +40,11 @@ LastMouseY=0
 LastSphVec=[1,0,0] #for 3d trackball
 
 # random grabbag of polyhedra
-DEFAULT_RECIPES = [
-  "C2dakD","oC20kkkT","kn4C40A0dA4","opD",
-  "lT","lK5oC","knD","dn6x4K5bT","oox4P7",
-  "n18n18n9n9n9soxY9","khD","lhD"]
+#DEFAULT_RECIPES = [
+#  "C2dakD","oC20kkkT","kn4C40A0dA4","opD",
+#  "lT","lK5oC","knD","dn6x4K5bT","oox4P7",
+#  "n18n18n9n9n9soxY9","khD","lhD"]
+DEFAULT_RECIPES = ["T"]
 
 # File-saving objects used to export txt/canvas-png
 saveText = (text, filename) ->
@@ -110,7 +111,10 @@ drawpoly = (poly,tvec) ->
   poly.xyz = _.map(poly.xyz, (x)->mv3(globRotM,x))
 
   # z sort faces
-  sortfaces(poly)
+  #sortfaces(poly)
+  window.polyobj = clone poly #for debugging inspection
+  #sortfaces_fancy(poly)
+  wtfs = sortfaces_fancy2(poly,persp_z_max,persp_z_min,persp_ratio,perspective_scale)
 
   #for face culling
   #normals = poly.normals()
@@ -152,6 +156,22 @@ drawpoly = (poly,tvec) ->
     if PaintMode is "stroke"
       ctx.strokeStyle = "rgba(0,0,0, .8)"
       ctx.stroke()
+
+  for face in wtfs
+    ctx.beginPath()
+    # move to first vertex of face
+    v0 = face[face.length-1]
+    [x,y] = perspT(add(tvec,poly.xyz[v0]), persp_z_max,persp_z_min,persp_ratio,perspective_scale)
+    ctx.moveTo(x+_2d_x_offset, y+_2d_y_offset)
+    # loop around face, defining polygon
+    for v in face
+      [x,y] = perspT(add(tvec,poly.xyz[v]),persp_z_max,persp_z_min,persp_ratio,perspective_scale)
+      ctx.lineTo(x+_2d_x_offset, y+_2d_y_offset)
+
+    ctx.lineWidth = 1.0
+    ctx.strokeStyle = "rgba(0,0,0, 1.0)"
+    ctx.stroke()
+    ctx.lineWidth = ctx_linewidth
 
   #for face,fno in poly.face
   #  ctx.textAlign = "center"

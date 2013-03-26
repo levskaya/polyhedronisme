@@ -76,6 +76,21 @@ dot = (vec1, vec2) -> vec1[0]*vec2[0] + vec1[1]*vec2[1] + vec1[2]*vec2[2]
 # 3d cross product d1 x d2
 cross = (d1, d2) -> [ d1[1]*d2[2]-d1[2]*d2[1], d1[2]*d2[0]-d1[0]*d2[2],  d1[0]*d2[1]-d1[1]*d2[0] ]
 
+# 2d dot product
+dot2D = (vec1, vec2) -> vec1[0]*vec2[0] + vec1[1]*vec2[1]
+
+# 2d cross product (scalar)
+cross2D = (d1, d2) -> d1[0]*d2[1]-d1[1]*d2[0]
+
+# 2d vector addition
+add2D = (vec1, vec2) -> [vec1[0]+vec2[0],vec1[1]+vec2[1]]
+
+# 2d vector subtraction
+sub2D = (vec1, vec2) -> [vec1[0]-vec2[0],vec1[1]-vec2[1]]
+
+# chop small (absolute) values to 0
+chop = (x) -> if abs(x) < 1e-10 then 0 else x
+
 # vector norm
 mag = (vec) -> sqrt(dot(vec,vec))
 
@@ -140,6 +155,40 @@ normal = (xyzs) ->
       normalV = add(normalV, orthogonal(v1, v2, v3))
       [v1,v2] = [v2,v3] # shift over one
     unit(normalV)
+
+calcExtents = (xyzs) ->
+  [x,y,z] = xyzs[0]
+  [maxX,minX] = [x,x]
+  [maxY,minY] = [y,y]
+  [maxZ,minZ] = [z,z]
+  for v in xyzs
+    [x,y,z] = v
+    maxX = if maxX < x then x else maxX
+    minX = if minX > x then x else minX
+    maxY = if maxY < y then y else maxY
+    minY = if minY > y then y else minY
+    maxZ = if maxZ < z then z else maxZ
+    minZ = if minZ > z then z else minZ
+
+  [[minX,maxX],[minY,maxY],[minZ,maxZ]]
+
+calcPerspExtents = (xyzs, max_real_depth, min_real_depth, desired_ratio, desired_length) ->
+  [x,y,z] = xyzs[0]
+  [pX,pY] = perspT(xyzs[0],max_real_depth, min_real_depth, desired_ratio, desired_length)
+  [maxX,minX] = [pX,pX]
+  [maxY,minY] = [pY,pY]
+  [maxZ,minZ] = [z,z]
+  for v in xyzs
+    [x,y,z] = v
+    [pX,pY] = perspT(v,max_real_depth, min_real_depth, desired_ratio, desired_length)
+    maxX = if maxX < pX then pX else maxX
+    minX = if minX > pX then pX else minX
+    maxY = if maxY < pY then pY else maxY
+    minY = if minY > pY then pY else minY
+    maxZ = if maxZ < z then z else maxZ
+    minZ = if minZ > z then z else minZ
+
+  [[minX,maxX],[minY,maxY],[minZ,maxZ]]
 
 # calculates area planar face by summing over subtriangle areas
 #  _Assumes_ Convexity!
@@ -306,7 +355,4 @@ getVec2VecRotM = (vec1, vec2)->
 
   #console.log  "getVec2VecRotM", angle, axis[0],axis[1],axis[2]
   vec_rotm(-1*angle,axis[0],axis[1],axis[2])
-
-
-
 

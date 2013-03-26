@@ -88,25 +88,289 @@ sortfaces = (poly) ->
   #closests = (smallestZ(poly.xyz[v] for v in f) for f in poly.face)
   centroids  = poly.centers()
   normals    = poly.normals()
+  extents    = poly.extents()
   ray_origin = [0,0, (persp_z_max * persp_ratio - persp_z_min)/(1-persp_ratio)]
 
-  # sort by plane partition: are you on same side as view-origin or not?
-  # !!! there is something wrong with this. even triangulated surfaces have artifacts.
-  # planesort = (a,b)->
-
   # sort by centroid z-depth: not correct but more stable heuristic w. weird non-planar "polygons"
-  zcentroidsort = (a,b) -> a[0][2]-b[0][2]
+  zcentroidsort = (a,b) -> a[1][2]-b[1][2]
+  zmaxsort = (a,b) -> a[3][2][1]-b[3][2][1]
 
-  zsortIndex = _.zip(centroids, normals, [0..poly.face.length-1])
-    #.sort(planesort)
+  zsortIndex = _.zip([0..poly.face.length-1],centroids, normals, extents)
+    #.sort(zmaxsort)
     .sort(zcentroidsort)
-    .map((x)->x[2])
+    .map((x)->x[0])
 
   # sort all face-associated properties
   poly.face = (poly.face[idx] for idx in zsortIndex)
   poly.face_class = (poly.face_class[idx] for idx in zsortIndex)
 
+# determines if face represented by faceverts2 is on same side or opposite of
+# refpoint from faceverts1
+facesidedness = (faceverts1, faceverts2, refpoint) ->
+  n1 = normal(faceverts1)
+  c1 = calcCentroid(faceverts1)
+  refside = dot(sub(refpoint,c1),n1)
+  samesided=true
+  oppsided=true
+  for vert in faceverts2
+    sidedness = dot(sub(vert,c1),n1)*refside
+    # correct for numerical imprecision ~0 is as good as 0
+    if abs(sidedness) < 1e-10 then sidedness = 0
+    #console.log "sidedness ", sidedness
+    if sidedness < 0 then samesided = false
+    if sidedness > 0 then oppsided = false
+  #console.log "SIDED", samesided, oppsided
+  if samesided
+    return 1
+  else if oppsided
+    return -1
+  else
+    return 0
 
+sortfaces_fancy = (poly) ->
+  ray_origin = [0,0, (persp_z_max * persp_ratio - persp_z_min)/(1-persp_ratio)]
+  centroids  = poly.centers()
+  extents    = poly.extents()
+  zminsort = (a,b) -> a[1][2][0]-b[1][2][0]
+  #zcentroidsort = (a,b) -> a[2][2]-b[2][2]
+
+  extentsort = (a,b) ->
+    [amin,amax] = a[1][2]
+    [bmin,bmax] = b[1][2]
+    diff = amin-bmin
+    if abs(diff)<1e-10 then diff=0
+    if diff != 0
+      return diff
+    diff = amax-bmax
+    if abs(diff)<1e-10 then diff=0
+    diff
+
+  zsortIndex = _.zip([0..poly.face.length-1], extents, centroids)
+    #.sort(zcentroidsort)
+    .sort(extentsort)
+    .map((x)->x[0])
+
+  facenums = (idx for idx in zsortIndex)
+  sortPtr = 0
+
+  console.log facenums
+  ii=0
+  while sortPtr<facenums.length-1 and ii<500
+    ii+=1
+    aidx = facenums[sortPtr]
+    for bidx,fno2 in facenums
+      if fno2<=sortPtr then continue
+
+      a=(poly.xyz[v] for v in poly.face[aidx])
+      b=(poly.xyz[v] for v in poly.face[bidx])
+      [[AminX,AmaxX],[AminY,AmaxY],[AminZ,AmaxZ]] = calcExtents(a)
+      [[BminX,BmaxX],[BminY,BmaxY],[BminZ,BmaxZ]] = calcExtents(b)
+
+      # If z-extents don't overlap, crude ordering OK
+      if BmaxZ < AminZ
+        console.log "wtf pre-ordering fail", aidx, "=", AminZ, AmaxZ, " ",bidx,"=", BminZ, BmaxZ
+      if AmaxZ <= BminZ or BmaxZ <= AminZ
+        #console.log "Zsep ", aidx, bidx
+        #sortPtr+=1
+        #break
+        continue
+        #console.log fno1, faces.length
+
+      # If X,Y extents don't overlap, OK
+      if AmaxX <= BminX or BmaxX <= AminX
+        #console.log "Xsep ", aidx, bidx
+        continue
+      if AmaxY <= BminY or BmaxY <= AminY
+        #console.log "Ysep ", aidx, bidx
+        continue
+
+      A_B_o = facesidedness(a, b, ray_origin)
+      B_A_o = facesidedness(b, a, ray_origin)
+      # A further back than B
+      # B entirely on same side of A as view origin point
+      # A entirely on opposite side of B as view origin point
+      if A_B_o == 1 or B_A_o == -1
+        #console.log "noswitch",aidx,bidx,A_B_o,B_A_o
+        continue
+
+      # B further back than A
+      # A entirely on same side of B as view origin point
+      # B entirely on opposite side of A as view origin point
+      if B_A_o == 1 or A_B_o == -1
+        facenums[sortPtr] = bidx
+        facenums[fno2] = aidx
+        console.log "switch",aidx,bidx,A_B_o,B_A_o
+        #console.log "... order test", aidx, "=", AminZ, AmaxZ, " ",bidx,"=", BminZ, BmaxZ
+
+        sortPtr=-1 #HACK to keep sortPtr unchanged below
+        break
+
+      #if fno2 == facenums.length-1
+      #  console.log "end ", aidx
+      #  sortPtr+=1
+      #  break
+
+      # All tests failed, emergency bailout
+      console.log "Warning: All tests failed on ", aidx, bidx
+      #sortPtr+=1
+      break
+    # no more faces to test against
+    #console.log "end ", aidx
+    sortPtr+=1
+
+  console.log sortPtr, ii
+  #facenums=facenums.reverse()
+  poly.face = (poly.face[idx] for idx in facenums)
+  poly.face_class = (poly.face_class[idx] for idx in facenums)
+
+# Tests for line intersection in 2D
+lineIsect2D = (a,b, sameLineException=false) ->
+  [a1,a2] = a
+  [b1,b2] = b
+  da = sub2D(a2,a1)
+  db = sub2D(b2,b1)
+  crossp = cross2D(da,db)
+  #console.log "crossp = ", crossp
+  # Parallel Line Case
+  if chop(crossp)==0 # parallel lines
+    if cross2D(sub2D(b1,a1),da)==0 #colinear lines
+      # Edge Case: collinear intersection
+      # project points along a1->a2 line
+      # pa1 = 0
+      pa2 = dot2D(da,da)
+      pb1 = dot2D(sub2D(b1,a1),da)
+      pb2 = dot2D(sub2D(b2,a1),da)
+      # ensure proper ordering of extent for bounds check
+      if pb1>pb2 then [pb1,pb2]=[pb2,pb1]
+      # special treatment of identical lines if specified
+      if sameLineException and pb1==0 and pb2=pa2
+        return false
+      if pb2 <= 0 or pb1 >= pa2
+        return false #colinear but NO intersection
+      else
+        return true #colinear intersection
+    else
+      return false # offset parallels
+  # General Case
+  du = chop(cross2D(sub2D(b1,a1),da)/crossp)
+  dt = chop(cross2D(sub2D(b1,a1),db)/crossp)
+  #console.log "du,dt = ", du,dt
+  if 0<du<1 and 0<dt<1
+    return true # interior intersection
+  else
+    return false
+
+#complicated by shared colinear lines
+polygonIsectTest = (a,b) ->
+  # Build Edges from point list
+  Aedges = _.zip(a[1..], a[0..a.length-2])
+  Aedges.push([a[a.length-1],a[0]])
+  Bedges = _.zip(b[1..], b[0..b.length-2])
+  Bedges.push([b[b.length-1],b[0]])
+  #console.log a,b,Aedges,Bedges
+  # Check Edge Intersections
+  for Aedge in Aedges
+    for Bedge in Bedges
+      if lineIsect2D(Aedge, Bedge, true) then return true
+  # Check points of A interior to B
+  for Apt in a
+    cnt=0
+    for Bedge in Bedges
+      if lineIsect2D(Bedge, [Apt,[10000,0]]) then cnt+=1
+    if cnt%2 != 0 then return true
+  # Check points of B interior to A
+  for Bpt in b
+    cnt=0
+    for Aedge in Aedges
+      if lineIsect2D(Aedge, [Bpt,[10000,0]]) then cnt+=1
+    if cnt%2 != 0 then return true
+  # No Intersection!
+  return false
+
+sortfaces_fancy2 = (poly,persp_z_max,persp_z_min,persp_ratio,perspective_scale) ->
+  ray_origin = [0,0, (persp_z_max * persp_ratio - persp_z_min)/(1-persp_ratio)]
+  centroids  = poly.centers()
+  extents    = poly.extents()
+
+  facePts = ((poly.xyz[v] for v in f) for f in poly.face)
+  perspTfacePts = ((perspT(poly.xyz[v],persp_z_max,persp_z_min,persp_ratio,perspective_scale) for v in f) for f in poly.face)
+
+  chop = (x) -> if abs(x) < 1e-10 then 0 else x
+  extentsort = (a,b) ->
+    [amin,amax] = a
+    [bmin,bmax] = b
+    diff = chop(amin-bmin)
+    if diff != 0
+      return diff
+    diff = chop(amax-bmax)
+    diff
+
+  zsortIndex = _.zip([0..poly.face.length-1], extents, centroids)
+    .sort((a,b) -> extentsort(a[1][2],b[1][2]))
+    .map((x)->x[0])
+
+  wtfs=[]
+
+  sortF = (aidx,bidx) ->
+    #a=(poly.xyz[v] for v in poly.face[aidx])
+    #b=(poly.xyz[v] for v in poly.face[bidx])
+    a = facePts[aidx]
+    b = facePts[bidx]
+
+    [[AminX,AmaxX],[AminY,AmaxY],[AminZ,AmaxZ]] =
+      calcPerspExtents(a,persp_z_max,persp_z_min,persp_ratio,perspective_scale)
+    [[BminX,BmaxX],[BminY,BmaxY],[BminZ,BmaxZ]] =
+      calcPerspExtents(b,persp_z_max,persp_z_min,persp_ratio,perspective_scale)
+
+    # If z-extents don't overlap, extent ordering holds
+    if chop(AmaxZ-BminZ) <= 0 or chop(BmaxZ-AminZ) <= 0
+      #console.log "Zsep ", aidx, bidx
+      return chop(AminZ-BminZ)
+    # If projected X,Y extents don't overlap
+    if chop(AmaxX-BminX) <= 0 or chop(BmaxX-AminX) <= 0
+      #console.log "Xsep ", aidx, bidx
+      return chop(AminZ-BminZ)
+    if chop(AmaxY-BminY) <= 0 or chop(BmaxY-AminY) <= 0
+      #console.log "Ysep ", aidx, bidx
+      return chop(AminZ-BminZ)
+
+    A_B_o = facesidedness(a, b, ray_origin)
+    B_A_o = facesidedness(b, a, ray_origin)
+    # B entirely on same side of A as view origin point
+    # A entirely on opposite side of B as view origin point
+    if A_B_o == 1 or B_A_o == -1
+      #console.log "noswitch",aidx,bidx,A_B_o,B_A_o
+      return -1
+
+    # A entirely on same side of B as view origin point
+    # B entirely on opposite side of A as view origin point
+    if B_A_o == 1 or A_B_o == -1
+      #console.log "switch",aidx,bidx,A_B_o,B_A_o
+      return 1
+
+    pA = perspTfacePts[aidx]
+    pB = perspTfacePts[bidx]
+    if not polygonIsectTest(pA,pB)
+      console.log "no isect", aidx, bidx
+      return chop(AminZ-BminZ)
+    else
+      console.log "isect", aidx, bidx
+
+    wtfs.push(poly.face[aidx])
+    wtfs.push(poly.face[bidx])
+    console.log "wtf", aidx, bidx, A_B_o, B_A_o
+    return chop(AminZ-BminZ)
+
+  zsortIndex.sort(sortF)
+  # sort all face-associated properties
+  poly.face = (poly.face[idx] for idx in zsortIndex)
+  poly.face_class = (poly.face_class[idx] for idx in zsortIndex)
+  return wtfs
+
+
+
+
+# Main Polyhedron Class
 class polyhedron
   constructor: (verts,faces,name) ->      # constructor of initially null polyhedron
     @face = faces or new Array()   # array of faces.          face.length = # faces
@@ -151,6 +415,25 @@ class polyhedron
     for f in @face
       normals_array.push normal(@xyz[v] for v in f)
     normals_array
+
+  extents: ->
+  # get x,y,z bounds for each polygon in polyhedron
+    extents_array = []
+    for f in @face
+      [x,y,z] = @xyz[f[0]]
+      [maxX,minX] = [x,x]
+      [maxY,minY] = [y,y]
+      [maxZ,minZ] = [z,z]
+      for v in f
+        [x,y,z] = @xyz[v]
+        maxX = if maxX < x then x else maxX
+        minX = if minX > x then x else minX
+        maxY = if maxY < y then y else maxY
+        minY = if minY > y then y else minY
+        maxZ = if maxZ < z then z else maxZ
+        minZ = if minZ > z then z else minZ
+      extents_array.push [[minX,maxX],[minY,maxY],[minZ,maxZ]]
+    extents_array
 
   # Export / Formatting Routines --------------------------------------------------
 
