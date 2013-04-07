@@ -287,6 +287,42 @@ polygonIsectTest = (a,b) ->
   # No Intersection!
   return false
 
+polygonclip = (polyA, polyB) ->
+  # attempt to use clipper lib implementing Vatti clipping algo
+  scale_factor = 10000.0
+  #subj_polygons = new ClipperLib.Polygons()
+  #subj_polygon = new ClipperLib.Polygon()
+  #for [x,y] in polyA:
+  #  subj_polygon.push(new ClipperLib.IntPoint(x*scale_factor,y*scale_factor))
+  #subj_polygons.push(subj_polygon)
+  # clip_polygons = new ClipperLib.Polygons()
+  # clip_polygon = new ClipperLib.Polygon()
+  # for [x,y] in polyA:
+  #   clip_polygon.push(new ClipperLib.IntPoint(x*scale_factor,y*scale_factor))
+  # clip_polygons.push(clip_polygon)
+  subj_polygons = []
+  subj_polygon = []
+  for [x,y] in polyA
+    subj_polygon.push({'X':x*scale_factor,'Y':y*scale_factor})
+  subj_polygons.push(subj_polygon)
+  clip_polygons = []
+  clip_polygon = []
+  for [x,y] in polyA
+    clip_polygon.push({'X':x*scale_factor,'Y':y*scale_factor})
+  clip_polygons.push(clip_polygon)
+
+  cpr = new ClipperLib.Clipper()
+  cpr.AddPolygons(subj_polygons, ClipperLib.PolyType.ptSubject)
+  cpr.AddPolygons(clip_polygons, ClipperLib.PolyType.ptClip)
+  solution_polygons = new ClipperLib.Polygons()
+  #cpr.Execute(clipType, solution_polygons, subject_fillType, clip_fillType)
+  succeeded = cpr.Execute(0, solution_polygons, 1, 1)
+
+  soln=[]
+  for xy in solution_polygons[0]
+    soln.push([xy['X']/scale_factor,xy['Y']/scale_factor])
+  return soln
+
 sortfaces_fancy2 = (poly,persp_z_max,persp_z_min,persp_ratio,perspective_scale) ->
   ray_origin = [0,0, (persp_z_max * persp_ratio - persp_z_min)/(1-persp_ratio)]
   centroids  = poly.centers()
@@ -316,7 +352,8 @@ sortfaces_fancy2 = (poly,persp_z_max,persp_z_min,persp_ratio,perspective_scale) 
     #b=(poly.xyz[v] for v in poly.face[bidx])
     a = facePts[aidx]
     b = facePts[bidx]
-
+    #aC = centroids[aidx]
+    #bC = centroids[bidx]
     [[AminX,AmaxX],[AminY,AmaxY],[AminZ,AmaxZ]] =
       calcPerspExtents(a,persp_z_max,persp_z_min,persp_ratio,perspective_scale)
     [[BminX,BmaxX],[BminY,BmaxY],[BminZ,BmaxZ]] =
@@ -334,34 +371,44 @@ sortfaces_fancy2 = (poly,persp_z_max,persp_z_min,persp_ratio,perspective_scale) 
       #console.log "Ysep ", aidx, bidx
       return chop(AminZ-BminZ)
 
+    pA = perspTfacePts[aidx]
+    pB = perspTfacePts[bidx]
+    if not polygonIsectTest(pA,pB)
+      #console.log "no isect", aidx, bidx
+      return chop(AminZ-BminZ)
+    #else
+      #console.log "isect", aidx, bidx
+
     A_B_o = facesidedness(a, b, ray_origin)
     B_A_o = facesidedness(b, a, ray_origin)
     # B entirely on same side of A as view origin point
     # A entirely on opposite side of B as view origin point
     if A_B_o == 1 or B_A_o == -1
-      #console.log "noswitch",aidx,bidx,A_B_o,B_A_o
+      console.log "noswitch",aidx,bidx,A_B_o,B_A_o
       return -1
 
     # A entirely on same side of B as view origin point
     # B entirely on opposite side of A as view origin point
     if B_A_o == 1 or A_B_o == -1
-      #console.log "switch",aidx,bidx,A_B_o,B_A_o
+      console.log "switch",aidx,bidx,A_B_o,B_A_o
       return 1
 
-    pA = perspTfacePts[aidx]
-    pB = perspTfacePts[bidx]
-    if not polygonIsectTest(pA,pB)
-      console.log "no isect", aidx, bidx
-      return chop(AminZ-BminZ)
-    else
-      console.log "isect", aidx, bidx
+    if wtfs.length == 0
+      wtfs.push(poly.face[aidx])
+      wtfs.push(poly.face[bidx])
+      console.log "wtf", aidx, bidx, A_B_o, B_A_o
 
-    wtfs.push(poly.face[aidx])
-    wtfs.push(poly.face[bidx])
-    console.log "wtf", aidx, bidx, A_B_o, B_A_o
+      pA = perspTfacePts[aidx]
+      pB = perspTfacePts[bidx]
+      if not polygonIsectTest(pA,pB)
+        console.log "no isect", aidx, bidx
+      else
+        console.log "isect", aidx, bidx
+
     return chop(AminZ-BminZ)
 
   zsortIndex.sort(sortF)
+
   # sort all face-associated properties
   poly.face = (poly.face[idx] for idx in zsortIndex)
   poly.face_class = (poly.face_class[idx] for idx in zsortIndex)

@@ -111,16 +111,18 @@ drawpoly = (poly,tvec) ->
   poly.xyz = _.map(poly.xyz, (x)->mv3(globRotM,x))
 
   # z sort faces
-  #sortfaces(poly)
+  sortfaces(poly)
   window.polyobj = clone poly #for debugging inspection
   #sortfaces_fancy(poly)
-  wtfs = sortfaces_fancy2(poly,persp_z_max,persp_z_min,persp_ratio,perspective_scale)
+  #wtfs = sortfaces_fancy2(poly,persp_z_max,persp_z_min,persp_ratio,perspective_scale)
+
+  wtfs = [polygonclip((poly.xyz[v] for v in poly.face[0]),(poly.xyz[v] for v in poly.face[2]))]
 
   #for face culling
-  #normals = poly.normals()
+  normals = poly.normals()
 
   for face,fno in poly.face
-    #if dot(normals[fno],[0,0,1]) < 0 then continue
+    if dot(normals[fno],[0,0,1]) < 0 then continue
     ctx.beginPath()
     # move to first vertex of face
     v0 = face[face.length-1]
@@ -161,12 +163,12 @@ drawpoly = (poly,tvec) ->
     ctx.beginPath()
     # move to first vertex of face
     v0 = face[face.length-1]
-    [x,y] = perspT(add(tvec,poly.xyz[v0]), persp_z_max,persp_z_min,persp_ratio,perspective_scale)
-    ctx.moveTo(x+_2d_x_offset, y+_2d_y_offset)
+    [x,y] = v0 #perspT(add(tvec,poly.xyz[v0]), persp_z_max,persp_z_min,persp_ratio,perspective_scale)
+    ctx.moveTo(10*x+_2d_x_offset, 10*y+_2d_y_offset)
     # loop around face, defining polygon
     for v in face
-      [x,y] = perspT(add(tvec,poly.xyz[v]),persp_z_max,persp_z_min,persp_ratio,perspective_scale)
-      ctx.lineTo(x+_2d_x_offset, y+_2d_y_offset)
+      [x,y] = v#perspT(add(tvec,poly.xyz[v]),persp_z_max,persp_z_min,persp_ratio,perspective_scale)
+      ctx.lineTo(10*x+_2d_x_offset, 10*y+_2d_y_offset)
 
     ctx.lineWidth = 1.0
     ctx.strokeStyle = "rgba(0,0,0, 1.0)"
