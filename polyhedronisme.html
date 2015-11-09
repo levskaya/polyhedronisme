@@ -36,31 +36,35 @@
   </div>
 </div>
 
+<!-- TODO: provide tooltips for these buttons -->
 <div class="controlswrapper">
-  <img id="strokeonly"  src="media/strokeonly.png"  style="vertical-align:middle;">
-  <img id="fillonly"  src="media/fillonly.png"  style="vertical-align:middle;">
-  <img id="fillandstroke"  src="media/fillandstroke.png" style="vertical-align:middle;">
+  <img id="strokeonly"  src="media/strokeonly.png"  style="vertical-align:middle;" title="Edges only (wireframe)">
+  <img id="fillonly"  src="media/fillonly.png"  style="vertical-align:middle;" title="Faces only">
+  <img id="fillandstroke"  src="media/fillandstroke.png" style="vertical-align:middle;" title="Edges and faces">
   <span style="width:100px;">&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;</span>
 
-  <img id="frontrot" src="media/frontrot.png" style="vertical-align:middle;position:relative;top:-1px;">
-  <img id="siderot"  src="media/siderot.png"  style="vertical-align:middle;">
-  <img id="toprot"   src="media/toprot.png"   style="vertical-align:middle;">
+  <img id="frontrot" src="media/frontrot.png" style="vertical-align:middle;position:relative;top:-1px;" title="Front rotation">
+  <img id="siderot"  src="media/siderot.png"  style="vertical-align:middle;" title="Side rotation">
+  <img id="toprot"   src="media/toprot.png"   style="vertical-align:middle;" title="Top rotation">
   <span style="width:100px;">&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;</span>
 
-  <span id="pngsavebutton" style="font-size:12px;cursor:pointer;">PNG</span>
-  <span id="objsavebutton" style="font-size:12px;cursor:pointer;">OBJ</span>
-  <span id="x3dsavebutton" style="font-size:12px;cursor:pointer;">VRML2</span>
+  <span id="pngsavebutton" style="font-size:12px;cursor:pointer;" title="Export as PNG image">PNG</span>
+  <span id="objsavebutton" style="font-size:12px;cursor:pointer;" title="Export as OBJ geometry">OBJ</span>
+  <span id="x3dsavebutton" style="font-size:12px;cursor:pointer;" title="Export as VRML2 model">VRML2</span>
 
 <p class="centered"><i>rotate by dragging on polyhedron, rescale by scrolling over canvas</i><br>
 </div>
 
 <div class="specwrapper">
   <label>recipe  <input id="spec"></input></label><br>
+  <!-- TODO: would like some documentation on what the palette colors map to.
+    It's not just that each face is colored according to the number of sides. -->
   <label>palette <input id="palette"></input></label>
 </div>
 
 <p>The specification consists of a space-delimited series of polyhedral recipes.
 <!-- 
+TODO would like to provide
 Some examples:</p>
 
 <ul>
@@ -95,7 +99,7 @@ Each recipe looks like: </p>
     <a href="https://en.wikipedia.org/wiki/Conway_polyhedron_notation">polyhedron-building operators</a>:</p>
 
 <ul>
-  <li><b>k<i>N</i></b> - <a href="https://en.wikipedia.org/wiki/Kleetope">kis</a> N-sided faces (if no N, then general kis)</li>
+  <li><b>k<i>N</i></b> - <a href="https://en.wikipedia.org/wiki/Kleetope">kis</a> on N-sided faces (if no N, then general kis)</li>
   <li><b>a</b> - ambo</li>
   <li><b>g</b> - gyro</li>
   <li><b>d</b> - dual</li>
@@ -110,13 +114,12 @@ Each recipe looks like: </p>
   <li><b>p</b> - propellor</li>
   <!-- Operators that could be added:
   <li><b>h</b> - <a href="https://en.wikipedia.org/wiki/Alternation_%28geometry%29">half</a>
-    (symbol clashes with the 'hollow' operator) (caution: requires even-sided faces, and can produce digons)</li>
+    (symbol clashes with the 'hollow' operator; could change the symbol for hollow to <b>i</b> as in skeletonize?) (caution: requires even-sided faces, and can produce digons)</li>
   <li><b>c</b> - chamfer</li>
   <li><b>w</b> - whirl</li>
   -->
 </ul>
 
-<p>O</p>
 <p>Also, some newer, experimental operators:</p>
 
 <ul>
@@ -126,21 +129,21 @@ Each recipe looks like: </p>
   <li><b>z</b> - triangulate</li>
 </ul>
 
-  <p>There are also the following "refinement" geometric operators for the
+  <p>There are also the following "refinement" operators for the geometric
   canonicalization of the polyhedral shape, mainly intended for making
-  the more traditional, convex polyhedra more symmetric</p>
+  the more traditional, convex polyhedra more symmetric:</p>
 <ul>
   <li><b>K<i>N</i></b> - quic<b>K</b> and dirty canonicalization, it can blow
   up, iteratively refines shape N times.</li>
   <li><b>C<i>N</i></b> - proper <b>C</b>anonicalization, intensive, slow convergence, iteratively refines shape N times.
+     Flattens faces.
      A typical N is 200 or 300.</li>
   <li><b>A<i>N</i></b> - convex spherical <b>A</b>djustment. Iterates N times. May give more pleasing symmetry,
   but can be unstable for certain shapes.</li>
-  <!-- Operators that could be added:
-  <li><b>h</b> - <a href="https://en.wikipedia.org/wiki/Alternation_%28geometry%29">half</a>
-    (symbol clashes with the 'hollow' operator) (caution: requires even-sided faces, and can produce digons)</li>
-  <li><b>c</b> - chamfer</li>
-  <li><b>w</b> - whirl</li>
+  <!-- Operators that might be useful:
+  <li><b>F<i>N</i></b> - homogenize <b>F</b>ace area - or at least, prevent faces from getting too small?</li>
+  <li><b>E<i>N</i></b> - homogenize <b>E</b>dge length</li>
+  <li><b>B<i>N</i></b> - attempt to <b>B</b>alance F and E, but always enforcing C</li>
   -->
 </ul>
 
