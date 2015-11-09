@@ -59,9 +59,23 @@
   <label>palette <input id="palette"></input></label>
 </div>
 
-<p>The specification consists of a space-delimited series of polyhedral recipes.  Each recipe looks like: </p>
+<p>The specification consists of a space-delimited series of polyhedral recipes.
+<!-- 
+Some examples:</p>
 
-  <p>[<b>op</b>][<b>op</b>] ... [<b>op</b>][<b>base</b>] <i>no spaces,
+<ul>
+  <li>pC - propellerized cube</li>
+  <li>tI - truncated icosahedron (soccer ball)</li>
+  <li>eptI - exploded propellerized truncated icosahedron</li>
+  <li>C300eC200pC200tI - ditto, canonicalized</li>
+  <li>AeA3ptI - ditto, with convex spherical adjustment</li>
+  To do: give examples using kN or tN, and with a space-delimited series if that's supported.
+</ul>
+
+<p> -->
+Each recipe looks like: </p>
+
+<p>[<b>op</b>][<b>op</b>] ... [<b>op</b>][<b>base</b>] <i>no spaces,
   just a string of characters</i> </p>
 
   <p>where [<b>base</b>] is one of</p>
@@ -77,15 +91,16 @@
     <li>Y<i>N</i> - N-sided pyramid</li>
   </ul>
 
-  <p>and <b>op</b> is one of these polyhedron-building operators</p>
+<p>and <b>op</b> is one of these
+    <a href="https://en.wikipedia.org/wiki/Conway_polyhedron_notation">polyhedron-building operators</a>:</p>
 
 <ul>
-  <li><b>k<i>N</i></b> - <a href="https://en.wikipedia.org/wiki/Kleetope">kis</a> the sides that have N edges (if no N, then general kis)</li>
+  <li><b>k<i>N</i></b> - <a href="https://en.wikipedia.org/wiki/Kleetope">kis</a> N-sided faces (if no N, then general kis)</li>
   <li><b>a</b> - ambo</li>
   <li><b>g</b> - gyro</li>
   <li><b>d</b> - dual</li>
   <li><b>r</b> - reflect</li>
-  <li><b>e</b> - explode (equiv. to <i>aa</i>) </li>
+  <li><b>e</b> - explode (a.k.a. <a href="https://en.wikipedia.org/wiki/Expansion_%28geometry%29">expand</a>, equiv. to <i>aa</i>) </li>
   <li><b>b</b> - bevel (equiv. to <i>ta</i>) </li>
   <li><b>o</b> - ortho (equiv. to <i>jj</i>) </li>
   <li><b>m</b> - meta (equiv. to <i>k3j</i>) </li>
@@ -93,10 +108,16 @@
   <li><b>j</b> - join (equiv. to <i>dad</i>) </li>
   <li><b>s</b> - snub (equiv. to <i>dgd</i>) </li>
   <li><b>p</b> - propellor</li>
+  <!-- Operators that could be added:
+  <li><b>h</b> - <a href="https://en.wikipedia.org/wiki/Alternation_%28geometry%29">half</a>
+    (symbol clashes with the 'hollow' operator) (caution: requires even-sided faces, and can produce digons)</li>
+  <li><b>c</b> - chamfer</li>
+  <li><b>w</b> - whirl</li>
+  -->
 </ul>
 
 <p>O</p>
-<p> also, some newer, experimental operators </p>
+<p>Also, some newer, experimental operators:</p>
 
 <ul>
   <li><b>l</b> - ste<b>l</b>lation</li>
@@ -115,9 +136,15 @@
      A typical N is 200 or 300.</li>
   <li><b>A<i>N</i></b> - convex spherical <b>A</b>djustment. Iterates N times. May give more pleasing symmetry,
   but can be unstable for certain shapes.</li>
+  <!-- Operators that could be added:
+  <li><b>h</b> - <a href="https://en.wikipedia.org/wiki/Alternation_%28geometry%29">half</a>
+    (symbol clashes with the 'hollow' operator) (caution: requires even-sided faces, and can produce digons)</li>
+  <li><b>c</b> - chamfer</li>
+  <li><b>w</b> - whirl</li>
+  -->
 </ul>
 
-<p>these can blow up the geometry of the weirder polyhedra, which can
+<p>These can blow up the geometry of the weirder polyhedra, which can
 be interesting too!</p>
 
 <p>Some relevant links: </p>
@@ -129,7 +156,7 @@ be interesting too!</p>
 </ul>
 
 <div class="footer">
-  Text & Figures CC-BY | Code MIT License | <a href="http://anselmlevskaya.com">Anselm Levskaya</a> 2011
+  Text &amp; Figures CC-BY | Code MIT License | <a href="http://anselmlevskaya.com">Anselm Levskaya</a> 2011
 </div>
 </div>
 
