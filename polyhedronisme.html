@@ -106,8 +106,12 @@ Each recipe looks like: </p>
   <li><b>z</b> - triangulate</li>
 </ul>
 
-  <p>There are also the following "refinement" operators for the geometric
-  canonicalization of the polyhedral shape, mainly intended for making
+  <p>Note that for most of the above operations, while the <i>topology</i> of the result is uniquely specified,
+  a great variety of <i>geometry</i> is possible. For maximum flexibility, the above operators do not enforce convexity
+  of the polyhedron, or planarity of the faces,
+  at each step. If these properties are desired in the final result, the following geometric "refinement" operators 
+  can be used. These operators are for
+  canonicalizing the polyhedral shape, and are mainly intended for making
   the more traditional, convex polyhedra more symmetric:</p>
 <ul>
   <li><b>K<i>N</i></b> - quic<b>K</b> and dirty canonicalization, it can blow
