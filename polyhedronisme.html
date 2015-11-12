@@ -2,7 +2,7 @@
 <html>
 <head>
 <meta http-equiv="Content-Type" content="text/html; charset=ISO-8859-1">
-<title>polyHédronisme</title>
+<title>polyH&eacute;dronisme</title>
 
 <script type="text/javascript" src="libs/jquery-1.7.min.js"></script>
 <script type="text/javascript" src="libs/jquery.mousewheel.js"></script>
@@ -23,7 +23,7 @@
 <div class="container">
 
 <h2 style="text-align:center;">
-  <span class="fadey">poly</span>Héd<span class="fadey">r</span>onisme<span style="font-size:10px;">v0.2<span>
+  <span class="fadey">poly</span>H&eacute;d<span class="fadey">r</span>onisme<span style="font-size:10px;">v0.2<span>
 </h2>
 
 <div class="canvaswrapper clearfix">
@@ -37,19 +37,19 @@
 </div>
 
 <div class="controlswrapper">
-  <img id="strokeonly"  src="media/strokeonly.png"  style="vertical-align:middle;">
-  <img id="fillonly"  src="media/fillonly.png"  style="vertical-align:middle;">
-  <img id="fillandstroke"  src="media/fillandstroke.png" style="vertical-align:middle;">
+  <img id="strokeonly"  src="media/strokeonly.png"  style="vertical-align:middle;" title="Edges only (wireframe)">
+  <img id="fillonly"  src="media/fillonly.png"  style="vertical-align:middle;" title="Faces only">
+  <img id="fillandstroke"  src="media/fillandstroke.png" style="vertical-align:middle;" title="Edges and faces">
   <span style="width:100px;">&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;</span>
 
-  <img id="frontrot" src="media/frontrot.png" style="vertical-align:middle;position:relative;top:-1px;">
-  <img id="siderot"  src="media/siderot.png"  style="vertical-align:middle;">
-  <img id="toprot"   src="media/toprot.png"   style="vertical-align:middle;">
+  <img id="frontrot" src="media/frontrot.png" style="vertical-align:middle;position:relative;top:-1px;" title="Front rotation">
+  <img id="siderot"  src="media/siderot.png"  style="vertical-align:middle;" title="Side rotation">
+  <img id="toprot"   src="media/toprot.png"   style="vertical-align:middle;" title="Top rotation">
   <span style="width:100px;">&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;</span>
 
-  <span id="pngsavebutton" style="font-size:12px;cursor:pointer;">PNG</span>
-  <span id="objsavebutton" style="font-size:12px;cursor:pointer;">OBJ</span>
-  <span id="x3dsavebutton" style="font-size:12px;cursor:pointer;">VRML2</span>
+  <span id="pngsavebutton" style="font-size:12px;cursor:pointer;" title="Export as PNG image">PNG</span>
+  <span id="objsavebutton" style="font-size:12px;cursor:pointer;" title="Export as OBJ geometry">OBJ</span>
+  <span id="x3dsavebutton" style="font-size:12px;cursor:pointer;" title="Export as VRML2 model">VRML2</span>
 
 <p class="centered"><i>rotate by dragging on polyhedron, rescale by scrolling over canvas</i><br>
 </div>
@@ -59,9 +59,10 @@
   <label>palette <input id="palette"></input></label>
 </div>
 
-<p>The specification consists of a space-delimited series of polyhedral recipes.  Each recipe looks like: </p>
+<p>The specification consists of a space-delimited series of polyhedral recipes.
+Each recipe looks like: </p>
 
-  <p>[<b>op</b>][<b>op</b>] ... [<b>op</b>][<b>base</b>] <i>no spaces,
+<p>[<b>op</b>][<b>op</b>] ... [<b>op</b>][<b>base</b>] <i>no spaces,
   just a string of characters</i> </p>
 
   <p>where [<b>base</b>] is one of</p>
@@ -77,25 +78,26 @@
     <li>Y<i>N</i> - N-sided pyramid</li>
   </ul>
 
-  <p>and <b>op</b> is one of</p>
+<p>and <b>op</b> is one of these
+    <a href="https://en.wikipedia.org/wiki/Conway_polyhedron_notation">polyhedron-building operators</a>:</p>
 
 <ul>
-  <li><b>k<i>N</i></b> - kisN if no N then general kis</li>
+  <li><b>k<i>N</i></b> - <a href="https://en.wikipedia.org/wiki/Kleetope">kis</a> on N-sided faces (if no N, then general kis)</li>
   <li><b>a</b> - ambo</li>
   <li><b>g</b> - gyro</li>
   <li><b>d</b> - dual</li>
   <li><b>r</b> - reflect</li>
-  <li><b>e</b> - explode (equiv. to <i>aa</i>) </li>
+  <li><b>e</b> - explode (a.k.a. <a href="https://en.wikipedia.org/wiki/Expansion_%28geometry%29">expand</a>, equiv. to <i>aa</i>) </li>
   <li><b>b</b> - bevel (equiv. to <i>ta</i>) </li>
   <li><b>o</b> - ortho (equiv. to <i>jj</i>) </li>
   <li><b>m</b> - meta (equiv. to <i>k3j</i>) </li>
-  <li><b>t<i>N</i></b> - truncate (equiv. to <i>dkNd</i>) </li>
+  <li><b>t<i>N</i></b> - truncate vertices of degree N (equiv. to <i>dkNd</i>; if no N, then truncate all vertices) </li>
   <li><b>j</b> - join (equiv. to <i>dad</i>) </li>
   <li><b>s</b> - snub (equiv. to <i>dgd</i>) </li>
   <li><b>p</b> - propellor</li>
 </ul>
 
-<p> also, some newer, experimental operators </p>
+<p>Also, some newer, experimental operators:</p>
 
 <ul>
   <li><b>l</b> - ste<b>l</b>lation</li>
@@ -104,18 +106,24 @@
   <li><b>z</b> - triangulate</li>
 </ul>
 
-  <p>there are also two "refinement" operators for the
-  canonicalization of the polyhedral shape, mainly intended for making
-  the more traditional, convex polyhedra more symmetric</p>
+  <p>Note that for most of the above operations, while the <i>topology</i> of the result is uniquely specified,
+  a great variety of <i>geometry</i> is possible. For maximum flexibility, the above operators do not enforce convexity
+  of the polyhedron, or planarity of the faces,
+  at each step. If these properties are desired in the final result, the following geometric "refinement" operators 
+  can be used. These operators are for
+  canonicalizing the polyhedral shape, and are mainly intended for making
+  the more traditional, convex polyhedra more symmetric:</p>
 <ul>
   <li><b>K<i>N</i></b> - quic<b>K</b> and dirty canonicalization, it can blow
   up, iteratively refines shape N times.</li>
-  <li><b>C<i>N</i></b> - proper <b>C</b>anonicalization, intensive, slow
-  convergence,  iteratively refines shape N times.</li>
-  <li><b>A<i>N</i></b> - convex spherical <b>A</b>djustment. Iterates N times.</li>
+  <li><b>C<i>N</i></b> - proper <b>C</b>anonicalization, intensive, slow convergence, iteratively refines shape N times.
+     Flattens faces.
+     A typical N is 200 or 300.</li>
+  <li><b>A<i>N</i></b> - convex spherical <b>A</b>djustment. Iterates N times. May give more pleasing symmetry,
+  but can be unstable for certain shapes.</li>
 </ul>
 
-<p>these can blow up the geometry of the weirder polyhedra, which can
+<p>These can blow up the geometry of the weirder polyhedra, which can
 be interesting too!</p>
 
 <p>Some relevant links: </p>
@@ -123,10 +131,11 @@ be interesting too!</p>
 <li><a href="http://en.wikipedia.org/wiki/Conway_polyhedron_notation">
   Wikipedia on Conway Polyhedral Notation</a></li>
 <li><a href="http://www.georgehart.com/">George W. Hart's Polyhedral Site</a></li>
+<li><a href="https://github.com/levskaya/polyhedronisme/blob/master/readme.md">More about this project, its inspiration and goals</a></a></li>
 </ul>
 
 <div class="footer">
-  Text & Figures CC-BY | Code MIT License | <a href="http://anselmlevskaya.com">Anselm Levskaya</a> 2011
+  Text &amp; Figures CC-BY | Code MIT License | <a href="http://anselmlevskaya.com">Anselm Levskaya</a> 2011
 </div>
 </div>
 
@@ -134,4 +143,3 @@ be interesting too!</p>
 
 </body>
 </html>
-
