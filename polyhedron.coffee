@@ -150,7 +150,7 @@ class polyhedron
     centers_array
 
   normals: ->
-  # get array of face centers
+  # get array of face normals
     normals_array = []
     for f in @face
       normals_array.push normal(@xyz[v] for v in f)
