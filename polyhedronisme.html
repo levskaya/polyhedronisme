@@ -104,9 +104,29 @@ Each recipe looks like: </p>
   <li><b>n<i>N</i></b> - i<b>n</b>setN </li>
   <li><b>x<i>N</i></b> - e<b>x</b>trudeN </li>
   <li><b>z</b> - triangulate</li>
+  <li><b>h</b> - hollow/skeletonize, useful for 3D printing, makes a
+  hollow-faced shell version of the polyhedron, only apply it once in
+  a recipe!</li>
 </ul>
 
-  <p>Note that for most of the above operations, while the <i>topology</i> of the result is uniquely specified,
+<p> There are more complicated, parameterized forms for <b>k</b> and <b>n</b>: </p>
+<ul>
+  <li><b>n</b>(<i>n</i>,<i>inset</i>,<i>depth</i>) - this applies the
+  inset operator on <i>n</i>-sided faces, insetting by <i>inset</i> scaled from
+  0 to 1, and extruding in or out along the normal by <i>depth</i>
+  (can be negative)
+  </li>
+  <li><b>k</b>(<i>n</i>,<i>depth</i>) - this applies the kis operator
+  on <i>n</i>-sided faces, setting the pyramidal height out or in along the normal by <i>depth</i>
+  (can be negative)
+  </li>
+  <li><b>h</b>(<i>0</i>,<i>inset</i>,<i>depth</i>) - this applies the
+  hollowing/skeletonizing operator on all faces, insetting by
+  <i>inset</i> (scaled from 0 to 1), and with a shell thickness of <i>depth</i>
+  </li>
+</ul>
+  
+<p>Note that for most of the above operations, while the <i>topology</i> of the result is uniquely specified,
   a great variety of <i>geometry</i> is possible. For maximum flexibility, the above operators do not enforce convexity
   of the polyhedron, or planarity of the faces,
   at each step. If these properties are desired in the final result, the following geometric "refinement" operators 
@@ -126,6 +146,11 @@ Each recipe looks like: </p>
 <p>These can blow up the geometry of the weirder polyhedra, which can
 be interesting too!</p>
 
+<h4> 3D Printing </h4>
+<p>You can export these shapes in forms appropriate for 3D printing by
+shapeways. Export in VRML2 format to preserve face colors if you want
+to use their colored fused-sand process.</p>
+
 <p>Some relevant links: </p>
 <ul>
 <li><a href="http://en.wikipedia.org/wiki/Conway_polyhedron_notation">
@@ -135,7 +160,7 @@ be interesting too!</p>
 </ul>
 
 <div class="footer">
-  Text &amp; Figures CC-BY | Code MIT License | <a href="http://anselmlevskaya.com">Anselm Levskaya</a> 2011
+  Text &amp; Figures CC-BY | Code MIT License | <a href="http://anselmlevskaya.com">Anselm Levskaya</a> 2015
 </div>
 </div>
 
