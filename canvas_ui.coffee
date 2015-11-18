@@ -166,6 +166,14 @@ drawShape = ->
   for p,i in globPolys
     drawpoly(p,[0+3*i,0,3])
 
+# update V E F stats on page
+# -----------------------------------------------------------------------------------
+updateStats = ->
+  for p,i in globPolys
+    $("#V").text(p.xyz.length)
+    # V - E + F = 2
+    $("#E").text(p.xyz.length + p.face.length - 2)
+    $("#F").text(p.face.length)
 
 # loop for animation
 # -----------------------------------------------------------------------------------
@@ -197,6 +205,7 @@ $( -> #wait for page to load
 
   # construct the polyhedra from spec
   globPolys = _.map(specs, (x)->newgeneratePoly(x))
+  updateStats()
 
   # draw it
   drawShape()
@@ -209,12 +218,13 @@ $( -> #wait for page to load
   $("#spec").change((e) ->
     specs = $("#spec").val().split(/\s+/g)[0..1] #only allow one recipe for now
     globPolys = _.map(specs, (x)->newgeneratePoly(x) )
+    updateStats()
     #animateShape()
     #window.location.replace("?recipe="+specs[0])
     drawShape()
   )
 
-  # when spec changes in input, parse and draw new polyhedra
+  # when palette changes in input, redraw polyhedra
   $("#palette").change((e) ->
     PALETTE = $(this).val().split(/\s+/g)
     drawShape()

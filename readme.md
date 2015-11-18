@@ -43,7 +43,6 @@ G x**2,y**2,z**2 => poly.xyz = _.map(poly.xyz, ([x,y,z]) -> [x*x,y*y,z*z])
 <li><b>w</b> - whirl</li>
 - Simple boolean operations on like-numbered faces: "cut and glue"
 - proper touch event handling for mobile
-- when a recipe is executed, show some stats: V E F at least
 - compounding a series - does it work?
 - some documentation on what the palette colors map to. Currently, by "signature",
   which means what exactly?
@@ -57,7 +56,7 @@ G x**2,y**2,z**2 => poly.xyz = _.map(poly.xyz, ([x,y,z]) -> [x*x,y*y,z*z])
   <li>AeA3ptI - ditto, with convex spherical adjustment</li>
   To do: give examples using kN or tN, and with a space-delimited series if that's supported.
 </ul>
-
+- add a "share"-like feature that lets you copy a link to a particular recipe and palette
 
 * * *
 Text CC-BY, Code MIT License
