@@ -65,6 +65,17 @@ parseurl = () ->
     urlParams[d(e[1])] = d(e[2])
   urlParams
 
+# update the shareable link URL with the current recipe and palette
+setlink = () ->
+  specs = $("#spec").val().split(/\s+/g)[0..1]
+  # strip any existing parameters
+  link = location.protocol + '//' + location.host + location.pathname
+  link += "?recipe=" + encodeURIComponent(specs[0])
+  if PALETTE != rwb_palette
+    link += "&palette=" + encodeURIComponent(PALETTE.reduce((x,y)->x+" "+y))
+  $("#link").attr("href", link)
+
+
 # Drawing Functions
 #==================================================================================================
 
@@ -199,8 +210,12 @@ $( -> #wait for page to load
   else
     specs=[randomchoice(DEFAULT_RECIPES)]
     $("#spec").val(specs)
+    setlink()
 
   # set initial palette spec
+  if "palette" of urlParams
+    PALETTE = urlParams["palette"].split(/\s+/g)
+    setlink()
   $("#palette").val( PALETTE.reduce((x,y)->x+" "+y) )
 
   # construct the polyhedra from spec
@@ -220,13 +235,14 @@ $( -> #wait for page to load
     globPolys = _.map(specs, (x)->newgeneratePoly(x) )
     updateStats()
     #animateShape()
-    #window.location.replace("?recipe="+specs[0])
+    setlink()
     drawShape()
   )
 
   # when palette changes in input, redraw polyhedra
   $("#palette").change((e) ->
     PALETTE = $(this).val().split(/\s+/g)
+    setlink()
     drawShape()
   )
 
@@ -330,5 +346,4 @@ $( -> #wait for page to load
     filename = "polyhedronisme-"+spec.replace(/\([^\)]+\)/g, "")+".wrl"
     saveText(x3dtxt,filename)
   )
-
 )
