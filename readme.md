@@ -32,8 +32,31 @@ It is written in coffeescript. Uses jQuery, underscore, [PEG.js][5] parser for p
 ```
 G x**2,y**2,z**2 => poly.xyz = _.map(poly.xyz, ([x,y,z]) -> [x*x,y*y,z*z])
 ```
+- more geometric refinement operators:
+<li><b>F<i>N</i></b> - homogenize <b>F</b>ace area - or at least, prevent faces from getting too small?</li>
+<li><b>E<i>N</i></b> - homogenize <b>E</b>dge length</li>
+<li><b>B<i>N</i></b> - attempt to <b>B</b>alance F and E, but always enforcing C</li>
+- more topological operators:
+<li><b>h</b> - <a href="https://en.wikipedia.org/wiki/Alternation_%28geometry%29">half</a>
+  (symbol clashes with the 'hollow' operator; could change the symbol for hollow to <b>i</b> as in skeletonize?) (caution: requires even-sided faces, and can produce digons)</li>
+<li><b>c</b> - chamfer</li>
+<li><b>w</b> - whirl</li>
 - Simple boolean operations on like-numbered faces: "cut and glue"
 - proper touch event handling for mobile
+- compounding a series - does it work?
+- some documentation on what the palette colors map to. Currently, by "signature",
+  which means what exactly?
+  - add a UI control to change to this - the other choice is just by vertex count?
+- add a few examples to the index page (or a manual page). E.g.
+<ul>
+  <li>pC - propellerized cube</li>
+  <li>tI - truncated icosahedron (soccer ball)</li>
+  <li>eptI - exploded propellerized truncated icosahedron</li>
+  <li>C300eC200pC200tI - ditto, canonicalized</li>
+  <li>AeA3ptI - ditto, with convex spherical adjustment</li>
+  To do: give examples using kN or tN, and with a space-delimited series if that's supported.
+</ul>
+- add a "share"-like feature that lets you copy a link to a particular recipe and palette
 
 * * *
 Text CC-BY, Code MIT License

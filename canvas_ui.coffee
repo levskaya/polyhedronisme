@@ -65,6 +65,17 @@ parseurl = () ->
     urlParams[d(e[1])] = d(e[2])
   urlParams
 
+# update the shareable link URL with the current recipe and palette
+setlink = () ->
+  specs = $("#spec").val().split(/\s+/g)[0..1]
+  # strip any existing parameters
+  link = location.protocol + '//' + location.host + location.pathname
+  link += "?recipe=" + encodeURIComponent(specs[0])
+  if PALETTE != rwb_palette
+    link += "&palette=" + encodeURIComponent(PALETTE.reduce((x,y)->x+" "+y))
+  $("#link").attr("href", link)
+
+
 # Drawing Functions
 #==================================================================================================
 
@@ -166,6 +177,14 @@ drawShape = ->
   for p,i in globPolys
     drawpoly(p,[0+3*i,0,3])
 
+# update V E F stats on page
+# -----------------------------------------------------------------------------------
+updateStats = ->
+  for p,i in globPolys
+    $("#V").text(p.xyz.length)
+    # V - E + F = 2
+    $("#E").text(p.xyz.length + p.face.length - 2)
+    $("#F").text(p.face.length)
 
 # loop for animation
 # -----------------------------------------------------------------------------------
@@ -191,12 +210,17 @@ $( -> #wait for page to load
   else
     specs=[randomchoice(DEFAULT_RECIPES)]
     $("#spec").val(specs)
+    setlink()
 
   # set initial palette spec
+  if "palette" of urlParams
+    PALETTE = urlParams["palette"].split(/\s+/g)
+    setlink()
   $("#palette").val( PALETTE.reduce((x,y)->x+" "+y) )
 
   # construct the polyhedra from spec
   globPolys = _.map(specs, (x)->newgeneratePoly(x))
+  updateStats()
 
   # draw it
   drawShape()
@@ -209,14 +233,16 @@ $( -> #wait for page to load
   $("#spec").change((e) ->
     specs = $("#spec").val().split(/\s+/g)[0..1] #only allow one recipe for now
     globPolys = _.map(specs, (x)->newgeneratePoly(x) )
+    updateStats()
     #animateShape()
-    #window.location.replace("?recipe="+specs[0])
+    setlink()
     drawShape()
   )
 
-  # when spec changes in input, parse and draw new polyhedra
+  # when palette changes in input, redraw polyhedra
   $("#palette").change((e) ->
     PALETTE = $(this).val().split(/\s+/g)
+    setlink()
     drawShape()
   )
 
@@ -320,5 +346,4 @@ $( -> #wait for page to load
     filename = "polyhedronisme-"+spec.replace(/\([^\)]+\)/g, "")+".wrl"
     saveText(x3dtxt,filename)
   )
-
 )
