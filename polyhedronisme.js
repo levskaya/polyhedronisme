@@ -1874,9 +1874,7 @@
     results = [];
     for (i = l = 0, len = globPolys.length; l < len; i = ++l) {
       p = globPolys[i];
-      $("#V").text(p.xyz.length);
-      $("#E").text(p.xyz.length + p.face.length - 2);
-      results.push($("#F").text(p.face.length));
+      results.push($("#stats").text(p.data()));
     }
     return results;
   };
