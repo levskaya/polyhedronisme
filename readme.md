@@ -56,7 +56,6 @@ G x**2,y**2,z**2 => poly.xyz = _.map(poly.xyz, ([x,y,z]) -> [x*x,y*y,z*z])
   <li>AeA3ptI - ditto, with convex spherical adjustment</li>
   To do: give examples using kN or tN, and with a space-delimited series if that's supported.
 </ul>
-- add a "share"-like feature that lets you copy a link to a particular recipe and palette
 
 * * *
 Text CC-BY, Code MIT License
