@@ -119,7 +119,7 @@ class polyhedron
 
   data: () ->   # informative string
     nEdges = @face.length + @xyz.length - 2 # E = V + F - 2
-    "(#{@face.length} faces, #{nEdges} edges, #{@xyz.length} vertices)"
+    "(#{@face.length} faces, #{nEdges} edges, #{@xyz.length} vertices; min. edge length #{@minEdgeLength().toPrecision(2)})"
 
   edges: ->
     finalset={}
@@ -138,6 +138,15 @@ class polyhedron
     #return edges
     uniqedges
 
+  minEdgeLength: () ->
+    min2 = -1;
+    # Compute minimum edge length
+    for e in @edges()
+      d2 = mag2(sub(@xyz[e[0]], @xyz[e[1]])) # square of edge length
+      if (min2 < 0 || d2 < min2)
+        min2 = d2
+    sqrt(min2) # is this normalized?
+          
   centers: ->
     # get array of face centers
     centers_array = []

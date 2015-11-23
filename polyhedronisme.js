@@ -466,7 +466,7 @@
     polyhedron.prototype.data = function() {
       var nEdges;
       nEdges = this.face.length + this.xyz.length - 2;
-      return "(" + this.face.length + " faces, " + nEdges + " edges, " + this.xyz.length + " vertices)";
+      return "(" + this.face.length + " faces, " + nEdges + " edges, " + this.xyz.length + " vertices; min. edge length " + (this.minEdgeLength().toPrecision(2)) + ")";
     };
 
     polyhedron.prototype.edges = function() {
@@ -491,6 +491,20 @@
         uniqedges.push(e);
       }
       return uniqedges;
+    };
+
+    polyhedron.prototype.minEdgeLength = function() {
+      var d2, e, l, len, min2, ref;
+      min2 = -1;
+      ref = this.edges();
+      for (l = 0, len = ref.length; l < len; l++) {
+        e = ref[l];
+        d2 = mag2(sub(this.xyz[e[0]], this.xyz[e[1]]));
+        if (min2 < 0 || d2 < min2) {
+          min2 = d2;
+        }
+      }
+      return sqrt(min2);
     };
 
     polyhedron.prototype.centers = function() {
