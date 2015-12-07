@@ -106,6 +106,21 @@ tangentPoint= (v1,v2) ->
 edgeDist = (v1,v2) ->
   sqrt mag2(tangentPoint v1, v2)
 
+# square of distance from point v3 to line segment v1...v2
+# http://mathworld.wolfram.com/Point-LineDistance3-Dimensional.html
+linePointDist2 = (v1,v2,v3) ->
+  d21 = sub v2, v1
+  d13 = sub v1, v3
+  m2 = mag2(d21)
+  t = -dot(d13, d21)/m2
+  if (t <= 0)
+    return mag2(d13)
+  else if (t >= 1)
+    result = mag2(sub v2, v3)
+
+  result = mag2(cross d21, d13)/m2
+  result
+  
 # find vector orthogonal to plane of 3 pts
 # -- do the below algos assume this be normalized or not?
 orthogonal = (v1,v2,v3) ->

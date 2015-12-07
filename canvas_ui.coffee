@@ -181,7 +181,8 @@ drawShape = ->
 # -----------------------------------------------------------------------------------
 updateStats = ->
   for p,i in globPolys
-    $("#stats").text(p.data())
+    $("#basicstats").text(p.data())
+    $("#morestats").text(p.moreData())
 
 # loop for animation
 # -----------------------------------------------------------------------------------

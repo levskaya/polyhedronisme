@@ -13,6 +13,7 @@
 # Topology stored as set of "faces."  Each face is list of n vertex indices
 # corresponding to one n-sided face.  Vertices listed clockwise as seen from outside.
 
+# Generate an array of edges [v1,v2] for the face.
 faceToEdges = (face) ->
   edges = []
   [v1] = face[-1..]
@@ -119,8 +120,11 @@ class polyhedron
 
   data: () ->   # informative string
     nEdges = @face.length + @xyz.length - 2 # E = V + F - 2
-    "(#{@face.length} faces, #{nEdges} edges, #{@xyz.length} vertices; min. edge length #{@minEdgeLength().toPrecision(2)})"
+    "#{@face.length} faces, #{nEdges} edges, #{@xyz.length} vertices"
 
+  moreData: () ->
+    "min. edge length #{@minEdgeLength().toPrecision(2)}; min. face radius #{@minFaceRadius().toPrecision(2)}"
+    
   edges: ->
     finalset={}
     uniqedges=[]
@@ -139,14 +143,28 @@ class polyhedron
     uniqedges
 
   minEdgeLength: () ->
-    min2 = -1;
+    min2 = Number.MAX_VALUE
     # Compute minimum edge length
     for e in @edges()
       d2 = mag2(sub(@xyz[e[0]], @xyz[e[1]])) # square of edge length
-      if (min2 < 0 || d2 < min2)
+      if (d2 < min2)
         min2 = d2
-    sqrt(min2) # is this normalized?
-          
+    sqrt(min2) # This is normalized if rescaling has happened.
+    
+  minFaceRadius: () ->
+    min2 = Number.MAX_VALUE
+    nFaces = @face.length
+    centers = @centers()
+    for f in [0...nFaces]
+      c = centers[f]
+      for e in faceToEdges(@face[f])
+        # Check distance from center to each edge.
+        de2 = linePointDist2(@xyz[e[0]], @xyz[e[1]], c)
+        if de2 < min2
+          min2 = de2
+
+    sqrt(min2)
+      
   centers: ->
     # get array of face centers
     centers_array = []

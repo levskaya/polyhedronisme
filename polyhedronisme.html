@@ -58,11 +58,15 @@
   <label>recipe  <input id="spec"></input></label>
   <a id="link" href="#" title="Copy this URL to share"><img src="media/link.png"></a>
   <br>
-  <span id="stats" style="font-size:12px">
-    V=<span id="V">0</span>, E=<span id="E">0</span>, F=<span id="F">0</span> 
-  </span>
-  <br>
   <label>palette <input id="palette"></input></label>
+</div>
+
+<div class="statswrapper">
+  <label>stats </label>
+  <div id="statsinner">
+    <span id="basicstats"></span><br />
+    <span id="morestats"></span>
+  </div>
 </div>
 
 <p>The specification consists of a space-delimited series of polyhedral recipes.
@@ -101,6 +105,11 @@ Each recipe looks like: </p>
   <li><b>j</b> - join (equiv. to <i>dad</i>) </li>
   <li><b>s</b> - snub (equiv. to <i>dgd</i>) </li>
   <li><b>p</b> - propellor</li>
+  <!--
+  <li><b>c</b> - chamfer</li>
+  <li><b>w</b> - whirl</li>
+  <li><b>h</b> - half (caution: requires even-sided faces, and can produce digons)</li>
+  -->
 </ul>
 
 <p>Also, some newer, experimental operators:</p>
@@ -110,9 +119,9 @@ Each recipe looks like: </p>
   <li><b>n<i>N</i></b> - i<b>n</b>setN </li>
   <li><b>x<i>N</i></b> - e<b>x</b>trudeN </li>
   <li><b>z</b> - triangulate</li>
-  <li><b>h</b> - hollow/skeletonize, useful for 3D printing, makes a
+  <!-- <li><b>h</b> - hollow/skeletonize, useful for 3D printing, makes a
   hollow-faced shell version of the polyhedron, only apply it once in
-  a recipe!</li>
+  a recipe!</li> Not implemented yet. -->
 </ul>
 
 <p> There are more complicated, parameterized forms for <b>k</b> and <b>n</b>: </p>

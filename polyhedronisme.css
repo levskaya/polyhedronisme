@@ -67,6 +67,23 @@ div.container {
     margin-right: auto;
     margin-left:  auto;
 }
+
+.statswrapper {
+    text-align:   center;
+    margin-right: auto;
+    margin-left:  auto;
+}
+
+.statsinner {
+    text-align:   left;
+    margin-right: auto;
+    margin-left:  auto;
+}
+
+.statswrapper span {
+    font-size: 12px;
+}
+
 label {
     font-variant: small-caps;
 }
