@@ -55,18 +55,23 @@
 </div>
 
 <div class="specwrapper">
-  <label>recipe  <input id="spec"></input></label>
+  <label style="width: 10em">recipe  <input id="spec"></input></label>
   <a id="link" href="#" title="Copy this URL to share"><img src="media/link.png"></a>
   <br>
   <label>palette <input id="palette"></input></label>
 </div>
 
+<br />
+
 <div class="statswrapper">
-  <label>stats </label>
+  <label style="">stats </label>
   <div id="statsinner">
-    <span id="basicstats"></span><br />
-    <span id="morestats"></span>
+    <div id="basicstats"></div>
+    <img id="expandcollapse" src="media/plus.png" />
+    <br />
+    <div id="morestats"></div>
   </div>
+  <div style="clear: both" />
 </div>
 
 <p>The specification consists of a space-delimited series of polyhedral recipes.

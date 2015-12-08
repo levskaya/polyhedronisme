@@ -43,6 +43,7 @@ div.container {
     margin-right: auto;
     width: 300px;
 }
+
 #palette {
     margin-left: auto;
     margin-right: auto;
@@ -74,34 +75,61 @@ div.container {
     margin-left:  auto;
 }
 
-.statsinner {
+.statswrapper div {
+    font-size: 12px;
+}
+
+.statswrapper label {
+    vertical-align: top;
+}
+
+#statsinner {
     text-align:   left;
     margin-right: auto;
     margin-left:  auto;
+    display: inline-block;
+    text-align: left;
+    border: solid #ccc 1px;
+    padding: 0em 0.4em;
+    position: relative;
 }
 
-.statswrapper span {
-    font-size: 12px;
+#statsinner img {
+    position: absolute;
+    right: 0.1em;
+    top: 0.2em;
+}
+
+#basicstats {
+    display: inline-block;
+    /* leave room for expand icon */
+    padding-right: 1em;
+}
+    
+#morestats {
+    display: none;
 }
 
 label {
     font-variant: small-caps;
 }
+
 .leftside {
     display: block;
     float: left;
     height: 400px;
     width: 110px;
-    //font-family:  sans-serif;
-    //font-variant: small-caps;
+    /* font-family:  sans-serif;
+       font-variant: small-caps; */
 }
+
 .rightside {
     display: block;
     float: left;
     height: 400px;
     width: 110px;
-    //font-family: sans-serif;
-    //font-variant: small-caps;
+    /* font-family: sans-serif;
+       font-variant: small-caps; */
 
 }
 

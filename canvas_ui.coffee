@@ -95,6 +95,15 @@ init = ->
     ctx.clearRect 0, 0, CANVAS_WIDTH, CANVAS_HEIGHT
     ctx.fillStyle = BG_COLOR
     ctx.fillRect 0, 0, CANVAS_WIDTH, CANVAS_HEIGHT
+    
+  exp = $('#expandcollapse')
+  exp.click ->
+    if /minus/.test(exp.attr('src'))  # Contains 'minus'
+      $('#morestats').hide()
+      exp.attr('src', 'media/plus.png')
+    else
+      $('#morestats').show()      
+      exp.attr('src', 'media/minus.png')
 
 # clear canvas
 # -----------------------------------------------------------------------------------

@@ -126,23 +126,16 @@
 
   linePointDist2 = function(v1, v2, v3) {
     var d13, d21, m2, result, t;
-    console.log("lpd1", v1, v2, v3);
     d21 = sub(v2, v1);
-    console.log("lpd d21", d21);
     d13 = sub(v1, v3);
-    console.log("lpd d13", d13);
     m2 = mag2(d21);
     t = -dot(d13, d21) / m2;
-    console.log("lpd t", t);
     if (t <= 0) {
       return mag2(d13);
     } else if (t >= 1) {
       result = mag2(sub(v2, v3));
-      console.log("lpd res1", result);
     }
-    console.log("lpd4");
     result = mag2(cross(d21, d13)) / m2;
-    console.log("lpd res2", result);
     return result;
   };
 
@@ -521,7 +514,6 @@
 
     polyhedron.prototype.minEdgeLength = function() {
       var d2, e, l, len, min2, ref;
-      console.log("minEdgeLength");
       min2 = Number.MAX_VALUE;
       ref = this.edges();
       for (l = 0, len = ref.length; l < len; l++) {
@@ -536,7 +528,6 @@
 
     polyhedron.prototype.minFaceRadius = function() {
       var c, centers, de2, e, f, l, len, min2, nFaces, o, ref, ref1;
-      console.log("minFaceRadius");
       min2 = Number.MAX_VALUE;
       nFaces = this.face.length;
       centers = this.centers();
@@ -1840,19 +1831,29 @@
   };
 
   init = function() {
-    var canvas;
+    var canvas, exp;
     canvas = $('#poly');
     canvas.width(CANVAS_WIDTH);
     canvas.height(CANVAS_HEIGHT);
     ctx = canvas[0].getContext("2d");
     ctx.lineWidth = ctx_linewidth;
     if (BG_CLEAR) {
-      return ctx.clearRect(0, 0, CANVAS_WIDTH, CANVAS_HEIGHT);
+      ctx.clearRect(0, 0, CANVAS_WIDTH, CANVAS_HEIGHT);
     } else {
       ctx.clearRect(0, 0, CANVAS_WIDTH, CANVAS_HEIGHT);
       ctx.fillStyle = BG_COLOR;
-      return ctx.fillRect(0, 0, CANVAS_WIDTH, CANVAS_HEIGHT);
+      ctx.fillRect(0, 0, CANVAS_WIDTH, CANVAS_HEIGHT);
     }
+    exp = $('#expandcollapse');
+    return exp.click(function() {
+      if (/minus/.test(exp.attr('src'))) {
+        $('#morestats').hide();
+        return exp.attr('src', 'media/plus.png');
+      } else {
+        $('#morestats').show();
+        return exp.attr('src', 'media/minus.png');
+      }
+    });
   };
 
   clear = function() {
