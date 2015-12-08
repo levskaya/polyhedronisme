@@ -42,7 +42,7 @@ sigfigs = (N, nsigs)->
 # for python-style enumerated for-in loops
 #  - should use "for [i,x] in AR then do (i,x)->" idiom instead
 #  - !! actually even easier:  "for val,idx in array" works!
-#enumerate = (ar) -> [i,ar[i]] for i in [0..ar.length-1]
+#enumerate = (ar) -> [i,ar[i]] for i in [0...ar.length]
 
 # general recursive deep-copy function
 clone = (obj) ->
@@ -200,7 +200,7 @@ project2dface = (verts)->
 # copies array of arrays by value (deep copy)
 copyVecArray = (vecArray)->
   newVecArray = new Array(vecArray.length)
-  for i in [0..vecArray.length-1]
+  for i in [0...vecArray.length]
     newVecArray[i] = vecArray[i][0..]
   newVecArray
 

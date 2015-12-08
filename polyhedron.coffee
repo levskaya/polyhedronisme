@@ -102,7 +102,7 @@ sortfaces = (poly) ->
   zcentroidsort = (a,b)->
     a[0][2]-b[0][2]
 
-  zsortIndex = _.zip(centroids, normals, [0..poly.face.length-1])
+  zsortIndex = _.zip(centroids, normals, [0...poly.face.length])
     #.sort(planesort)
     .sort(zcentroidsort)
     .map((x)->x[2])
@@ -393,14 +393,14 @@ prism = (n) ->
   poly = new polyhedron()
   poly.name = "P#{n}"
 
-  for i in [0..n-1] # vertex #'s 0...n-1 around one face
+  for i in [0...n] # vertex #'s 0 to n-1 around one face
     poly.xyz.push [-cos(i*theta), -sin(i*theta),  -h]
-  for i in [0..n-1] # vertex #'s n...2n-1 around other
+  for i in [0...n] # vertex #'s n to 2n-1 around other
     poly.xyz.push [-cos(i*theta), -sin(i*theta), h]
 
   poly.face.push [n-1..0]   #top
-  poly.face.push [n..2*n-1] #bottom
-  for i in [0..n-1] #n square sides
+  poly.face.push [n...2*n] #bottom
+  for i in [0...n] #n square sides
     poly.face.push [i, (i+1)%n, (i+1)%n+n, i+n]
 
   poly = adjustXYZ(poly,1)
@@ -417,9 +417,9 @@ antiprism = (n) ->
   poly = new polyhedron()
   poly.name = "A#{n}"
 
-  for i in [0..n-1] # vertex #'s 0...n-1 around one face
+  for i in [0...n] # vertex #'s 0...n-1 around one face
     poly.xyz.push [r * cos(i*theta), r * sin(i*theta), h]
-  for i in [0..n-1] # vertex #'s n...2n-1 around other
+  for i in [0...n] # vertex #'s n...2n-1 around other
     poly.xyz.push [r * cos((i+0.5)*theta), r * sin((i+0.5)*theta), -h]
 
   poly.face.push [n-1..0]   #top
@@ -437,12 +437,12 @@ pyramid = (n) ->
   poly = new polyhedron()
   poly.name = "Y#{n}"
 
-  for i in [0..n-1] # vertex #'s 0...n-1 around one face
+  for i in [0...n] # vertex #'s 0...n-1 around one face
     poly.xyz.push [-cos(i*theta), -sin(i*theta), -0.2]
   poly.xyz.push [0,0, height] # apex
 
   poly.face.push [n-1..0] # base
-  for i in [0..n-1] # n triangular sides
+  for i in [0...n] # n triangular sides
     poly.face.push [i, (i+1)%n, n]
 
   poly = canonicalXYZ(poly,3)

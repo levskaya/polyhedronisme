@@ -122,7 +122,7 @@ drawpoly = (poly,tvec) ->
   tvec ||= [3,3,3]
 
   #centers = _.map(poly.centers(), (x)->mv3(rotm(rot[0],rot[1],rot[2]),x))
-  #oldfaces = ("#{fno}" for fno in [0..centers.length-1])
+  #oldfaces = ("#{fno}" for fno in [0...centers.length])
 
   # rotate poly in 3d
   oldxyz = _.map(poly.xyz, (x)->x)
