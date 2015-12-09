@@ -318,7 +318,7 @@ dual = (poly) ->
 # A polyhedron with e edges will have a chamfered form containing 2e new vertices,
 # 3e new edges, and e new hexagonal faces. -- Wikipedia
 # See also http://dmccooey.com/polyhedra/Chamfer.html
-# 
+#
 # The dist parameter could control how deeply to chamfer.
 # But I'm not sure about implementing that yet.
 #
@@ -331,7 +331,7 @@ dual = (poly) ->
 
 chamfer = (poly, dist) ->
   dist or= 0.5
-  
+
   flag = new polyflag()
 
   normals = poly.normals()
@@ -343,13 +343,13 @@ chamfer = (poly, dist) ->
   for f,i in poly.face
     v1 = f[f.length-1]
     v1new = i + "_" + v1
-    
+
     for v2 in f
       # TODO: figure out what distances will give us a planar hex face.
       # Move each old vertex further from the origin.
       flag.newV(v2, mult(1.0 + dist, poly.xyz[v2]))
       # Add a new vertex, moved parallel to normal.
-      v2new = i + "_" + v2  
+      v2new = i + "_" + v2
       flag.newV(v2new, add(poly.xyz[v2], mult(dist*1.5, normals[i])))
       # Four new flags:
       # One whose face corresponds to the original face:
