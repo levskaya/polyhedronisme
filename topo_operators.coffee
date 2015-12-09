@@ -23,6 +23,8 @@
 # one can refer to vertices and faces that don't yet exist or haven't been traversed yet in the
 # transformation code.
 #
+# A flag is similar in concept to a directed halfedge in halfedge data structures.
+#
 class polyflag
   constructor: ->
     @flags= new Object() # flags[face][vertex] = next vertex of flag; symbolic triples
@@ -330,14 +332,13 @@ dual = (poly) ->
 # But it doesn't work for cases like T.
 
 chamfer = (poly, dist) ->
+  console.log "Taking chamfer of #{poly.name}..."
+
   dist or= 0.5
   
   flag = new polyflag()
 
   normals = poly.normals()
-
-  # helper func: name of new hexagonal face that replaces an old edge
-  hexName = (v1, v2) -> if v1<v2 then "hex"+v1+"_"+v2 else "hex"+v2+"_"+v1
 
   # For each face f in the original poly
   for f,i in poly.face
@@ -346,9 +347,11 @@ chamfer = (poly, dist) ->
     
     for v2 in f
       # TODO: figure out what distances will give us a planar hex face.
-      # Move each old vertex further from the origin.
-      flag.newV(v2, mult(1.0 + dist, poly.xyz[v2]))
-      # Add a new vertex, moved parallel to normal.
+      # d = cross(sub(v2, v1), v1) # check handedness
+
+      # Copy each existing vertex.
+      flag.newV(v2, poly.xyz[v2])
+      # Add a new vertex, moved perpendicular to the edge.
       v2new = i + "_" + v2  
       flag.newV(v2new, add(poly.xyz[v2], mult(dist*1.5, normals[i])))
       # Four new flags:
@@ -367,9 +370,60 @@ chamfer = (poly, dist) ->
   newpoly
 
 
-whirl = (poly) ->
-  poly
+# Whirl
+# ----------------------------------------------------------------------------------------------
+# Gyro followed by truncation of vertices centered on original faces.
+# This create 2 new hexagons for every original edge.
+# (https://en.wikipedia.org/wiki/Conway_polyhedron_notation#Operations_on_polyhedra)
+#
+# Possible extension: take a parameter n that means only whirl n-sided faces.
+# If we do that, the flags marked #* below will need to have their other sides
+# filled in one way or another, depending on whether the adjacent face is
+# whirled or not.
 
+whirl = (poly, n) ->
+  console.log "Taking whirl of #{poly.name}..."
+  n or= 0
+  
+  flag = new polyflag()
+
+  for v,i in poly.xyz
+    flag.newV "v"+i, unit(v)  # each old vertex is a new vertex
+
+  centers = poly.centers() # new vertices around center of each face
+  #for f,i in poly.face
+  #  # Whirl: use "center"+i+"~"+v1
+  #  flag.newV "center"+i+"~"+v1, unit(centers[i])
+
+  for f,i in poly.face
+    [v1, v2] = f[-2..-1]
+    for v,j in f
+      v3 = v
+      # New vertex along edge
+      v1_2 = oneThird(poly.xyz[v1],poly.xyz[v2])
+      flag.newV(v1+"~"+v2, v1_2)
+      # New vertices near center of face
+      cv1name = "center"+i+"~"+v1
+      cv2name = "center"+i+"~"+v2
+      flag.newV(cv1name, unit(oneThird(centers[i], v1_2))) 
+      fname = i+"f"+v1
+      # New hexagon for each original edge
+      flag.newFlag(fname, cv1name,      v1+"~"+v2)
+      flag.newFlag(fname, v1+"~"+v2,  v2+"~"+v1) #*
+      flag.newFlag(fname, v2+"~"+v1,  "v"+v2)    #*
+      flag.newFlag(fname, "v"+v2,     v2+"~"+v3) #*
+      flag.newFlag(fname, v2+"~"+v3,  cv2name)
+      flag.newFlag(fname, cv2name, cv1name)
+      # New face in center of each old face      
+      flag.newFlag("c"+i, cv1name, cv2name)
+      
+      [v1, v2] = [v2, v3]                       # shift over one
+
+  newpoly = flag.topoly()
+  newpoly.name = "w" + poly.name
+  #newpoly.xyz = adjustXYZ(newpoly, 3)
+  newpoly
+  
 
 # insetN
 # ------------------------------------------------------------------------------------------

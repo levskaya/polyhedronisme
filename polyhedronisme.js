@@ -1088,17 +1088,11 @@
   };
 
   chamfer = function(poly, dist) {
-    var f, facename, flag, hexName, i, l, len, len1, newpoly, normals, o, ref, v1, v1new, v2, v2new;
+    var f, facename, flag, i, l, len, len1, newpoly, normals, o, ref, v1, v1new, v2, v2new;
+    console.log("Taking chamfer of " + poly.name + "...");
     dist || (dist = 0.5);
     flag = new polyflag();
     normals = poly.normals();
-    hexName = function(v1, v2) {
-      if (v1 < v2) {
-        return "hex" + v1 + "_" + v2;
-      } else {
-        return "hex" + v2 + "_" + v1;
-      }
-    };
     ref = poly.face;
     for (i = l = 0, len = ref.length; l < len; i = ++l) {
       f = ref[i];
@@ -1106,7 +1100,7 @@
       v1new = i + "_" + v1;
       for (o = 0, len1 = f.length; o < len1; o++) {
         v2 = f[o];
-        flag.newV(v2, mult(1.0 + dist, poly.xyz[v2]));
+        flag.newV(v2, poly.xyz[v2]);
         v2new = i + "_" + v2;
         flag.newV(v2new, add(poly.xyz[v2], mult(dist * 1.5, normals[i])));
         flag.newFlag("orig" + i, v1new, v2new);
@@ -1123,8 +1117,43 @@
     return newpoly;
   };
 
-  whirl = function(poly) {
-    return poly;
+  whirl = function(poly, n) {
+    var centers, cv1name, cv2name, f, flag, fname, i, j, l, len, len1, len2, newpoly, o, ref, ref1, ref2, ref3, u, v, v1, v1_2, v2, v3;
+    console.log("Taking whirl of " + poly.name + "...");
+    n || (n = 0);
+    flag = new polyflag();
+    ref = poly.xyz;
+    for (i = l = 0, len = ref.length; l < len; i = ++l) {
+      v = ref[i];
+      flag.newV("v" + i, unit(v));
+    }
+    centers = poly.centers();
+    ref1 = poly.face;
+    for (i = o = 0, len1 = ref1.length; o < len1; i = ++o) {
+      f = ref1[i];
+      ref2 = f.slice(-2), v1 = ref2[0], v2 = ref2[1];
+      for (j = u = 0, len2 = f.length; u < len2; j = ++u) {
+        v = f[j];
+        v3 = v;
+        v1_2 = oneThird(poly.xyz[v1], poly.xyz[v2]);
+        flag.newV(v1 + "~" + v2, v1_2);
+        cv1name = "center" + i + "~" + v1;
+        cv2name = "center" + i + "~" + v2;
+        flag.newV(cv1name, unit(oneThird(centers[i], v1_2)));
+        fname = i + "f" + v1;
+        flag.newFlag(fname, cv1name, v1 + "~" + v2);
+        flag.newFlag(fname, v1 + "~" + v2, v2 + "~" + v1);
+        flag.newFlag(fname, v2 + "~" + v1, "v" + v2);
+        flag.newFlag(fname, "v" + v2, v2 + "~" + v3);
+        flag.newFlag(fname, v2 + "~" + v3, cv2name);
+        flag.newFlag(fname, cv2name, cv1name);
+        flag.newFlag("c" + i, cv1name, cv2name);
+        ref3 = [v2, v3], v1 = ref3[0], v2 = ref3[1];
+      }
+    }
+    newpoly = flag.topoly();
+    newpoly.name = "w" + poly.name;
+    return newpoly;
   };
 
   insetN = function(poly, n, inset_dist, popout_dist) {
