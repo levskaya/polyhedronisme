@@ -320,7 +320,7 @@ dual = (poly) ->
 # A polyhedron with e edges will have a chamfered form containing 2e new vertices,
 # 3e new edges, and e new hexagonal faces. -- Wikipedia
 # See also http://dmccooey.com/polyhedra/Chamfer.html
-# 
+#
 # The dist parameter could control how deeply to chamfer.
 # But I'm not sure about implementing that yet.
 #
@@ -335,7 +335,7 @@ chamfer = (poly, dist) ->
   console.log "Taking chamfer of #{poly.name}..."
 
   dist or= 0.5
-  
+
   flag = new polyflag()
 
   normals = poly.normals()
@@ -344,15 +344,13 @@ chamfer = (poly, dist) ->
   for f,i in poly.face
     v1 = f[f.length-1]
     v1new = i + "_" + v1
-    
+
     for v2 in f
       # TODO: figure out what distances will give us a planar hex face.
-      # d = cross(sub(v2, v1), v1) # check handedness
-
-      # Copy each existing vertex.
-      flag.newV(v2, poly.xyz[v2])
-      # Add a new vertex, moved perpendicular to the edge.
-      v2new = i + "_" + v2  
+      # Move each old vertex further from the origin.
+      flag.newV(v2, mult(1.0 + dist, poly.xyz[v2]))
+      # Add a new vertex, moved parallel to normal.
+      v2new = i + "_" + v2
       flag.newV(v2new, add(poly.xyz[v2], mult(dist*1.5, normals[i])))
       # Four new flags:
       # One whose face corresponds to the original face:
@@ -473,7 +471,6 @@ insetN = (poly, n, inset_dist, popout_dist)->
   #newpoly.xyz = canonicalXYZ(newpoly, 3)  # this tends to make results look like shit
   newpoly
 
-
 # ExtrudeN
 # ------------------------------------------------------------------------------------------
 extrudeN = (poly, n)->
@@ -517,6 +514,72 @@ extrudeN = (poly, n)->
   newpoly = flag.topoly()
   newpoly.name = "x" + (if n is 0 then "" else n) + poly.name
   #console.log newpoly
+  #newpoly.xyz = adjustXYZ(newpoly, 3)
+  #newpoly.xyz = canonicalXYZ(newpoly, 3)  # this tends to make results look like shit
+  newpoly
+
+# hollow / skeletonize
+# ------------------------------------------------------------------------------------------
+hollow = (poly, n, inset_dist, thickness)->
+  n or= 0
+  inset_dist  or= 0.5
+  thickness or= 0.2
+
+  console.log "Skeletonizing #{if n==0 then "" else n}-sided faces of #{poly.name}..."
+
+  dualnormals = dual(poly).normals()
+  normals = poly.normals()
+  centers = poly.centers()
+
+  flag = new polyflag()
+  for p,i in poly.xyz
+    # each old vertex is a new vertex
+    flag.newV "v#{i}", p
+    flag.newV "downv#{i}",  add(p,mult(-1*thickness,dualnormals[i]))
+
+  for f,i in poly.face #new inset vertex for every vert in face
+    #if f.length is n or n is 0
+    for v in f
+      flag.newV "fin"+i+"v"+v, tween(poly.xyz[v],centers[i],inset_dist)
+      flag.newV "findown"+i+"v"+v, add(tween(poly.xyz[v],centers[i],inset_dist),mult(-1*thickness,normals[i]))
+
+  #foundAny = false                 # alert if don't find any
+  for f,i in poly.face
+    v1 = "v"+f[f.length-1]
+    for v in f
+      v2 = "v"+v
+      #if f.length is n or n is 0
+      foundAny = true
+      fname = i + v1
+      flag.newFlag fname,      v1,       v2
+      flag.newFlag fname,      v2,       "fin"+i+v2
+      flag.newFlag fname, "fin"+i+v2,  "fin"+i+v1
+      flag.newFlag fname, "fin"+i+v1,  v1
+
+      fname = "sides"+i + v1
+      flag.newFlag fname, "fin"+i+v1,     "fin"+i+v2
+      flag.newFlag fname, "fin"+i+v2,     "findown"+i+v2
+      flag.newFlag fname, "findown"+i+v2, "findown"+i+v1
+      flag.newFlag fname, "findown"+i+v1, "fin"+i+v1
+
+      fname = "bottom"+i + v1
+      flag.newFlag fname,  "down"+v2,      "down"+v1
+      flag.newFlag fname,  "down"+v1,      "findown"+i+v1
+      flag.newFlag fname,  "findown"+i+v1, "findown"+i+v2
+      flag.newFlag fname,  "findown"+i+v2, "down"+v2
+
+      #new inset, extruded face
+      #flag.newFlag "ex"+i, "fin"+i+v1,  "fin"+i+v2
+      #else
+      #  flag.newFlag i, v1, v2  # same old flag, if non-n
+      v1=v2  # current becomes previous
+
+  #if not foundAny
+  #  console.log "No #{n}-fold components were found."
+
+  newpoly = flag.topoly()
+  #newpoly.name = "h" + (if n is 0 then "" else n) + poly.name
+  newpoly.name = "h" + poly.name
   #newpoly.xyz = adjustXYZ(newpoly, 3)
   #newpoly.xyz = canonicalXYZ(newpoly, 3)  # this tends to make results look like shit
   newpoly

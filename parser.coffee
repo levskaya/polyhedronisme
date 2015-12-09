@@ -63,6 +63,7 @@ opmap = {
   "g": gyro
   "p": propellor
   "r": reflect
+  "h": hollow
   "c": chamfer
   "w": whirl
   "n": insetN
