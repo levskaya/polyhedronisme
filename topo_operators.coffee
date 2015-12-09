@@ -29,15 +29,16 @@ class polyflag
     @verts= new Object() # XYZ coordinates
     @xyzs = new Object() # [symbolic names] holds vertex index
 
+  # Add a new vertex named "name" with coordinates "xyz".
   newV: (name, xyz) ->
     if @verts[name] is undefined
       @verts[name] = 0
       @xyzs[name] = xyz
 
-  newFlag: (face, v1, v2) ->
-    if @flags[face] is undefined
-      @flags[face] = {}
-    @flags[face][v1] = v2
+  newFlag: (facename, v1, v2) ->
+    if @flags[facename] is undefined
+      @flags[facename] = {}
+    @flags[facename][v1] = v2
 
   topoly: () ->
     poly = new polyhedron()
@@ -149,13 +150,16 @@ ambo = (poly)->
 
   flag = new polyflag()
 
+  # For each face f in the original poly
   for f,i in poly.face
     [v1, v2] = f[-2..-1]
     for v3 in f
       if v1 < v2 # vertices are the midpoints of all edges of original poly
         flag.newV(midName(v1,v2), midpoint(poly.xyz[v1], poly.xyz[v2]))
-      # two new flags
+      # two new flags:
+      # One whose face corresponds to the original f:
       flag.newFlag("orig"+i,  midName(v1,v2), midName(v2,v3))
+      # Another flag whose face  corresponds to (the truncated) v2:
       flag.newFlag("dual"+v2, midName(v2,v3), midName(v1,v2))
       # shift over one
       [v1, v2] = [v2, v3]
@@ -303,6 +307,69 @@ dual = (poly) ->
     dpoly.name = poly.name[1..]
 
   dpoly
+
+
+# Chamfer
+# ----------------------------------------------------------------------------------------
+# A truncation along a polyhedron's edges.
+# Chamfering or edge-truncation is similar to expansion, moving faces apart and outward,
+# but also maintains the original vertices. Adds a new hexagonal face in place of each
+# original edge.
+# A polyhedron with e edges will have a chamfered form containing 2e new vertices,
+# 3e new edges, and e new hexagonal faces. -- Wikipedia
+# See also http://dmccooey.com/polyhedra/Chamfer.html
+# 
+# The dist parameter could control how deeply to chamfer.
+# But I'm not sure about implementing that yet.
+#
+# Q: what is the dual operation of chamfering? I.e.
+# if cX = dxdX, and xX = dcdX, what operation is x?
+
+# We could "almost" do this in terms of already-implemented operations:
+# cC = t4daC = t4jC, cO = t3daO, cD = t5daD, cI = t3daI
+# But it doesn't work for cases like T.
+
+chamfer = (poly, dist) ->
+  dist or= 0.5
+  
+  flag = new polyflag()
+
+  normals = poly.normals()
+
+  # helper func: name of new hexagonal face that replaces an old edge
+  hexName = (v1, v2) -> if v1<v2 then "hex"+v1+"_"+v2 else "hex"+v2+"_"+v1
+
+  # For each face f in the original poly
+  for f,i in poly.face
+    v1 = f[f.length-1]
+    v1new = i + "_" + v1
+    
+    for v2 in f
+      # TODO: figure out what distances will give us a planar hex face.
+      # Move each old vertex further from the origin.
+      flag.newV(v2, mult(1.0 + dist, poly.xyz[v2]))
+      # Add a new vertex, moved parallel to normal.
+      v2new = i + "_" + v2  
+      flag.newV(v2new, add(poly.xyz[v2], mult(dist*1.5, normals[i])))
+      # Four new flags:
+      # One whose face corresponds to the original face:
+      flag.newFlag("orig"+i, v1new, v2new)
+      # And three for the edges of the new hexagon:
+      facename = (if v1<v2 then "hex"+v1+"_"+v2 else "hex"+v2+"_"+v1)
+      flag.newFlag(facename, v2, v2new)
+      flag.newFlag(facename, v2new, v1new)
+      flag.newFlag(facename, v1new, v1)
+      v1 = v2
+      v1new = v2new
+
+  newpoly = flag.topoly()
+  newpoly.name = "c" + poly.name
+  newpoly
+
+
+whirl = (poly) ->
+  poly
+
 
 # insetN
 # ------------------------------------------------------------------------------------------

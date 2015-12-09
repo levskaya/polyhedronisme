@@ -135,7 +135,7 @@ canonicalXYZ = (poly, nIterations) ->
   console.log "Pseudo-canonicalizing #{poly.name}..."
 
   # iteratively reciprocate face normals
-  for count in [0..nIterations-1]
+  for count in [0...nIterations]
     dpoly.xyz = reciprocalN(poly)
     poly.xyz  = reciprocalN(dpoly)
 
@@ -148,7 +148,7 @@ adjustXYZ = (poly, nIterations) ->
   dpoly = dual(poly) # v's of dual are in order of arg's f's
   console.log "Planarizing #{poly.name}..."
 
-  for count in [0..nIterations-1]
+  for count in [0...nIterations]
     # reciprocate face centers
     dpoly.xyz = reciprocalC(poly)
     poly.xyz  = reciprocalC(dpoly)

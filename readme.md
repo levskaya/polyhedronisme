@@ -43,6 +43,7 @@ G x**2,y**2,z**2 => poly.xyz = _.map(poly.xyz, ([x,y,z]) -> [x*x,y*y,z*z])
 <li><b>w</b> - whirl</li>
 - Simple boolean operations on like-numbered faces: "cut and glue"
 - proper touch event handling for mobile
+- auto-rotation of the polyhedron (checkbox? play/pause button?)
 - compounding a series - does it work?
 - some documentation on what the palette colors map to. Currently, by "signature",
   which means what exactly?
@@ -54,9 +55,9 @@ G x**2,y**2,z**2 => poly.xyz = _.map(poly.xyz, ([x,y,z]) -> [x*x,y*y,z*z])
   <li>eptI - exploded propellerized truncated icosahedron</li>
   <li>C300eC200pC200tI - ditto, canonicalized</li>
   <li>AeA3ptI - ditto, with convex spherical adjustment</li>
+  <li>k(4,1.8)k(3,1.8)C200eO</li>
   To do: give examples using kN or tN, and with a space-delimited series if that's supported.
 </ul>
-- add a "share"-like feature that lets you copy a link to a particular recipe and palette
 
 * * *
 Text CC-BY, Code MIT License

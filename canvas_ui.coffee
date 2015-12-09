@@ -95,6 +95,15 @@ init = ->
     ctx.clearRect 0, 0, CANVAS_WIDTH, CANVAS_HEIGHT
     ctx.fillStyle = BG_COLOR
     ctx.fillRect 0, 0, CANVAS_WIDTH, CANVAS_HEIGHT
+    
+  exp = $('#expandcollapse')
+  exp.click ->
+    if /minus/.test(exp.attr('src'))  # Contains 'minus'
+      $('#morestats').hide()
+      exp.attr('src', 'media/plus.png')
+    else
+      $('#morestats').show()      
+      exp.attr('src', 'media/minus.png')
 
 # clear canvas
 # -----------------------------------------------------------------------------------
@@ -113,7 +122,7 @@ drawpoly = (poly,tvec) ->
   tvec ||= [3,3,3]
 
   #centers = _.map(poly.centers(), (x)->mv3(rotm(rot[0],rot[1],rot[2]),x))
-  #oldfaces = ("#{fno}" for fno in [0..centers.length-1])
+  #oldfaces = ("#{fno}" for fno in [0...centers.length])
 
   # rotate poly in 3d
   oldxyz = _.map(poly.xyz, (x)->x)
@@ -181,10 +190,8 @@ drawShape = ->
 # -----------------------------------------------------------------------------------
 updateStats = ->
   for p,i in globPolys
-    $("#V").text(p.xyz.length)
-    # V - E + F = 2
-    $("#E").text(p.xyz.length + p.face.length - 2)
-    $("#F").text(p.face.length)
+    $("#basicstats").text(p.data())
+    $("#morestats").text(p.moreData())
 
 # loop for animation
 # -----------------------------------------------------------------------------------

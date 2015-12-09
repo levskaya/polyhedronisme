@@ -13,6 +13,7 @@
 # Topology stored as set of "faces."  Each face is list of n vertex indices
 # corresponding to one n-sided face.  Vertices listed clockwise as seen from outside.
 
+# Generate an array of edges [v1,v2] for the face.
 faceToEdges = (face) ->
   edges = []
   [v1] = face[-1..]
@@ -101,7 +102,7 @@ sortfaces = (poly) ->
   zcentroidsort = (a,b)->
     a[0][2]-b[0][2]
 
-  zsortIndex = _.zip(centroids, normals, [0..poly.face.length-1])
+  zsortIndex = _.zip(centroids, normals, [0...poly.face.length])
     #.sort(planesort)
     .sort(zcentroidsort)
     .map((x)->x[2])
@@ -119,8 +120,11 @@ class polyhedron
 
   data: () ->   # informative string
     nEdges = @face.length + @xyz.length - 2 # E = V + F - 2
-    "(#{@face.length} faces, #{nEdges} edges, #{@xyz.length} vertices)"
+    "#{@face.length} faces, #{nEdges} edges, #{@xyz.length} vertices"
 
+  moreData: () ->
+    "min. edge length #{@minEdgeLength().toPrecision(2)}; min. face radius #{@minFaceRadius().toPrecision(2)}"
+    
   edges: ->
     finalset={}
     uniqedges=[]
@@ -138,6 +142,29 @@ class polyhedron
     #return edges
     uniqedges
 
+  minEdgeLength: () ->
+    min2 = Number.MAX_VALUE
+    # Compute minimum edge length
+    for e in @edges()
+      d2 = mag2(sub(@xyz[e[0]], @xyz[e[1]])) # square of edge length
+      if (d2 < min2)
+        min2 = d2
+    sqrt(min2) # This is normalized if rescaling has happened.
+    
+  minFaceRadius: () ->
+    min2 = Number.MAX_VALUE
+    nFaces = @face.length
+    centers = @centers()
+    for f in [0...nFaces]
+      c = centers[f]
+      for e in faceToEdges(@face[f])
+        # Check distance from center to each edge.
+        de2 = linePointDist2(@xyz[e[0]], @xyz[e[1]], c)
+        if de2 < min2
+          min2 = de2
+
+    sqrt(min2)
+      
   centers: ->
     # get array of face centers
     centers_array = []
@@ -366,14 +393,14 @@ prism = (n) ->
   poly = new polyhedron()
   poly.name = "P#{n}"
 
-  for i in [0..n-1] # vertex #'s 0...n-1 around one face
+  for i in [0...n] # vertex #'s 0 to n-1 around one face
     poly.xyz.push [-cos(i*theta), -sin(i*theta),  -h]
-  for i in [0..n-1] # vertex #'s n...2n-1 around other
+  for i in [0...n] # vertex #'s n to 2n-1 around other
     poly.xyz.push [-cos(i*theta), -sin(i*theta), h]
 
   poly.face.push [n-1..0]   #top
-  poly.face.push [n..2*n-1] #bottom
-  for i in [0..n-1] #n square sides
+  poly.face.push [n...2*n] #bottom
+  for i in [0...n] #n square sides
     poly.face.push [i, (i+1)%n, (i+1)%n+n, i+n]
 
   poly = adjustXYZ(poly,1)
@@ -390,9 +417,9 @@ antiprism = (n) ->
   poly = new polyhedron()
   poly.name = "A#{n}"
 
-  for i in [0..n-1] # vertex #'s 0...n-1 around one face
+  for i in [0...n] # vertex #'s 0...n-1 around one face
     poly.xyz.push [r * cos(i*theta), r * sin(i*theta), h]
-  for i in [0..n-1] # vertex #'s n...2n-1 around other
+  for i in [0...n] # vertex #'s n...2n-1 around other
     poly.xyz.push [r * cos((i+0.5)*theta), r * sin((i+0.5)*theta), -h]
 
   poly.face.push [n-1..0]   #top
@@ -410,12 +437,12 @@ pyramid = (n) ->
   poly = new polyhedron()
   poly.name = "Y#{n}"
 
-  for i in [0..n-1] # vertex #'s 0...n-1 around one face
+  for i in [0...n] # vertex #'s 0...n-1 around one face
     poly.xyz.push [-cos(i*theta), -sin(i*theta), -0.2]
   poly.xyz.push [0,0, height] # apex
 
   poly.face.push [n-1..0] # base
-  for i in [0..n-1] # n triangular sides
+  for i in [0...n] # n triangular sides
     poly.face.push [i, (i+1)%n, n]
 
   poly = canonicalXYZ(poly,3)
