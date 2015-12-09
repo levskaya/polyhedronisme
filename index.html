@@ -55,16 +55,23 @@
 </div>
 
 <div class="specwrapper">
-  <label>recipe  <input id="spec"></input></label>
-  <a id="link" href="#" title="Copy this URL to share">
-    <img src="media/link.png">
-  </a>
-  <br>
-  <span id="stats" style="font-size:12px">
-    V=<span id="V">0</span>, E=<span id="E">0</span>, F=<span id="F">0</span> 
-  </span>
+  <label style="width: 10em">recipe  <input id="spec"></input></label>
+  <a id="link" href="#" title="Copy this URL to share"><img src="media/link.png"></a>
   <br>
   <label>palette <input id="palette"></input></label>
+</div>
+
+<br />
+
+<div class="statswrapper">
+  <label style="">stats </label>
+  <div id="statsinner">
+    <div id="basicstats"></div>
+    <img id="expandcollapse" src="media/plus.png" />
+    <br />
+    <div id="morestats"></div>
+  </div>
+  <div style="clear: both"></div>
 </div>
 
 <p>The specification consists of a space-delimited series of polyhedral recipes.
@@ -103,6 +110,11 @@ Each recipe looks like: </p>
   <li><b>j</b> - join (equiv. to <i>dad</i>) </li>
   <li><b>s</b> - snub (equiv. to <i>dgd</i>) </li>
   <li><b>p</b> - propellor</li>
+  <li><b>c</b> - chamfer</li>
+  <!--
+  <li><b>w</b> - whirl</li>
+  <li><b>h</b> - half (caution: requires even-sided faces, and can produce digons)</li>
+  -->
 </ul>
 
 <p>Also, some newer, experimental operators:</p>
