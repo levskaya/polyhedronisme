@@ -55,8 +55,10 @@ G x**2,y**2,z**2 => poly.xyz = _.map(poly.xyz, ([x,y,z]) -> [x*x,y*y,z*z])
   <li>eptI - exploded propellerized truncated icosahedron</li>
   <li>C300eC200pC200tI - ditto, canonicalized</li>
   <li>AeA3ptI - ditto, with convex spherical adjustment</li>
+  <li>scccC - snub triple-chamfered cube</li>
   <li>k(4,1.8)k(3,1.8)C200eO</li>
   To do: give examples using kN or tN, and with a space-delimited series if that's supported.
+  
 </ul>
 
 * * *
