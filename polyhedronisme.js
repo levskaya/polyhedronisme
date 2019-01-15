@@ -2393,12 +2393,17 @@ const DEFAULT_RECIPES = [
   "n18n18n9n9n9soxY9"];
 
 // File-saving objects used to export txt/canvas-png
+// const saveText = function(text, filename) {
+//   const BB = window.BlobBuilder || window.WebKitBlobBuilder || window.MozBlobBuilder;
+//   const bb = new BB();
+//   bb.append(text);
+//   return saveAs(bb.getBlob(`text/plain;charset=${document.characterSet}`), filename);
+// };
 const saveText = function(text, filename) {
-  const BB = window.BlobBuilder || window.WebKitBlobBuilder || window.MozBlobBuilder;
-  const bb = new BB();
-  bb.append(text);
-  return saveAs(bb.getBlob(`text/plain;charset=${document.characterSet}`), filename);
-};
+  const blb = new Blob([text], 
+    {type: `text/plain;charset=${document.characterSet}`});
+  return saveAs(blb, filename);
+}
 
 // parses URL string for polyhedron recipe, for bookmarking
 // should use #! href format instead
@@ -2719,7 +2724,10 @@ $( function() { //wait for page to load
     //window.location = canvas.toDataURL("image/png")
     const spec = $("#spec").val().split(/\s+/g)[0];
     const filename = `polyhedronisme-${spec.replace(/\([^\)]+\)/g, "")}.png`;
-    return canvas.toBlob( blob=> saveAs(blob, filename));
+    //blobUtil.canvasToBlob(canvas, 'image/png').then(
+    //  blob=>saveAs(blob, filename))
+    return canvas.toBlobHD(blob => saveAs(blob, filename));
+    //return canvas.toBlob( blob=> saveAs(blob, filename));
   });
 
   $("#objsavebutton").click(function(e){
