@@ -1,11 +1,11 @@
 /*
 * Polyhédronisme Styles
 *
-* Copyright 2011, Anselm Levskaya
+* Copyright 2019, Anselm Levskaya
 * Released under the MIT License
 */
 
-@import url(http://fonts.googleapis.com/css?family=Metrophobic);
+/*@import url(http://fonts.googleapis.com/css?family=Metrophobic);*/
 
 .clearfix:after {
     content: ".";

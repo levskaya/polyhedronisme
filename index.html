@@ -7,23 +7,22 @@
 <script type="text/javascript" src="libs/jquery-1.7.min.js"></script>
 <script type="text/javascript" src="libs/jquery.mousewheel.js"></script>
 <script type="text/javascript" src="libs/underscore-min.js"></script>
-<script type="text/javascript" src="libs/BlobBuilder.min.js"></script>
-<script type="text/javascript" src="libs/canvas-toBlob.min.js"></script>
-<script type="text/javascript" src="libs/FileSaver.min.js"></script>
+<script type="text/javascript" src="libs/Blob.js"></script>
+<script type="text/javascript" src="libs/canvas-toBlob.js"></script>
+<script type="text/javascript" src="libs/FileSaver.js"></script>
 <script type="text/javascript" src="libs/peg-0.6.2.min.js"></script>
 
-<script type="text/javascript" src="polyhedronisme.min.js"></script>
+<script type="text/javascript" src="polyhedronisme.js"></script>
 
 <link rel="stylesheet" type="text/css" href="polyhedronisme.css">
-<style>
-</style>
+<style></style>
 </head>
 
 <body>
 <div class="container">
 
 <h2 style="text-align:center;">
-  <span class="fadey">poly</span>H&eacute;d<span class="fadey">r</span>onisme<span style="font-size:10px;">v0.2<span>
+  <span class="fadey">poly</span>H&eacute;d<span class="fadey">r</span>onisme<span style="font-size:10px;">v0.2.1<span>
 </h2>
 
 <div class="canvaswrapper clearfix">
@@ -169,22 +168,21 @@ be interesting too!</p>
 <h4> 3D Printing </h4>
 <p>You can export these shapes in forms appropriate for 3D printing by
 shapeways. Export in VRML2 format to preserve face colors if you want
-to use their colored fused-sand process.</p>
+to use their colored fused-sand process.  You'll probably want to rescale 
+the exported geometry to a non-tiny size.</p>
 
 <p>Some relevant links: </p>
 <ul>
 <li><a href="http://en.wikipedia.org/wiki/Conway_polyhedron_notation">
   Wikipedia on Conway Polyhedral Notation</a></li>
 <li><a href="http://www.georgehart.com/">George W. Hart's Polyhedral Site</a></li>
-<li><a href="https://github.com/levskaya/polyhedronisme/blob/master/readme.md">More about this project, its inspiration and goals</a></a></li>
+<li><a href="http://github.com/levskaya/polyhedronisme">Source and more information at Github</a></li>
 </ul>
 
 <div class="footer">
-  Text &amp; Figures CC-BY | Code MIT License | <a href="http://anselmlevskaya.com">Anselm Levskaya</a> 2015
+  Text &amp; Figures CC-BY | Code MIT License | <a href="http://anselmlevskaya.com">Anselm Levskaya</a> 2019
 </div>
 </div>
-
-<a href="http://github.com/levskaya/polyhedronisme"><img style="position: absolute; top: 0; right: 0; border: 0;" src="http://s3.amazonaws.com/github/ribbons/forkme_right_red_aa0000.png" alt="Fork me on GitHub" /></a>
 
 </body>
 </html>
