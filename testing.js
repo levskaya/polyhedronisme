@@ -13,18 +13,19 @@
 // Testing Functions
 //===================================================================================================
 
-//report on face topology
+// report on face topology
 const topolog = function(poly) {
-  let str="";
+  let str = "";
   for (let f of poly.face) {
     for (let v of f) {
-      str+=`${v}->`;
+      str += `${v}->`;
     }
     str+="\n";
   }
-  return console.log(str);
+  console.log(str);
 };
 
+// test basic cross of all ops against all seeds
 const testrig = function() {
   const seeds=["T","O","C","I","D","P3","P4","A4","A5","Y3","Y4"];
   const ops = ["k","a","g","p","d","r","e","b","o","m","t","j",
@@ -33,8 +34,8 @@ const testrig = function() {
   for (let op of ops) {
     console.log(`Operator ${op}`);
     for (let seed of seeds) {
-      console.log(op+seed+":", newgeneratePoly(op + seed));
+      console.log(op + seed + ":", newgeneratePoly(op + seed));
     }
   }
-  return console.log("===== Done Testing Basic Ops =====");
+  console.log("===== Done Testing Basic Ops =====");
 };

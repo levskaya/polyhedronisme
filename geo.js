@@ -9,14 +9,6 @@
 //
 // Copyright 2019, Anselm Levskaya
 // Released under the MIT License
-/*
- * decaffeinate suggestions:
- * DS101: Remove unnecessary use of Array.from
- * DS102: Remove unnecessary code created because of implicit returns
- * DS202: Simplify dynamic range loops
- * DS207: Consider shorter variations of null checks
- * Full docs: https://github.com/decaffeinate/decaffeinate/blob/master/docs/suggestions.md
- */
 
 
 // Math / Vector / Matrix Functions
@@ -34,11 +26,6 @@ const sigfigs = function(N, nsigs){
   const normed = pow(10, log10(N)-floor(log10(N)));
   return `${round(normed*(nsigs-1))}`;
 };
-
-// for python-style enumerated for-in loops
-//  - should use "for [i,x] in AR then do (i,x)->" idiom instead
-//  - !! actually even easier:  "for val,idx in array" works!
-//enumerate = (ar) -> [i,ar[i]] for i in [0...ar.length]
 
 // general recursive deep-copy function
 var clone = function(obj) {
@@ -59,22 +46,30 @@ const randomchoice = function(array){
 };
 
 // 3d scalar multiplication
-const mult = (c, vec) => [c*vec[0],c*vec[1],c*vec[2]];
+const mult = (c, vec) => 
+  [c*vec[0],c*vec[1],c*vec[2]];
 
 // 3d element-wise multiply
-const _mult = (vec1, vec2) => [vec1[0]*vec2[0],vec1[1]*vec2[1],vec1[2]*vec2[2]];
+const _mult = (vec1, vec2) => 
+  [vec1[0]*vec2[0], vec1[1]*vec2[1], vec1[2]*vec2[2]];
 
 // 3d vector addition
-const add = (vec1, vec2) => [vec1[0]+vec2[0],vec1[1]+vec2[1],vec1[2]+vec2[2]];
+const add = (vec1, vec2) => 
+  [vec1[0]+vec2[0], vec1[1]+vec2[1], vec1[2]+vec2[2]];
 
 // 3d vector subtraction
-const sub = (vec1, vec2) => [vec1[0]-vec2[0],vec1[1]-vec2[1],vec1[2]-vec2[2]];
+const sub = (vec1, vec2) => 
+  [vec1[0]-vec2[0], vec1[1]-vec2[1], vec1[2]-vec2[2]];
 
 // 3d dot product
-const dot = (vec1, vec2) => (vec1[0]*vec2[0]) + (vec1[1]*vec2[1]) + (vec1[2]*vec2[2]);
+const dot = (vec1, vec2) => 
+  (vec1[0]*vec2[0]) + (vec1[1]*vec2[1]) + (vec1[2]*vec2[2]);
 
 // 3d cross product d1 x d2
-const cross = (d1, d2) => [ (d1[1]*d2[2])-(d1[2]*d2[1]), (d1[2]*d2[0])-(d1[0]*d2[2]),  (d1[0]*d2[1])-(d1[1]*d2[0]) ];
+const cross = (d1, d2) => 
+  [(d1[1]*d2[2]) - (d1[2]*d2[1]), 
+   (d1[2]*d2[0]) - (d1[0]*d2[2]),  
+   (d1[0]*d2[1]) - (d1[1]*d2[0]) ];
 
 // vector norm
 const mag = vec => sqrt(dot(vec,vec));
@@ -89,38 +84,47 @@ const unit = vec => mult( 1/sqrt(mag2(vec)), vec);
 const midpoint = (vec1, vec2) => mult(1/2.0,add(vec1,vec2));
 
 // parametric segment between vec1, vec2 w. parameter t ranging from 0 to 1
-const tween = (vec1,vec2,t) => [ ((1-t)*vec1[0]) + (t*vec2[0]), ((1-t)*vec1[1]) + (t*vec2[1]), ((1-t)*vec1[2]) + (t*vec2[2]) ];
+const tween = (vec1,vec2,t) => 
+  [((1-t)*vec1[0]) + (t*vec2[0]), 
+   ((1-t)*vec1[1]) + (t*vec2[1]), 
+   ((1-t)*vec1[2]) + (t*vec2[2])];
 
 // uses above to go one-third of the way along vec1->vec2 line
 const oneThird = (vec1, vec2) => tween(vec1, vec2, 1/3.0);
 
 // reflect 3vec in unit sphere, spherical reciprocal
-const reciprocal = vec => mult( 1.0/mag2(vec), vec);
+const reciprocal = vec => mult(1.0 / mag2(vec), vec);
 
 // point where line v1...v2 tangent to an origin sphere
-const tangentPoint= function(v1,v2) {
+const tangentPoint= function(v1, v2) {
   const d = sub(v2, v1);
-  return sub(v1, mult(dot(d,v1)/mag2(d),d));
+  return sub(v1, mult(dot(d, v1)/mag2(d), d));
 };
 
 // distance of line v1...v2 to origin
-const edgeDist = (v1,v2) => sqrt(mag2(tangentPoint(v1, v2)));
+const edgeDist = (v1, v2) => sqrt(mag2(tangentPoint(v1, v2)));
 
 // square of distance from point v3 to line segment v1...v2
 // http://mathworld.wolfram.com/Point-LineDistance3-Dimensional.html
-const linePointDist2 = function(v1,v2,v3) {
+// calculates min distance from 
+// point v3 to finite line segment between v1 and v2
+const linePointDist2 = function(v1, v2, v3) {
   let result;
   const d21 = sub(v2, v1);
   const d13 = sub(v1, v3);
+  const d23 = sub(v2, v3);
   const m2 = mag2(d21);
   const t = -dot(d13, d21)/m2;
-  if (t <= 0) {
-    return mag2(d13);
-  } else if (t >= 1) {
-    result = mag2(sub(v2, v3));
+  if (t <= 0) { 
+    // closest to point beyond v1, clip to |v3-v1|^2
+    result = mag2(d13);
+  } else if (t >= 1) { 
+    // closest to point beyond v2, clip to |v3-v2|^2
+    result = mag2(d23);
+  } else {
+    // closest in-between v1, v2
+    result = mag2(cross(d21, d13))/m2;
   }
-
-  result = mag2(cross(d21, d13))/m2;
   return result;
 };
   
@@ -152,7 +156,8 @@ const intersect = function(set1, set2, set3) {
 
 // calculate centroid of array of vertices
 const calcCentroid = function(xyzs) {
-    let centroidV = [0,0,0]; // running sum of vertex coords
+  // running sum of vertex coords
+  let centroidV = [0,0,0];
     for (let v of xyzs) {
       centroidV = add(centroidV, v);
     }
@@ -161,11 +166,12 @@ const calcCentroid = function(xyzs) {
 
 // calculate average normal vector for array of vertices
 const normal = function(xyzs) {
-    let normalV = [0,0,0]; // running sum of normal vectors
-    let [v1,v2] = Array.from(xyzs.slice(-2));
+  // running sum of normal vectors
+  let normalV = [0,0,0]; 
+    let [v1,v2] = xyzs.slice(-2);
     for (let v3 of xyzs) {
       normalV = add(normalV, orthogonal(v1, v2, v3));
-      [v1,v2] = Array.from([v2,v3]);
+      [v1,v2] = [v2,v3];
     } // shift over one
     return unit(normalV);
   };
@@ -174,7 +180,7 @@ const normal = function(xyzs) {
 //  _Assumes_ Convexity!
 const convexarea = function(xyzs) {
     let area = 0.0;
-    let [v1,v2] = Array.from(xyzs.slice(0, 2));
+    let [v1,v2] = xyzs.slice(0, 2);
     for (let v3 of xyzs.slice(2)) {
       //area of sub-triangle
       area += mag( cross(sub(v2,v1), sub(v3,v1)) );
@@ -187,7 +193,7 @@ const convexarea = function(xyzs) {
 const faceSignature = function(xyzs) {
     let x;
     const cross_array = [];
-    let [v1,v2] = Array.from(xyzs.slice(0, 2));
+    let [v1,v2] = xyzs.slice(0, 2);
     for (let v3 of xyzs.slice(2)) {
       //area of sub-triangle
       cross_array.push(mag( cross(sub(v2,v1), sub(v3,v1)) ));
@@ -280,37 +286,34 @@ const vec_rotm = function(angle, x, y, z) {
   const sinA2 = sinA*sinA;
   const length = mag([x,y,z]);
   if (length === 0) {
-    [x,y,z] = Array.from([0,0,1]);
+    [x,y,z] = [0,0,1];
   }
   if (length !== 1) {
-    [x,y,z] = Array.from(unit([x,y,z]));
+    [x,y,z] = unit([x,y,z]);
   }
 
-  //console.log "vec_rotm args",angle,x,y,z,"vars",sinA,cosA
-
   if ((x === 1) && (y === 0) && (z === 0)) {
-      m=[[1,            0,           0],
-         [0,    1-(2*sinA2), 2*sinA*cosA],
-         [0, -2*sinA*cosA,   1-(2*sinA2)]];
+      m = [[1,              0,           0],
+          [0,    1-(2*sinA2), 2*sinA*cosA],
+          [0,   -2*sinA*cosA, 1-(2*sinA2)]];
   } else if ((x === 0) && (y === 1) && (z === 0)) {
-      m=[[  1-(2*sinA2), 0,  -2*sinA*cosA],
-         [          0, 1,             0],
-         [2*sinA*cosA, 0,     1-(2*sinA2)]];
+      m = [[1-(2*sinA2), 0,  -2*sinA*cosA],
+          [          0, 1,             0],
+          [2*sinA*cosA, 0,   1-(2*sinA2)]];
   } else if ((x === 0) && (y === 0) && (z === 1)) {
-      m=[[   1-(2*sinA2), 2*sinA*cosA, 0],
-         [-2*sinA*cosA,   1-(2*sinA2), 0],
-         [           0,           0, 1]];
+      m = [[   1-(2*sinA2),   2*sinA*cosA, 0],
+          [  -2*sinA*cosA,   1-(2*sinA2), 0],
+          [             0,             0, 1]];
   } else {
       const x2 = x*x;
       const y2 = y*y;
       const z2 = z*z;
-      m=[[1-(2*(y2+z2)*sinA2),         2*((x*y*sinA2)+(z*sinA*cosA)), 2*((x*z*sinA2)-(y*sinA*cosA))],
-         [2*((y*x*sinA2)-(z*sinA*cosA)),         1-(2*(z2+x2)*sinA2), 2*((y*z*sinA2)+(x*sinA*cosA))],
-         [2*((z*x*sinA2)+(y*sinA*cosA)), 2*((z*y*sinA2)-(x*sinA*cosA)),         1-(2*(x2+y2)*sinA2)]];
+      m = 
+        [[1-(2*(y2+z2)*sinA2), 2*((x*y*sinA2)+(z*sinA*cosA)), 2*((x*z*sinA2)-(y*sinA*cosA))],
+        [2*((y*x*sinA2)-(z*sinA*cosA)), 1-(2*(z2+x2)*sinA2), 2*((y*z*sinA2)+(x*sinA*cosA))],
+        [2*((z*x*sinA2)+(y*sinA*cosA)), 2*((z*y*sinA2)-(x*sinA*cosA)), 1-(2*(x2+y2)*sinA2)]];
     }
 
-  //console.log "vec_rotm m", m[0],m[1],m[2],m[3],m[4],m[5],m[6],m[7],m[8]
-  //return matrix
   return m;
 };
 
@@ -319,19 +322,23 @@ const vec_rotm = function(angle, x, y, z) {
 // scales perspective such that inside depth regions min_real_depth <--> max_real_depth
 // perspective lengths vary no more than:   desired_ratio
 // with target dimension of roughly length: desired_length
-const perspT = function(vec3, max_real_depth, min_real_depth, desired_ratio, desired_length) {
-  const z0          = ((max_real_depth * desired_ratio) - min_real_depth)/(1-desired_ratio);
-  const scalefactor =  (desired_length * desired_ratio)/(1-desired_ratio);
-
+const perspT = function(vec3, max_real_depth, min_real_depth, 
+                        desired_ratio, desired_length) {
+  const z0 = 
+    ((max_real_depth * desired_ratio) - min_real_depth) / (1-desired_ratio);
+  const scalefactor = 
+    (desired_length * desired_ratio) / (1-desired_ratio);
   // projected [X, Y]
   return [(scalefactor*vec3[0])/(vec3[2]+z0), (scalefactor*vec3[1])/(vec3[2]+z0)];
 };
 
 // Inverses perspective transform by projecting plane onto a unit sphere at origin
 const invperspT = 
-function(x, y, dx, dy, max_real_depth, min_real_depth, desired_ratio, desired_length) {
-  const z0 = ((max_real_depth * desired_ratio) - min_real_depth)/(1-desired_ratio);
-  const s =  (desired_length * desired_ratio)/(1-desired_ratio);
+  function(x, y, dx, dy, max_real_depth, min_real_depth, 
+           desired_ratio, desired_length) {
+  const z0 = 
+    ((max_real_depth * desired_ratio) - min_real_depth)/(1-desired_ratio);
+  const s = (desired_length * desired_ratio)/(1-desired_ratio);
   const xp = x-dx;
   const yp = y-dy;
   const s2 = s*s;
@@ -339,19 +346,20 @@ function(x, y, dx, dy, max_real_depth, min_real_depth, desired_ratio, desired_le
   const xp2 = xp*xp;
   const yp2 = yp*yp;
 
-  const xsphere = ((2*s*xp*z0) + sqrt((4*s2*xp2*z02) + (4*xp2*(s2+xp2+yp2)*(1-z02)) ) )/(2.0*(s2+xp2+yp2));
-  const ysphere = (((s*yp*z0)/(s2+xp2+yp2)) + ((yp*sqrt((4*s2*z02) + (4*(s2+xp2+yp2)*(1-z02))))/(2.0*(s2+xp2+yp2))));
-  const zsphere = sqrt(1-(xsphere*xsphere)-(ysphere*ysphere));
+  const xsphere = ((2*s*xp*z0) 
+                    + sqrt((4*s2*xp2*z02) 
+                    + (4*xp2*(s2+xp2+yp2)*(1-z02))))/(2.0*(s2+xp2+yp2));
+  const ysphere = (((s*yp*z0)/(s2+xp2+yp2)) 
+                   + ((yp*sqrt((4*s2*z02) 
+                   + (4*(s2+xp2+yp2)*(1-z02))))/(2.0*(s2+xp2+yp2))));
+  const zsphere = sqrt(1 - (xsphere*xsphere) - (ysphere*ysphere));
 
-  //console.log  "invperspT", xsphere, ysphere, zsphere, mag([xsphere, ysphere, zsphere])
   return [xsphere, ysphere, zsphere];
 };
 
 // Returns rotation matrix that takes vec1 to vec2
 const getVec2VecRotM = function(vec1, vec2){
-  const axis    = cross(vec1, vec2);
-  const angle   = acos(dot(vec1, vec2));
-
-  //console.log  "getVec2VecRotM", angle, axis[0],axis[1],axis[2]
+  const axis  = cross(vec1, vec2);
+  const angle = acos(dot(vec1, vec2));
   return vec_rotm(-1*angle, axis[0], axis[1], axis[2]);
 };

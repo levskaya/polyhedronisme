@@ -9,14 +9,6 @@
 //
 // Copyright 2019, Anselm Levskaya
 // Released under the MIT License
-/*
- * decaffeinate suggestions:
- * DS101: Remove unnecessary use of Array.from
- * DS102: Remove unnecessary code created because of implicit returns
- * DS202: Simplify dynamic range loops
- * DS207: Consider shorter variations of null checks
- * Full docs: https://github.com/decaffeinate/decaffeinate/blob/master/docs/suggestions.md
- */
 
 
 // Math / Vector / Matrix Functions
@@ -34,11 +26,6 @@ const sigfigs = function(N, nsigs){
   const normed = pow(10, log10(N)-floor(log10(N)));
   return `${round(normed*(nsigs-1))}`;
 };
-
-// for python-style enumerated for-in loops
-//  - should use "for [i,x] in AR then do (i,x)->" idiom instead
-//  - !! actually even easier:  "for val,idx in array" works!
-//enumerate = (ar) -> [i,ar[i]] for i in [0...ar.length]
 
 // general recursive deep-copy function
 var clone = function(obj) {
@@ -59,22 +46,30 @@ const randomchoice = function(array){
 };
 
 // 3d scalar multiplication
-const mult = (c, vec) => [c*vec[0],c*vec[1],c*vec[2]];
+const mult = (c, vec) => 
+  [c*vec[0],c*vec[1],c*vec[2]];
 
 // 3d element-wise multiply
-const _mult = (vec1, vec2) => [vec1[0]*vec2[0],vec1[1]*vec2[1],vec1[2]*vec2[2]];
+const _mult = (vec1, vec2) => 
+  [vec1[0]*vec2[0], vec1[1]*vec2[1], vec1[2]*vec2[2]];
 
 // 3d vector addition
-const add = (vec1, vec2) => [vec1[0]+vec2[0],vec1[1]+vec2[1],vec1[2]+vec2[2]];
+const add = (vec1, vec2) => 
+  [vec1[0]+vec2[0], vec1[1]+vec2[1], vec1[2]+vec2[2]];
 
 // 3d vector subtraction
-const sub = (vec1, vec2) => [vec1[0]-vec2[0],vec1[1]-vec2[1],vec1[2]-vec2[2]];
+const sub = (vec1, vec2) => 
+  [vec1[0]-vec2[0], vec1[1]-vec2[1], vec1[2]-vec2[2]];
 
 // 3d dot product
-const dot = (vec1, vec2) => (vec1[0]*vec2[0]) + (vec1[1]*vec2[1]) + (vec1[2]*vec2[2]);
+const dot = (vec1, vec2) => 
+  (vec1[0]*vec2[0]) + (vec1[1]*vec2[1]) + (vec1[2]*vec2[2]);
 
 // 3d cross product d1 x d2
-const cross = (d1, d2) => [ (d1[1]*d2[2])-(d1[2]*d2[1]), (d1[2]*d2[0])-(d1[0]*d2[2]),  (d1[0]*d2[1])-(d1[1]*d2[0]) ];
+const cross = (d1, d2) => 
+  [(d1[1]*d2[2]) - (d1[2]*d2[1]), 
+   (d1[2]*d2[0]) - (d1[0]*d2[2]),  
+   (d1[0]*d2[1]) - (d1[1]*d2[0]) ];
 
 // vector norm
 const mag = vec => sqrt(dot(vec,vec));
@@ -89,38 +84,47 @@ const unit = vec => mult( 1/sqrt(mag2(vec)), vec);
 const midpoint = (vec1, vec2) => mult(1/2.0,add(vec1,vec2));
 
 // parametric segment between vec1, vec2 w. parameter t ranging from 0 to 1
-const tween = (vec1,vec2,t) => [ ((1-t)*vec1[0]) + (t*vec2[0]), ((1-t)*vec1[1]) + (t*vec2[1]), ((1-t)*vec1[2]) + (t*vec2[2]) ];
+const tween = (vec1,vec2,t) => 
+  [((1-t)*vec1[0]) + (t*vec2[0]), 
+   ((1-t)*vec1[1]) + (t*vec2[1]), 
+   ((1-t)*vec1[2]) + (t*vec2[2])];
 
 // uses above to go one-third of the way along vec1->vec2 line
 const oneThird = (vec1, vec2) => tween(vec1, vec2, 1/3.0);
 
 // reflect 3vec in unit sphere, spherical reciprocal
-const reciprocal = vec => mult( 1.0/mag2(vec), vec);
+const reciprocal = vec => mult(1.0 / mag2(vec), vec);
 
 // point where line v1...v2 tangent to an origin sphere
-const tangentPoint= function(v1,v2) {
+const tangentPoint= function(v1, v2) {
   const d = sub(v2, v1);
-  return sub(v1, mult(dot(d,v1)/mag2(d),d));
+  return sub(v1, mult(dot(d, v1)/mag2(d), d));
 };
 
 // distance of line v1...v2 to origin
-const edgeDist = (v1,v2) => sqrt(mag2(tangentPoint(v1, v2)));
+const edgeDist = (v1, v2) => sqrt(mag2(tangentPoint(v1, v2)));
 
 // square of distance from point v3 to line segment v1...v2
 // http://mathworld.wolfram.com/Point-LineDistance3-Dimensional.html
-const linePointDist2 = function(v1,v2,v3) {
+// calculates min distance from 
+// point v3 to finite line segment between v1 and v2
+const linePointDist2 = function(v1, v2, v3) {
   let result;
   const d21 = sub(v2, v1);
   const d13 = sub(v1, v3);
+  const d23 = sub(v2, v3);
   const m2 = mag2(d21);
   const t = -dot(d13, d21)/m2;
-  if (t <= 0) {
-    return mag2(d13);
-  } else if (t >= 1) {
-    result = mag2(sub(v2, v3));
+  if (t <= 0) { 
+    // closest to point beyond v1, clip to |v3-v1|^2
+    result = mag2(d13);
+  } else if (t >= 1) { 
+    // closest to point beyond v2, clip to |v3-v2|^2
+    result = mag2(d23);
+  } else {
+    // closest in-between v1, v2
+    result = mag2(cross(d21, d13))/m2;
   }
-
-  result = mag2(cross(d21, d13))/m2;
   return result;
 };
   
@@ -152,7 +156,8 @@ const intersect = function(set1, set2, set3) {
 
 // calculate centroid of array of vertices
 const calcCentroid = function(xyzs) {
-    let centroidV = [0,0,0]; // running sum of vertex coords
+  // running sum of vertex coords
+  let centroidV = [0,0,0];
     for (let v of xyzs) {
       centroidV = add(centroidV, v);
     }
@@ -161,11 +166,12 @@ const calcCentroid = function(xyzs) {
 
 // calculate average normal vector for array of vertices
 const normal = function(xyzs) {
-    let normalV = [0,0,0]; // running sum of normal vectors
-    let [v1,v2] = Array.from(xyzs.slice(-2));
+  // running sum of normal vectors
+  let normalV = [0,0,0]; 
+    let [v1,v2] = xyzs.slice(-2);
     for (let v3 of xyzs) {
       normalV = add(normalV, orthogonal(v1, v2, v3));
-      [v1,v2] = Array.from([v2,v3]);
+      [v1,v2] = [v2,v3];
     } // shift over one
     return unit(normalV);
   };
@@ -174,7 +180,7 @@ const normal = function(xyzs) {
 //  _Assumes_ Convexity!
 const convexarea = function(xyzs) {
     let area = 0.0;
-    let [v1,v2] = Array.from(xyzs.slice(0, 2));
+    let [v1,v2] = xyzs.slice(0, 2);
     for (let v3 of xyzs.slice(2)) {
       //area of sub-triangle
       area += mag( cross(sub(v2,v1), sub(v3,v1)) );
@@ -187,7 +193,7 @@ const convexarea = function(xyzs) {
 const faceSignature = function(xyzs) {
     let x;
     const cross_array = [];
-    let [v1,v2] = Array.from(xyzs.slice(0, 2));
+    let [v1,v2] = xyzs.slice(0, 2);
     for (let v3 of xyzs.slice(2)) {
       //area of sub-triangle
       cross_array.push(mag( cross(sub(v2,v1), sub(v3,v1)) ));
@@ -280,37 +286,34 @@ const vec_rotm = function(angle, x, y, z) {
   const sinA2 = sinA*sinA;
   const length = mag([x,y,z]);
   if (length === 0) {
-    [x,y,z] = Array.from([0,0,1]);
+    [x,y,z] = [0,0,1];
   }
   if (length !== 1) {
-    [x,y,z] = Array.from(unit([x,y,z]));
+    [x,y,z] = unit([x,y,z]);
   }
 
-  //console.log "vec_rotm args",angle,x,y,z,"vars",sinA,cosA
-
   if ((x === 1) && (y === 0) && (z === 0)) {
-      m=[[1,            0,           0],
-         [0,    1-(2*sinA2), 2*sinA*cosA],
-         [0, -2*sinA*cosA,   1-(2*sinA2)]];
+      m = [[1,              0,           0],
+          [0,    1-(2*sinA2), 2*sinA*cosA],
+          [0,   -2*sinA*cosA, 1-(2*sinA2)]];
   } else if ((x === 0) && (y === 1) && (z === 0)) {
-      m=[[  1-(2*sinA2), 0,  -2*sinA*cosA],
-         [          0, 1,             0],
-         [2*sinA*cosA, 0,     1-(2*sinA2)]];
+      m = [[1-(2*sinA2), 0,  -2*sinA*cosA],
+          [          0, 1,             0],
+          [2*sinA*cosA, 0,   1-(2*sinA2)]];
   } else if ((x === 0) && (y === 0) && (z === 1)) {
-      m=[[   1-(2*sinA2), 2*sinA*cosA, 0],
-         [-2*sinA*cosA,   1-(2*sinA2), 0],
-         [           0,           0, 1]];
+      m = [[   1-(2*sinA2),   2*sinA*cosA, 0],
+          [  -2*sinA*cosA,   1-(2*sinA2), 0],
+          [             0,             0, 1]];
   } else {
       const x2 = x*x;
       const y2 = y*y;
       const z2 = z*z;
-      m=[[1-(2*(y2+z2)*sinA2),         2*((x*y*sinA2)+(z*sinA*cosA)), 2*((x*z*sinA2)-(y*sinA*cosA))],
-         [2*((y*x*sinA2)-(z*sinA*cosA)),         1-(2*(z2+x2)*sinA2), 2*((y*z*sinA2)+(x*sinA*cosA))],
-         [2*((z*x*sinA2)+(y*sinA*cosA)), 2*((z*y*sinA2)-(x*sinA*cosA)),         1-(2*(x2+y2)*sinA2)]];
+      m = 
+        [[1-(2*(y2+z2)*sinA2), 2*((x*y*sinA2)+(z*sinA*cosA)), 2*((x*z*sinA2)-(y*sinA*cosA))],
+        [2*((y*x*sinA2)-(z*sinA*cosA)), 1-(2*(z2+x2)*sinA2), 2*((y*z*sinA2)+(x*sinA*cosA))],
+        [2*((z*x*sinA2)+(y*sinA*cosA)), 2*((z*y*sinA2)-(x*sinA*cosA)), 1-(2*(x2+y2)*sinA2)]];
     }
 
-  //console.log "vec_rotm m", m[0],m[1],m[2],m[3],m[4],m[5],m[6],m[7],m[8]
-  //return matrix
   return m;
 };
 
@@ -319,19 +322,23 @@ const vec_rotm = function(angle, x, y, z) {
 // scales perspective such that inside depth regions min_real_depth <--> max_real_depth
 // perspective lengths vary no more than:   desired_ratio
 // with target dimension of roughly length: desired_length
-const perspT = function(vec3, max_real_depth, min_real_depth, desired_ratio, desired_length) {
-  const z0          = ((max_real_depth * desired_ratio) - min_real_depth)/(1-desired_ratio);
-  const scalefactor =  (desired_length * desired_ratio)/(1-desired_ratio);
-
+const perspT = function(vec3, max_real_depth, min_real_depth, 
+                        desired_ratio, desired_length) {
+  const z0 = 
+    ((max_real_depth * desired_ratio) - min_real_depth) / (1-desired_ratio);
+  const scalefactor = 
+    (desired_length * desired_ratio) / (1-desired_ratio);
   // projected [X, Y]
   return [(scalefactor*vec3[0])/(vec3[2]+z0), (scalefactor*vec3[1])/(vec3[2]+z0)];
 };
 
 // Inverses perspective transform by projecting plane onto a unit sphere at origin
 const invperspT = 
-function(x, y, dx, dy, max_real_depth, min_real_depth, desired_ratio, desired_length) {
-  const z0 = ((max_real_depth * desired_ratio) - min_real_depth)/(1-desired_ratio);
-  const s =  (desired_length * desired_ratio)/(1-desired_ratio);
+  function(x, y, dx, dy, max_real_depth, min_real_depth, 
+           desired_ratio, desired_length) {
+  const z0 = 
+    ((max_real_depth * desired_ratio) - min_real_depth)/(1-desired_ratio);
+  const s = (desired_length * desired_ratio)/(1-desired_ratio);
   const xp = x-dx;
   const yp = y-dy;
   const s2 = s*s;
@@ -339,20 +346,21 @@ function(x, y, dx, dy, max_real_depth, min_real_depth, desired_ratio, desired_le
   const xp2 = xp*xp;
   const yp2 = yp*yp;
 
-  const xsphere = ((2*s*xp*z0) + sqrt((4*s2*xp2*z02) + (4*xp2*(s2+xp2+yp2)*(1-z02)) ) )/(2.0*(s2+xp2+yp2));
-  const ysphere = (((s*yp*z0)/(s2+xp2+yp2)) + ((yp*sqrt((4*s2*z02) + (4*(s2+xp2+yp2)*(1-z02))))/(2.0*(s2+xp2+yp2))));
-  const zsphere = sqrt(1-(xsphere*xsphere)-(ysphere*ysphere));
+  const xsphere = ((2*s*xp*z0) 
+                    + sqrt((4*s2*xp2*z02) 
+                    + (4*xp2*(s2+xp2+yp2)*(1-z02))))/(2.0*(s2+xp2+yp2));
+  const ysphere = (((s*yp*z0)/(s2+xp2+yp2)) 
+                   + ((yp*sqrt((4*s2*z02) 
+                   + (4*(s2+xp2+yp2)*(1-z02))))/(2.0*(s2+xp2+yp2))));
+  const zsphere = sqrt(1 - (xsphere*xsphere) - (ysphere*ysphere));
 
-  //console.log  "invperspT", xsphere, ysphere, zsphere, mag([xsphere, ysphere, zsphere])
   return [xsphere, ysphere, zsphere];
 };
 
 // Returns rotation matrix that takes vec1 to vec2
 const getVec2VecRotM = function(vec1, vec2){
-  const axis    = cross(vec1, vec2);
-  const angle   = acos(dot(vec1, vec2));
-
-  //console.log  "getVec2VecRotM", angle, axis[0],axis[1],axis[2]
+  const axis  = cross(vec1, vec2);
+  const angle = acos(dot(vec1, vec2));
   return vec_rotm(-1*angle, axis[0], axis[1], axis[2]);
 };
 // Polyhédronisme
@@ -485,7 +493,6 @@ const sortfaces = function(poly) {
   const centroids  = poly.centers();
   const normals    = poly.normals();
   const ray_origin = [0,0, ((persp_z_max * persp_ratio) - persp_z_min)/(1-persp_ratio)];
-  //console.log ray_origin
 
   // sort by binary-space partition: are you on same side as view-origin or not?
   // !!! there is something wrong with this. even triangulated surfaces have artifacts.
@@ -505,13 +512,15 @@ const sortfaces = function(poly) {
   // sort all face-associated properties
   poly.face = ((() => {
     const result = [];
-    for (idx of zsortIndex) {       result.push(poly.face[idx]);
+    for (idx of zsortIndex) {
+      result.push(poly.face[idx]);
     }
     return result;
   })());
-  return poly.face_class = ((() => {
+  poly.face_class = ((() => {
     const result1 = [];
-    for (idx of zsortIndex) {       result1.push(poly.face_class[idx]);
+    for (idx of zsortIndex) {
+      result1.push(poly.face_class[idx]);
     }
     return result1;
   })());
@@ -519,9 +528,12 @@ const sortfaces = function(poly) {
 
 
 class polyhedron {
-  constructor(verts,faces,name) {      // constructor of initially null polyhedron
-    this.face = faces || new Array();   // array of faces.          face.length = # faces
-    this.xyz  = verts || new Array();   // array of vertex coords.  xyz.length = # of vertices
+  // constructor of initially null polyhedron
+  constructor(verts, faces, name) {
+    // array of faces.  face.length = # faces
+    this.face = faces || new Array();
+    // array of vertex coords.  xyz.length = # of vertices
+    this.xyz  = verts || new Array();
     this.name = name  || "null polyhedron";
   }
 
@@ -563,19 +575,21 @@ class polyhedron {
     let min2 = Number.MAX_VALUE;
     // Compute minimum edge length
     for (let e of this.edges()) {
-      const d2 = mag2(sub(this.xyz[e[0]], this.xyz[e[1]])); // square of edge length
+      // square of edge length
+      const d2 = mag2(sub(this.xyz[e[0]], this.xyz[e[1]]));
       if (d2 < min2) {
         min2 = d2;
       }
     }
-    return sqrt(min2); // This is normalized if rescaling has happened.
+    // This is normalized if rescaling has happened.
+    return sqrt(min2); 
   }
     
   minFaceRadius() {
     let min2 = Number.MAX_VALUE;
     const nFaces = this.face.length;
     const centers = this.centers();
-    for (let f = 0, end = nFaces, asc = 0 <= end; asc ? f < end : f > end; asc ? f++ : f--) {
+    for (let f = 0, end = nFaces; f < end; f++) {
       const c = centers[f];
       for (let e of faceToEdges(this.face[f])) {
         // Check distance from center to each edge.
@@ -593,18 +607,19 @@ class polyhedron {
     // get array of face centers
     const centers_array = [];
     for (let f of this.face) {
-      let fcenter = [0,0,0];
-      for (let v of f) { //avg vertex coords
+      let fcenter = [0, 0, 0];
+      // average vertex coords
+      for (let v of f) {
         fcenter = add(fcenter, this.xyz[v]);
-      } // add
-      centers_array.push(mult(1.0/f.length, fcenter));
-    } // div by n
+      }
+      centers_array.push(mult(1.0 / f.length, fcenter));
+    }
     // return face-ordered array of centroids
     return centers_array;
   }
 
   normals() {
-  // get array of face normals
+    // get array of face normals
     const normals_array = [];
     for (let f of this.face) {
       normals_array.push(normal(f.map((v) => this.xyz[v])));
@@ -849,24 +864,21 @@ const dodecahedron = function() {
 
 const prism = function(n) {
   let i;
-  let asc, end;
-  let asc1, end1;
-  let asc2, end2;
   const theta = (2*PI)/n; // pie angle
   const h = Math.sin(theta/2); // half-edge
   let poly = new polyhedron();
   poly.name = `P${n}`;
 
-  for (i = 0, end = n, asc = 0 <= end; asc ? i < end : i > end; asc ? i++ : i--) { // vertex #'s 0 to n-1 around one face
+  for (i = 0; i < n; i++) { // vertex #'s 0 to n-1 around one face
     poly.xyz.push([-cos(i*theta), -sin(i*theta),  -h]);
   }
-  for (i = 0, end1 = n, asc1 = 0 <= end1; asc1 ? i < end1 : i > end1; asc1 ? i++ : i--) { // vertex #'s n to 2n-1 around other
+  for (i = 0; i < n; i++) { // vertex #'s n to 2n-1 around other
     poly.xyz.push([-cos(i*theta), -sin(i*theta), h]);
   }
 
-  poly.face.push(__range__(n-1, 0, true));   //top
+  poly.face.push(__range__(n-1, 0, true));  //top
   poly.face.push(__range__(n, 2*n, false)); //bottom
-  for (i = 0, end2 = n, asc2 = 0 <= end2; asc2 ? i < end2 : i > end2; asc2 ? i++ : i--) { //n square sides
+  for (i = 0; i < n; i++) { //n square sides
     poly.face.push([i, (i+1)%n, ((i+1)%n)+n, i+n]);
   }
 
@@ -876,29 +888,26 @@ const prism = function(n) {
 
 const antiprism = function(n) {
   let i;
-  let asc, end;
-  let asc1, end1;
-  let asc2, end2;
   const theta = (2*PI)/n; // pie angle
   let h = sqrt(1-(4/((4+(2*cos(theta/2)))-(2*cos(theta)))));
   let r = sqrt(1-(h*h));
-  const f = sqrt((h*h) + pow(r*cos(theta/2),2) );
+  const f = sqrt((h*h) + pow(r*cos(theta/2),2));
   // correction so edge midpoints (not vertices) on unit sphere
   r = -r/f;
   h = -h/f;
   let poly = new polyhedron();
   poly.name = `A${n}`;
 
-  for (i = 0, end = n, asc = 0 <= end; asc ? i < end : i > end; asc ? i++ : i--) { // vertex #'s 0...n-1 around one face
+  for (i = 0; i < n; i++) { // vertex #'s 0...n-1 around one face
     poly.xyz.push([r * cos(i*theta), r * sin(i*theta), h]);
   }
-  for (i = 0, end1 = n, asc1 = 0 <= end1; asc1 ? i < end1 : i > end1; asc1 ? i++ : i--) { // vertex #'s n...2n-1 around other
+  for (i = 0; i < n; i++) { // vertex #'s n...2n-1 around other
     poly.xyz.push([r * cos((i+0.5)*theta), r * sin((i+0.5)*theta), -h]);
   }
 
   poly.face.push(__range__(n-1, 0, true));   //top
   poly.face.push(__range__(n, (2*n)-1, true)); //bottom
-  for (i = 0, end2 = n-1, asc2 = 0 <= end2; asc2 ? i <= end2 : i >= end2; asc2 ? i++ : i--) { //2n triangular sides
+  for (i = 0; i <= n-1; i++) { //2n triangular sides
     poly.face.push([i, (i+1)%n, i+n]);
     poly.face.push([i, i+n, ((((n+i)-1)%n)+n)]);
   }
@@ -909,24 +918,22 @@ const antiprism = function(n) {
 
 const pyramid = function(n) {
   let i;
-  let asc, end;
-  let asc1, end1;
   const theta = (2*PI)/n; // pie angle
   const height = 1;
   let poly = new polyhedron();
   poly.name = `Y${n}`;
 
-  for (i = 0, end = n, asc = 0 <= end; asc ? i < end : i > end; asc ? i++ : i--) { // vertex #'s 0...n-1 around one face
+  for (i = 0; i < n; i++) { // vertex #'s 0...n-1 around one face
     poly.xyz.push([-cos(i*theta), -sin(i*theta), -0.2]);
   }
   poly.xyz.push([0,0, height]); // apex
 
   poly.face.push(__range__(n-1, 0, true)); // base
-  for (i = 0, end1 = n, asc1 = 0 <= end1; asc1 ? i < end1 : i > end1; asc1 ? i++ : i--) { // n triangular sides
+  for (i = 0; i < n; i++) { // n triangular sides
     poly.face.push([i, (i+1)%n, n]);
   }
 
-  poly = canonicalXYZ(poly,3);
+  poly = canonicalXYZ(poly, 3);
   return poly;
 };
 
@@ -1122,7 +1129,8 @@ const ambo = function(poly){
   console.log(`Taking ambo of ${poly.name}...`);
 
   // helper func to insure unique names of midpoints
-  const midName = function(v1, v2) { if (v1<v2) { return v1+"_"+v2; } else { return v2+"_"+v1; } };
+  const midName = function(v1, v2) { 
+    if (v1<v2) { return v1+"_"+v2; } else { return v2+"_"+v1; } };
 
   const flag = new polyflag();
 
@@ -1825,10 +1833,10 @@ const canonicalize = function(poly, Niter) {
     newVs = recenter(newVs, edges);
     newVs = planarize(newVs, faces);
     maxChange = _.max(_.map(_.zip(newVs,oldVs), 
-    function(...args){ 
-      const [x,y] = args[0]; 
-      return mag(sub(x,y));  
-    }));
+      function(...args){ 
+        const [x,y] = args[0]; 
+        return mag(sub(x,y));  
+      }));
     if (maxChange < 1e-8) {
       break;
     }
@@ -2168,18 +2176,19 @@ function __range__(left, right, inclusive) {
 // Testing Functions
 //===================================================================================================
 
-//report on face topology
+// report on face topology
 const topolog = function(poly) {
-  let str="";
+  let str = "";
   for (let f of poly.face) {
     for (let v of f) {
-      str+=`${v}->`;
+      str += `${v}->`;
     }
     str+="\n";
   }
-  return console.log(str);
+  console.log(str);
 };
 
+// test basic cross of all ops against all seeds
 const testrig = function() {
   const seeds=["T","O","C","I","D","P3","P4","A4","A5","Y3","Y4"];
   const ops = ["k","a","g","p","d","r","e","b","o","m","t","j",
@@ -2188,10 +2197,10 @@ const testrig = function() {
   for (let op of ops) {
     console.log(`Operator ${op}`);
     for (let seed of seeds) {
-      console.log(op+seed+":", newgeneratePoly(op + seed));
+      console.log(op + seed + ":", newgeneratePoly(op + seed));
     }
   }
-  return console.log("===== Done Testing Basic Ops =====");
+  console.log("===== Done Testing Basic Ops =====");
 };
 // Polyhédronisme
 //===================================================================================================
@@ -2200,11 +2209,6 @@ const testrig = function() {
 //
 // Copyright 2019, Anselm Levskaya
 // Released under the MIT License
-/*
- * decaffeinate suggestions:
- * DS102: Remove unnecessary code created because of implicit returns
- * Full docs: https://github.com/decaffeinate/decaffeinate/blob/master/docs/suggestions.md
- */
 
 // Parser Routines
 //===================================================================================================
@@ -2311,18 +2315,13 @@ const newgeneratePoly = function(notation) {
   let op = oplist.shift();
   const basefunc = basemap[op["op"]];
   const baseargs = op["args"];
-  let poly     = dispatch(basefunc, baseargs);
-
-  //console.log "base", poly
+  let poly = dispatch(basefunc, baseargs);
 
   for (op of oplist) {
     const opfunc = opmap[op["op"]];
     const opargs = [poly].concat(op["args"]);
-    //console.log opargs
-    poly   = dispatch(opfunc, opargs);
+    poly = dispatch(opfunc, opargs);
   }
-
-  //console.log "final", poly
 
   // Recenter polyhedra at origin (rarely needed)
   poly.xyz = recenter(poly.xyz, poly.edges());

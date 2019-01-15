@@ -128,7 +128,6 @@ const sortfaces = function(poly) {
   const centroids  = poly.centers();
   const normals    = poly.normals();
   const ray_origin = [0,0, ((persp_z_max * persp_ratio) - persp_z_min)/(1-persp_ratio)];
-  //console.log ray_origin
 
   // sort by binary-space partition: are you on same side as view-origin or not?
   // !!! there is something wrong with this. even triangulated surfaces have artifacts.
@@ -148,13 +147,15 @@ const sortfaces = function(poly) {
   // sort all face-associated properties
   poly.face = ((() => {
     const result = [];
-    for (idx of zsortIndex) {       result.push(poly.face[idx]);
+    for (idx of zsortIndex) {
+      result.push(poly.face[idx]);
     }
     return result;
   })());
-  return poly.face_class = ((() => {
+  poly.face_class = ((() => {
     const result1 = [];
-    for (idx of zsortIndex) {       result1.push(poly.face_class[idx]);
+    for (idx of zsortIndex) {
+      result1.push(poly.face_class[idx]);
     }
     return result1;
   })());
@@ -162,9 +163,12 @@ const sortfaces = function(poly) {
 
 
 class polyhedron {
-  constructor(verts,faces,name) {      // constructor of initially null polyhedron
-    this.face = faces || new Array();   // array of faces.          face.length = # faces
-    this.xyz  = verts || new Array();   // array of vertex coords.  xyz.length = # of vertices
+  // constructor of initially null polyhedron
+  constructor(verts, faces, name) {
+    // array of faces.  face.length = # faces
+    this.face = faces || new Array();
+    // array of vertex coords.  xyz.length = # of vertices
+    this.xyz  = verts || new Array();
     this.name = name  || "null polyhedron";
   }
 
@@ -206,19 +210,21 @@ class polyhedron {
     let min2 = Number.MAX_VALUE;
     // Compute minimum edge length
     for (let e of this.edges()) {
-      const d2 = mag2(sub(this.xyz[e[0]], this.xyz[e[1]])); // square of edge length
+      // square of edge length
+      const d2 = mag2(sub(this.xyz[e[0]], this.xyz[e[1]]));
       if (d2 < min2) {
         min2 = d2;
       }
     }
-    return sqrt(min2); // This is normalized if rescaling has happened.
+    // This is normalized if rescaling has happened.
+    return sqrt(min2); 
   }
     
   minFaceRadius() {
     let min2 = Number.MAX_VALUE;
     const nFaces = this.face.length;
     const centers = this.centers();
-    for (let f = 0, end = nFaces, asc = 0 <= end; asc ? f < end : f > end; asc ? f++ : f--) {
+    for (let f = 0, end = nFaces; f < end; f++) {
       const c = centers[f];
       for (let e of faceToEdges(this.face[f])) {
         // Check distance from center to each edge.
@@ -236,18 +242,19 @@ class polyhedron {
     // get array of face centers
     const centers_array = [];
     for (let f of this.face) {
-      let fcenter = [0,0,0];
-      for (let v of f) { //avg vertex coords
+      let fcenter = [0, 0, 0];
+      // average vertex coords
+      for (let v of f) {
         fcenter = add(fcenter, this.xyz[v]);
-      } // add
-      centers_array.push(mult(1.0/f.length, fcenter));
-    } // div by n
+      }
+      centers_array.push(mult(1.0 / f.length, fcenter));
+    }
     // return face-ordered array of centroids
     return centers_array;
   }
 
   normals() {
-  // get array of face normals
+    // get array of face normals
     const normals_array = [];
     for (let f of this.face) {
       normals_array.push(normal(f.map((v) => this.xyz[v])));
@@ -492,24 +499,21 @@ const dodecahedron = function() {
 
 const prism = function(n) {
   let i;
-  let asc, end;
-  let asc1, end1;
-  let asc2, end2;
   const theta = (2*PI)/n; // pie angle
   const h = Math.sin(theta/2); // half-edge
   let poly = new polyhedron();
   poly.name = `P${n}`;
 
-  for (i = 0, end = n, asc = 0 <= end; asc ? i < end : i > end; asc ? i++ : i--) { // vertex #'s 0 to n-1 around one face
+  for (i = 0; i < n; i++) { // vertex #'s 0 to n-1 around one face
     poly.xyz.push([-cos(i*theta), -sin(i*theta),  -h]);
   }
-  for (i = 0, end1 = n, asc1 = 0 <= end1; asc1 ? i < end1 : i > end1; asc1 ? i++ : i--) { // vertex #'s n to 2n-1 around other
+  for (i = 0; i < n; i++) { // vertex #'s n to 2n-1 around other
     poly.xyz.push([-cos(i*theta), -sin(i*theta), h]);
   }
 
-  poly.face.push(__range__(n-1, 0, true));   //top
+  poly.face.push(__range__(n-1, 0, true));  //top
   poly.face.push(__range__(n, 2*n, false)); //bottom
-  for (i = 0, end2 = n, asc2 = 0 <= end2; asc2 ? i < end2 : i > end2; asc2 ? i++ : i--) { //n square sides
+  for (i = 0; i < n; i++) { //n square sides
     poly.face.push([i, (i+1)%n, ((i+1)%n)+n, i+n]);
   }
 
@@ -519,29 +523,26 @@ const prism = function(n) {
 
 const antiprism = function(n) {
   let i;
-  let asc, end;
-  let asc1, end1;
-  let asc2, end2;
   const theta = (2*PI)/n; // pie angle
   let h = sqrt(1-(4/((4+(2*cos(theta/2)))-(2*cos(theta)))));
   let r = sqrt(1-(h*h));
-  const f = sqrt((h*h) + pow(r*cos(theta/2),2) );
+  const f = sqrt((h*h) + pow(r*cos(theta/2),2));
   // correction so edge midpoints (not vertices) on unit sphere
   r = -r/f;
   h = -h/f;
   let poly = new polyhedron();
   poly.name = `A${n}`;
 
-  for (i = 0, end = n, asc = 0 <= end; asc ? i < end : i > end; asc ? i++ : i--) { // vertex #'s 0...n-1 around one face
+  for (i = 0; i < n; i++) { // vertex #'s 0...n-1 around one face
     poly.xyz.push([r * cos(i*theta), r * sin(i*theta), h]);
   }
-  for (i = 0, end1 = n, asc1 = 0 <= end1; asc1 ? i < end1 : i > end1; asc1 ? i++ : i--) { // vertex #'s n...2n-1 around other
+  for (i = 0; i < n; i++) { // vertex #'s n...2n-1 around other
     poly.xyz.push([r * cos((i+0.5)*theta), r * sin((i+0.5)*theta), -h]);
   }
 
   poly.face.push(__range__(n-1, 0, true));   //top
   poly.face.push(__range__(n, (2*n)-1, true)); //bottom
-  for (i = 0, end2 = n-1, asc2 = 0 <= end2; asc2 ? i <= end2 : i >= end2; asc2 ? i++ : i--) { //2n triangular sides
+  for (i = 0; i <= n-1; i++) { //2n triangular sides
     poly.face.push([i, (i+1)%n, i+n]);
     poly.face.push([i, i+n, ((((n+i)-1)%n)+n)]);
   }
@@ -552,24 +553,22 @@ const antiprism = function(n) {
 
 const pyramid = function(n) {
   let i;
-  let asc, end;
-  let asc1, end1;
   const theta = (2*PI)/n; // pie angle
   const height = 1;
   let poly = new polyhedron();
   poly.name = `Y${n}`;
 
-  for (i = 0, end = n, asc = 0 <= end; asc ? i < end : i > end; asc ? i++ : i--) { // vertex #'s 0...n-1 around one face
+  for (i = 0; i < n; i++) { // vertex #'s 0...n-1 around one face
     poly.xyz.push([-cos(i*theta), -sin(i*theta), -0.2]);
   }
   poly.xyz.push([0,0, height]); // apex
 
   poly.face.push(__range__(n-1, 0, true)); // base
-  for (i = 0, end1 = n, asc1 = 0 <= end1; asc1 ? i < end1 : i > end1; asc1 ? i++ : i--) { // n triangular sides
+  for (i = 0; i < n; i++) { // n triangular sides
     poly.face.push([i, (i+1)%n, n]);
   }
 
-  poly = canonicalXYZ(poly,3);
+  poly = canonicalXYZ(poly, 3);
   return poly;
 };
 

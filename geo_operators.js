@@ -119,10 +119,10 @@ const canonicalize = function(poly, Niter) {
     newVs = recenter(newVs, edges);
     newVs = planarize(newVs, faces);
     maxChange = _.max(_.map(_.zip(newVs,oldVs), 
-    function(...args){ 
-      const [x,y] = args[0]; 
-      return mag(sub(x,y));  
-    }));
+      function(...args){ 
+        const [x,y] = args[0]; 
+        return mag(sub(x,y));  
+      }));
     if (maxChange < 1e-8) {
       break;
     }

@@ -5,11 +5,6 @@
 //
 // Copyright 2019, Anselm Levskaya
 // Released under the MIT License
-/*
- * decaffeinate suggestions:
- * DS102: Remove unnecessary code created because of implicit returns
- * Full docs: https://github.com/decaffeinate/decaffeinate/blob/master/docs/suggestions.md
- */
 
 // Parser Routines
 //===================================================================================================
@@ -116,18 +111,13 @@ const newgeneratePoly = function(notation) {
   let op = oplist.shift();
   const basefunc = basemap[op["op"]];
   const baseargs = op["args"];
-  let poly     = dispatch(basefunc, baseargs);
-
-  //console.log "base", poly
+  let poly = dispatch(basefunc, baseargs);
 
   for (op of oplist) {
     const opfunc = opmap[op["op"]];
     const opargs = [poly].concat(op["args"]);
-    //console.log opargs
-    poly   = dispatch(opfunc, opargs);
+    poly = dispatch(opfunc, opargs);
   }
-
-  //console.log "final", poly
 
   // Recenter polyhedra at origin (rarely needed)
   poly.xyz = recenter(poly.xyz, poly.edges());

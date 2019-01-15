@@ -181,7 +181,8 @@ const ambo = function(poly){
   console.log(`Taking ambo of ${poly.name}...`);
 
   // helper func to insure unique names of midpoints
-  const midName = function(v1, v2) { if (v1<v2) { return v1+"_"+v2; } else { return v2+"_"+v1; } };
+  const midName = function(v1, v2) { 
+    if (v1<v2) { return v1+"_"+v2; } else { return v2+"_"+v1; } };
 
   const flag = new polyflag();
 
