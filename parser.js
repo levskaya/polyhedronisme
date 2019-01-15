@@ -1,8 +1,3 @@
-/*
- * decaffeinate suggestions:
- * DS102: Remove unnecessary code created because of implicit returns
- * Full docs: https://github.com/decaffeinate/decaffeinate/blob/master/docs/suggestions.md
- */
 // Polyhédronisme
 //===================================================================================================
 //
@@ -10,6 +5,11 @@
 //
 // Copyright 2019, Anselm Levskaya
 // Released under the MIT License
+/*
+ * decaffeinate suggestions:
+ * DS102: Remove unnecessary code created because of implicit returns
+ * Full docs: https://github.com/decaffeinate/decaffeinate/blob/master/docs/suggestions.md
+ */
 
 // Parser Routines
 //===================================================================================================

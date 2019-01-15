@@ -1,11 +1,3 @@
-/*
- * decaffeinate suggestions:
- * DS101: Remove unnecessary use of Array.from
- * DS102: Remove unnecessary code created because of implicit returns
- * DS202: Simplify dynamic range loops
- * DS207: Consider shorter variations of null checks
- * Full docs: https://github.com/decaffeinate/decaffeinate/blob/master/docs/suggestions.md
- */
 // Polyhédronisme
 //===================================================================================================
 //
@@ -17,6 +9,14 @@
 //
 // Copyright 2019, Anselm Levskaya
 // Released under the MIT License
+/*
+ * decaffeinate suggestions:
+ * DS101: Remove unnecessary use of Array.from
+ * DS102: Remove unnecessary code created because of implicit returns
+ * DS202: Simplify dynamic range loops
+ * DS207: Consider shorter variations of null checks
+ * Full docs: https://github.com/decaffeinate/decaffeinate/blob/master/docs/suggestions.md
+ */
 
 
 // Math / Vector / Matrix Functions
@@ -355,14 +355,6 @@ const getVec2VecRotM = function(vec1, vec2){
   //console.log  "getVec2VecRotM", angle, axis[0],axis[1],axis[2]
   return vec_rotm(-1*angle, axis[0], axis[1], axis[2]);
 };
-/*
- * decaffeinate suggestions:
- * DS101: Remove unnecessary use of Array.from
- * DS102: Remove unnecessary code created because of implicit returns
- * DS202: Simplify dynamic range loops
- * DS205: Consider reworking code to avoid use of IIFEs
- * Full docs: https://github.com/decaffeinate/decaffeinate/blob/master/docs/suggestions.md
- */
 // Polyhédronisme
 //===================================================================================================
 //
@@ -371,6 +363,14 @@ const getVec2VecRotM = function(vec1, vec2){
 // Copyright 2019, Anselm Levskaya
 // Released under the MIT License
 //
+/*
+ * decaffeinate suggestions:
+ * DS101: Remove unnecessary use of Array.from
+ * DS102: Remove unnecessary code created because of implicit returns
+ * DS202: Simplify dynamic range loops
+ * DS205: Consider reworking code to avoid use of IIFEs
+ * Full docs: https://github.com/decaffeinate/decaffeinate/blob/master/docs/suggestions.md
+ */
 
 // Polyhedra Functions
 //===================================================================================================
@@ -939,14 +939,7 @@ function __range__(left, right, inclusive) {
     range.push(i);
   }
   return range;
-}/*
- * decaffeinate suggestions:
- * DS101: Remove unnecessary use of Array.from
- * DS102: Remove unnecessary code created because of implicit returns
- * DS202: Simplify dynamic range loops
- * Full docs: https://github.com/decaffeinate/decaffeinate/blob/master/docs/suggestions.md
- */
-// Polyhédronisme
+}// Polyhédronisme
 //===================================================================================================
 //
 // A toy for constructing and manipulating polyhedra and other meshes
@@ -957,6 +950,13 @@ function __range__(left, right, inclusive) {
 //
 // Copyright 2019, Anselm Levskaya
 // Released under the MIT License
+/*
+ * decaffeinate suggestions:
+ * DS101: Remove unnecessary use of Array.from
+ * DS102: Remove unnecessary code created because of implicit returns
+ * DS202: Simplify dynamic range loops
+ * Full docs: https://github.com/decaffeinate/decaffeinate/blob/master/docs/suggestions.md
+ */
 
 
 //===================================================================================================
@@ -1704,14 +1704,6 @@ const stellaN = function(poly){
   //newpoly.xyz = canonicalXYZ(newpoly, 3)  # this tends to make results look like shit
   return newpoly;
 };
-/*
- * decaffeinate suggestions:
- * DS102: Remove unnecessary code created because of implicit returns
- * DS201: Simplify complex destructure assignments
- * DS202: Simplify dynamic range loops
- * DS205: Consider reworking code to avoid use of IIFEs
- * Full docs: https://github.com/decaffeinate/decaffeinate/blob/master/docs/suggestions.md
- */
 // Polyhédronisme
 //===================================================================================================
 //
@@ -1723,6 +1715,14 @@ const stellaN = function(poly){
 //
 // Copyright 2019, Anselm Levskaya
 // Released under the MIT License
+/*
+ * decaffeinate suggestions:
+ * DS102: Remove unnecessary code created because of implicit returns
+ * DS201: Simplify complex destructure assignments
+ * DS202: Simplify dynamic range loops
+ * DS205: Consider reworking code to avoid use of IIFEs
+ * Full docs: https://github.com/decaffeinate/decaffeinate/blob/master/docs/suggestions.md
+ */
 
 
 //===================================================================================================
@@ -1913,11 +1913,6 @@ const adjustXYZ = function(poly, nIterations) {
 };
 
 
-/*
- * decaffeinate suggestions:
- * DS102: Remove unnecessary code created because of implicit returns
- * Full docs: https://github.com/decaffeinate/decaffeinate/blob/master/docs/suggestions.md
- */
 // Polyhédronisme
 //===================================================================================================
 //
@@ -1926,6 +1921,11 @@ const adjustXYZ = function(poly, nIterations) {
 // Copyright 2019, Anselm Levskaya
 // Released under the MIT License
 //
+/*
+ * decaffeinate suggestions:
+ * DS102: Remove unnecessary code created because of implicit returns
+ * Full docs: https://github.com/decaffeinate/decaffeinate/blob/master/docs/suggestions.md
+ */
 
 // Polyhedra Functions
 //===================================================================================================
@@ -2153,12 +2153,7 @@ function __range__(left, right, inclusive) {
     range.push(i);
   }
   return range;
-}/*
- * decaffeinate suggestions:
- * DS102: Remove unnecessary code created because of implicit returns
- * Full docs: https://github.com/decaffeinate/decaffeinate/blob/master/docs/suggestions.md
- */
-// Polyhédronisme
+}// Polyhédronisme
 //===================================================================================================
 //
 // A toy for constructing and manipulating polyhedra and other meshes
@@ -2169,7 +2164,11 @@ function __range__(left, right, inclusive) {
 //
 // Copyright 2019, Anselm Levskaya
 // Released under the MIT License
-
+/*
+ * decaffeinate suggestions:
+ * DS102: Remove unnecessary code created because of implicit returns
+ * Full docs: https://github.com/decaffeinate/decaffeinate/blob/master/docs/suggestions.md
+ */
 
 // Testing Functions
 //===================================================================================================
@@ -2198,11 +2197,6 @@ const testrig = function() {
   }
   return console.log("===== Done Testing Basic Ops =====");
 };
-/*
- * decaffeinate suggestions:
- * DS102: Remove unnecessary code created because of implicit returns
- * Full docs: https://github.com/decaffeinate/decaffeinate/blob/master/docs/suggestions.md
- */
 // Polyhédronisme
 //===================================================================================================
 //
@@ -2210,6 +2204,11 @@ const testrig = function() {
 //
 // Copyright 2019, Anselm Levskaya
 // Released under the MIT License
+/*
+ * decaffeinate suggestions:
+ * DS102: Remove unnecessary code created because of implicit returns
+ * Full docs: https://github.com/decaffeinate/decaffeinate/blob/master/docs/suggestions.md
+ */
 
 // Parser Routines
 //===================================================================================================
@@ -2339,12 +2338,6 @@ const newgeneratePoly = function(notation) {
   // return the poly object
   return poly;
 };
-/*
- * decaffeinate suggestions:
- * DS102: Remove unnecessary code created because of implicit returns
- * DS205: Consider reworking code to avoid use of IIFEs
- * Full docs: https://github.com/decaffeinate/decaffeinate/blob/master/docs/suggestions.md
- */
 // Polyhédronisme
 //===================================================================================================
 //
@@ -2352,7 +2345,12 @@ const newgeneratePoly = function(notation) {
 //
 // Copyright 2019, Anselm Levskaya
 // Released under the MIT License
-
+/*
+ * decaffeinate suggestions:
+ * DS102: Remove unnecessary code created because of implicit returns
+ * DS205: Consider reworking code to avoid use of IIFEs
+ * Full docs: https://github.com/decaffeinate/decaffeinate/blob/master/docs/suggestions.md
+ */
 
 // GLOBALS
 //===================================================================================================
@@ -2393,12 +2391,6 @@ const DEFAULT_RECIPES = [
   "n18n18n9n9n9soxY9"];
 
 // File-saving objects used to export txt/canvas-png
-// const saveText = function(text, filename) {
-//   const BB = window.BlobBuilder || window.WebKitBlobBuilder || window.MozBlobBuilder;
-//   const bb = new BB();
-//   bb.append(text);
-//   return saveAs(bb.getBlob(`text/plain;charset=${document.characterSet}`), filename);
-// };
 const saveText = function(text, filename) {
   const blb = new Blob([text], 
     {type: `text/plain;charset=${document.characterSet}`});
@@ -2620,7 +2612,8 @@ $( function() { //wait for page to load
 
   // when spec changes in input, parse and draw new polyhedra
   $("#spec").change(function(e) {
-    specs = $("#spec").val().split(/\s+/g).slice(0, 2); //only allow one recipe for now
+    // only allow one recipe for now
+    specs = $("#spec").val().split(/\s+/g).slice(0, 2);
     globPolys = _.map(specs, x=> newgeneratePoly(x));
     updateStats();
     //animateShape()
@@ -2649,15 +2642,18 @@ $( function() { //wait for page to load
   // ---------------------------------------
   $("#poly").mousedown( function(e){
     e.preventDefault();
-    MOUSEDOWN=true;
-    LastMouseX=e.clientX-$(this).offset().left; //relative mouse coords
-    LastMouseY=e.clientY-($(this).offset().top-$(window).scrollTop());
-    //calculate inverse projection of point to sphere
+    MOUSEDOWN = true;
+    // relative mouse coords
+    LastMouseX = e.clientX-$(this).offset().left;
+    LastMouseY = e.clientY-($(this).offset().top-$(window).scrollTop());
+    // calculate inverse projection of point to sphere
     const tmpvec=invperspT(LastMouseX,LastMouseY,_2d_x_offset,_2d_y_offset,persp_z_max,persp_z_min,persp_ratio,perspective_scale);
-    if ((tmpvec[0]*tmpvec[1]*tmpvec[2]*0) === 0) {  //quick NaN check
-      LastSphVec=tmpvec;
+    // quick NaN check
+    if ((tmpvec[0]*tmpvec[1]*tmpvec[2]*0) === 0) {
+      LastSphVec = tmpvec;
     }
-    return globlastRotM = clone(globRotM); //copy last transform state
+    // copy last transform state
+    return globlastRotM = clone(globRotM); 
   });
   $("#poly").mouseup( function(e){
     e.preventDefault();
@@ -2672,10 +2668,14 @@ $( function() { //wait for page to load
     if (MOUSEDOWN) {
       const MouseX=e.clientX-$(this).offset().left;
       const MouseY=e.clientY-($(this).offset().top-$(window).scrollTop());
-      const SphVec=invperspT(MouseX,MouseY,_2d_x_offset,_2d_y_offset,persp_z_max,persp_z_min,persp_ratio,perspective_scale);
+      const SphVec=invperspT(MouseX, MouseY,
+        _2d_x_offset,_2d_y_offset,
+        persp_z_max,persp_z_min,
+        persp_ratio,perspective_scale);
 
       // quick NaN check
-      if (((SphVec[0]*SphVec[1]*SphVec[2]*0) === 0) && ((LastSphVec[0]*LastSphVec[1]*LastSphVec[2]*0) === 0)) {
+      if (((SphVec[0]*SphVec[1]*SphVec[2]*0) === 0) && 
+           ((LastSphVec[0]*LastSphVec[1]*LastSphVec[2]*0) === 0)) {
         globRotM = mm3(getVec2VecRotM(LastSphVec,SphVec),globlastRotM);
       }
 
@@ -2720,14 +2720,9 @@ $( function() { //wait for page to load
   // ---------------------------------------
   $("#pngsavebutton").click(function(e){
     const canvas=$("#poly")[0];
-    //this works, but is janky
-    //window.location = canvas.toDataURL("image/png")
     const spec = $("#spec").val().split(/\s+/g)[0];
     const filename = `polyhedronisme-${spec.replace(/\([^\)]+\)/g, "")}.png`;
-    //blobUtil.canvasToBlob(canvas, 'image/png').then(
-    //  blob=>saveAs(blob, filename))
     return canvas.toBlobHD(blob => saveAs(blob, filename));
-    //return canvas.toBlob( blob=> saveAs(blob, filename));
   });
 
   $("#objsavebutton").click(function(e){
@@ -2741,7 +2736,6 @@ $( function() { //wait for page to load
     const triangulated = triangulate(globPolys[0],true); //triangulate to preserve face_colors for 3d printing
     const x3dtxt = triangulated.toVRML();
     const spec = $("#spec").val().split(/\s+/g)[0];
-    //filename = "polyhedronisme-"+spec+".x3d"
     const filename = `polyhedronisme-${spec.replace(/\([^\)]+\)/g, "")}.wrl`;
     return saveText(x3dtxt,filename);
   });

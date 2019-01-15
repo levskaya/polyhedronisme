@@ -1,9 +1,3 @@
-/*
- * decaffeinate suggestions:
- * DS102: Remove unnecessary code created because of implicit returns
- * DS205: Consider reworking code to avoid use of IIFEs
- * Full docs: https://github.com/decaffeinate/decaffeinate/blob/master/docs/suggestions.md
- */
 // Polyhédronisme
 //===================================================================================================
 //
@@ -11,7 +5,12 @@
 //
 // Copyright 2019, Anselm Levskaya
 // Released under the MIT License
-
+/*
+ * decaffeinate suggestions:
+ * DS102: Remove unnecessary code created because of implicit returns
+ * DS205: Consider reworking code to avoid use of IIFEs
+ * Full docs: https://github.com/decaffeinate/decaffeinate/blob/master/docs/suggestions.md
+ */
 
 // GLOBALS
 //===================================================================================================
@@ -273,7 +272,8 @@ $( function() { //wait for page to load
 
   // when spec changes in input, parse and draw new polyhedra
   $("#spec").change(function(e) {
-    specs = $("#spec").val().split(/\s+/g).slice(0, 2); //only allow one recipe for now
+    // only allow one recipe for now
+    specs = $("#spec").val().split(/\s+/g).slice(0, 2);
     globPolys = _.map(specs, x=> newgeneratePoly(x));
     updateStats();
     //animateShape()
@@ -302,15 +302,18 @@ $( function() { //wait for page to load
   // ---------------------------------------
   $("#poly").mousedown( function(e){
     e.preventDefault();
-    MOUSEDOWN=true;
-    LastMouseX=e.clientX-$(this).offset().left; //relative mouse coords
-    LastMouseY=e.clientY-($(this).offset().top-$(window).scrollTop());
-    //calculate inverse projection of point to sphere
+    MOUSEDOWN = true;
+    // relative mouse coords
+    LastMouseX = e.clientX-$(this).offset().left;
+    LastMouseY = e.clientY-($(this).offset().top-$(window).scrollTop());
+    // calculate inverse projection of point to sphere
     const tmpvec=invperspT(LastMouseX,LastMouseY,_2d_x_offset,_2d_y_offset,persp_z_max,persp_z_min,persp_ratio,perspective_scale);
-    if ((tmpvec[0]*tmpvec[1]*tmpvec[2]*0) === 0) {  //quick NaN check
-      LastSphVec=tmpvec;
+    // quick NaN check
+    if ((tmpvec[0]*tmpvec[1]*tmpvec[2]*0) === 0) {
+      LastSphVec = tmpvec;
     }
-    return globlastRotM = clone(globRotM); //copy last transform state
+    // copy last transform state
+    return globlastRotM = clone(globRotM); 
   });
   $("#poly").mouseup( function(e){
     e.preventDefault();
@@ -325,10 +328,14 @@ $( function() { //wait for page to load
     if (MOUSEDOWN) {
       const MouseX=e.clientX-$(this).offset().left;
       const MouseY=e.clientY-($(this).offset().top-$(window).scrollTop());
-      const SphVec=invperspT(MouseX,MouseY,_2d_x_offset,_2d_y_offset,persp_z_max,persp_z_min,persp_ratio,perspective_scale);
+      const SphVec=invperspT(MouseX, MouseY,
+        _2d_x_offset,_2d_y_offset,
+        persp_z_max,persp_z_min,
+        persp_ratio,perspective_scale);
 
       // quick NaN check
-      if (((SphVec[0]*SphVec[1]*SphVec[2]*0) === 0) && ((LastSphVec[0]*LastSphVec[1]*LastSphVec[2]*0) === 0)) {
+      if (((SphVec[0]*SphVec[1]*SphVec[2]*0) === 0) && 
+           ((LastSphVec[0]*LastSphVec[1]*LastSphVec[2]*0) === 0)) {
         globRotM = mm3(getVec2VecRotM(LastSphVec,SphVec),globlastRotM);
       }
 
@@ -373,14 +380,9 @@ $( function() { //wait for page to load
   // ---------------------------------------
   $("#pngsavebutton").click(function(e){
     const canvas=$("#poly")[0];
-    //this works, but is janky
-    //window.location = canvas.toDataURL("image/png")
     const spec = $("#spec").val().split(/\s+/g)[0];
     const filename = `polyhedronisme-${spec.replace(/\([^\)]+\)/g, "")}.png`;
-    //blobUtil.canvasToBlob(canvas, 'image/png').then(
-    //  blob=>saveAs(blob, filename))
     return canvas.toBlobHD(blob => saveAs(blob, filename));
-    //return canvas.toBlob( blob=> saveAs(blob, filename));
   });
 
   $("#objsavebutton").click(function(e){
@@ -394,7 +396,6 @@ $( function() { //wait for page to load
     const triangulated = triangulate(globPolys[0],true); //triangulate to preserve face_colors for 3d printing
     const x3dtxt = triangulated.toVRML();
     const spec = $("#spec").val().split(/\s+/g)[0];
-    //filename = "polyhedronisme-"+spec+".x3d"
     const filename = `polyhedronisme-${spec.replace(/\([^\)]+\)/g, "")}.wrl`;
     return saveText(x3dtxt,filename);
   });
