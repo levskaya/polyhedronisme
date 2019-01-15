@@ -13,16 +13,14 @@ core geometric 'seed' and then modifying it with topological and
 geometrical operators that derive more complex shapes from this base
 set.
 
-It should runs on any modern canvas-enabled browser.
-
 This project was also inspired by the renaissance tome
 [Perspectiva Corporum Regularium][4] featuring engravings by Jost
 Amman after designs and drawings by Wenzel Jamnitzer.
 
-It uses jQuery, underscore, [PEG.js][5] parser for parsing recipes, and
+This was written long ago, before webGL really worked.  It uses jQuery, underscore, [PEG.js][5] parser for parsing recipes, and
 [Eli Grey's][eli] Blob.js, FileSaver, canvas-toBlob for saving files.
 
-NB: It's been converted away from coffeescript and is slowly being modernized a bit.
+It's been converted away from coffeescript and is slowly being modernized a bit.
 
 * * *
 Text CC-BY, Code MIT License

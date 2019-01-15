@@ -9,11 +9,6 @@
 //
 // Copyright 2019, Anselm Levskaya
 // Released under the MIT License
-/*
- * decaffeinate suggestions:
- * DS102: Remove unnecessary code created because of implicit returns
- * Full docs: https://github.com/decaffeinate/decaffeinate/blob/master/docs/suggestions.md
- */
 
 // Testing Functions
 //===================================================================================================
@@ -32,12 +27,13 @@ const topolog = function(poly) {
 
 const testrig = function() {
   const seeds=["T","O","C","I","D","P3","P4","A4","A5","Y3","Y4"];
-  const ops = ["k","a","g","p","d","n","x","*"];
+  const ops = ["k","a","g","p","d","r","e","b","o","m","t","j",
+               "s","p","c","w","l","n","x","z","h"];
   console.log("===== Test Basic Ops =====");
   for (let op of ops) {
     console.log(`Operator ${op}`);
     for (let seed of seeds) {
-      console.log(op+seed+":", generatePoly(op+seed));
+      console.log(op+seed+":", newgeneratePoly(op + seed));
     }
   }
   return console.log("===== Done Testing Basic Ops =====");
