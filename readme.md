@@ -19,51 +19,14 @@ This project was also inspired by the renaissance tome
 [Perspectiva Corporum Regularium][4] featuring engravings by Jost
 Amman after designs and drawings by Wenzel Jamnitzer.
 
-It is written in coffeescript. Uses jQuery, underscore, [PEG.js][5] parser for parsing recipes, and
+It uses jQuery, underscore, [PEG.js][5] parser for parsing recipes, and
 [Eli Grey's][eli] BlobBuilder, FileSaver, canvas-toBlob for saving files.
 
-### Future
-- Switch rendering to Three.JS
-- WebGL frontend to replace the hand-rolled, slow canvas renderer, for
-  those browsers that can use it.
-- 2d vector export to SVG
-- integration of [csg.js][6] lib for complex mesh joins
-- geometric distortion operators, i.e.:
-```
-G x**2,y**2,z**2 => poly.xyz = _.map(poly.xyz, ([x,y,z]) -> [x*x,y*y,z*z])
-```
-- more geometric refinement operators:
-<li><b>F<i>N</i></b> - homogenize <b>F</b>ace area - or at least, prevent faces from getting too small?</li>
-<li><b>E<i>N</i></b> - homogenize <b>E</b>dge length</li>
-<li><b>B<i>N</i></b> - attempt to <b>B</b>alance F and E, but always enforcing C</li>
-- more topological operators:
-<li><b>h</b> - <a href="https://en.wikipedia.org/wiki/Alternation_%28geometry%29">half</a>
-  (symbol clashes with the 'hollow' operator; could change the symbol for hollow to <b>i</b> as in skeletonize?) (caution: requires even-sided faces, and can produce digons)</li>
-<li><b>c</b> - chamfer</li>
-<li><b>w</b> - whirl</li>
-- Simple boolean operations on like-numbered faces: "cut and glue"
-- proper touch event handling for mobile
-- auto-rotation of the polyhedron (checkbox? play/pause button?)
-- compounding a series - does it work?
-- some documentation on what the palette colors map to. Currently, by "signature",
-  which means what exactly?
-  - add a UI control to change to this - the other choice is just by vertex count?
-- add a few examples to the index page (or a manual page). E.g.
-<ul>
-  <li>pC - propellerized cube</li>
-  <li>tI - truncated icosahedron (soccer ball)</li>
-  <li>eptI - exploded propellerized truncated icosahedron</li>
-  <li>C300eC200pC200tI - ditto, canonicalized</li>
-  <li>AeA3ptI - ditto, with convex spherical adjustment</li>
-  <li>scccC - snub triple-chamfered cube</li>
-  <li>k(4,1.8)k(3,1.8)C200eO</li>
-  To do: give examples using kN or tN, and with a space-delimited series if that's supported.
-  
-</ul>
+NB: It's being slowly converted away from coffeescript and modernized a bit.
 
 * * *
 Text CC-BY, Code MIT License
-2011 Anselm Levskaya
+2019 Anselm Levskaya
 
 [1]: http://en.wikipedia.org/wiki/Conway_polyhedron_notation "Conway Operators"
 [2]: http://www.georgehart.com/ "George W. Hart"
