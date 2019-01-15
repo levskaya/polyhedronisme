@@ -20,9 +20,9 @@ This project was also inspired by the renaissance tome
 Amman after designs and drawings by Wenzel Jamnitzer.
 
 It uses jQuery, underscore, [PEG.js][5] parser for parsing recipes, and
-[Eli Grey's][eli] BlobBuilder, FileSaver, canvas-toBlob for saving files.
+[Eli Grey's][eli] Blob.js, FileSaver, canvas-toBlob for saving files.
 
-NB: It's being slowly converted away from coffeescript and modernized a bit.
+NB: It's been converted away from coffeescript and is slowly being modernized a bit.
 
 * * *
 Text CC-BY, Code MIT License
