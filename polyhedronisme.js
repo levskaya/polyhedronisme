@@ -419,7 +419,7 @@ const hextofloats = function(hexstr){
   return rgb;
 };
 
-const PALETTE = rwb_palette; //GLOBAL
+let PALETTE = rwb_palette; //GLOBAL
 const palette = function(n) {
   if (n < PALETTE.length) {
     return hextofloats(PALETTE[n]);
