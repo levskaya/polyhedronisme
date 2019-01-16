@@ -5,24 +5,16 @@
 //
 // Copyright 2019, Anselm Levskaya
 // Released under the MIT License
-/*
- * decaffeinate suggestions:
- * DS102: Remove unnecessary code created because of implicit returns
- * DS205: Consider reworking code to avoid use of IIFEs
- * Full docs: https://github.com/decaffeinate/decaffeinate/blob/master/docs/suggestions.md
- */
 
 // GLOBALS
 //===================================================================================================
-let ctx={}; // for global access to canvas context
+let ctx = {}; // for global access to canvas context
+let globPolys = {}; // constructed polyhedras
+
 const CANVAS_WIDTH  = 500; //canvas dims
 const CANVAS_HEIGHT = 400; //canvas dims
-let globPolys={}; // constructed polyhedras
-
 let globRotM = clone(eye3);
-let globlastRotM = clone(eye3);
-//globtheta = 0 # rotation and projective mapping parameters
-//globphi   = 0
+let globLastRotM = clone(eye3);
 let perspective_scale = 800;
 const persp_z_max = 5;
 const persp_z_min = 0;
@@ -30,31 +22,30 @@ const persp_ratio = 0.8;
 const _2d_x_offset = CANVAS_WIDTH/2; //300
 const _2d_y_offset = CANVAS_HEIGHT/2; //140
 
-const globtime = new Date(); // for animation
-
 const BG_CLEAR = true; // clear background or colored?
 const BG_COLOR = "rgba(255,255,255,1.0)"; // background color
 const COLOR_METHOD = "signature"; //"area"
-let PaintMode = "fillstroke";
 const ctx_linewidth = 0.5; // for outline of faces
+let PaintMode = "fillstroke";
 
-// Mouse Event Variables
-let MOUSEDOWN=false;
-let LastMouseX=0;
-let LastMouseY=0;
-let LastSphVec=[1,0,0]; //for 3d trackball
+// mouse event variables
+let MOUSEDOWN = false;
+let LastMouseX = 0;
+let LastMouseY = 0;
+// state variable for 3d trackball
+let LastSphVec = [1, 0, 0];
 
 // random grabbag of polyhedra
 const DEFAULT_RECIPES = [
-  "C2dakD","oC20kkkT","kn4C40A0dA4","opD",
-  "lT","lK5oC","knD","dn6x4K5bT","oox4P7",
+  "C2dakD", "oC20kkkT", "kn4C40A0dA4", "opD",
+  "lT", "lK5oC", "knD", "dn6x4K5bT", "oox4P7",
   "n18n18n9n9n9soxY9"];
 
 // File-saving objects used to export txt/canvas-png
 const saveText = function(text, filename) {
   const blb = new Blob([text], 
     {type: `text/plain;charset=${document.characterSet}`});
-  return saveAs(blb, filename);
+  saveAs(blb, filename);
 }
 
 // parses URL string for polyhedron recipe, for bookmarking
@@ -82,7 +73,7 @@ const setlink = function() {
   if (PALETTE !== rwb_palette) {
     link += `&palette=${encodeURIComponent(PALETTE.reduce((x,y)=> x+" "+y))}`;
   }
-  return $("#link").attr("href", link);
+  $("#link").attr("href", link);
 };
 
 
@@ -108,13 +99,13 @@ const init = function() {
   }
     
   const exp = $('#expandcollapse');
-  return exp.click(function() {
+  exp.click(function() {
     if (/minus/.test(exp.attr('src'))) {  // Contains 'minus'
       $('#morestats').hide();
-      return exp.attr('src', 'media/plus.png');
+      exp.attr('src', 'media/plus.png');
     } else {
       $('#morestats').show();      
-      return exp.attr('src', 'media/minus.png');
+      exp.attr('src', 'media/minus.png');
     }
   });
 };
@@ -123,11 +114,11 @@ const init = function() {
 // -----------------------------------------------------------------------------------
 const clear = function() {
   if (BG_CLEAR) {
-    return ctx.clearRect(0, 0, CANVAS_WIDTH, CANVAS_HEIGHT);
+    ctx.clearRect(0, 0, CANVAS_WIDTH, CANVAS_HEIGHT);
   } else {
     ctx.clearRect(0, 0, CANVAS_WIDTH, CANVAS_HEIGHT);
     ctx.fillStyle = BG_COLOR;
-    return ctx.fillRect(0, 0, CANVAS_WIDTH, CANVAS_HEIGHT);
+    ctx.fillRect(0, 0, CANVAS_WIDTH, CANVAS_HEIGHT);
   }
 };
 
@@ -163,37 +154,35 @@ const drawpoly = function(poly, tvec) {
     let clr = palette(poly.face_class[fno]);
 
     // shade based on simple cosine illumination factor
-    const face_verts = ((() => {
-      const result = [];
-      for (v of face) {
-        result.push(poly.xyz[v]);
-      }
-      return result;
-    })());
+    const face_verts = face.map((v)=>poly.xyz[v])
+    //TODO: these magic illumination parameters should be global constants or parameters
     const illum = dot(normal(face_verts), unit([1, -1, 0]));
     clr = mult((((illum / 2.0) + 0.5) * 0.7) + 0.3, clr);
 
     if ((PaintMode === "fill") || (PaintMode === "fillstroke")) {
-      ctx.fillStyle = `rgba(${round(clr[0]*255)}, ${round(clr[1]*255)}, ${round(clr[2]*255)}, ${1.0})`;
+      ctx.fillStyle = 
+        `rgba(${round(clr[0]*255)}, ${round(clr[1]*255)}, ${round(clr[2]*255)}, ${1.0})`;
       ctx.fill();
-    // make cartoon stroke (=black) / realistic stroke an option (=below)
-      ctx.strokeStyle = `rgba(${round(clr[0]*255)}, ${round(clr[1]*255)}, ${round(clr[2]*255)}, ${1.0})`;
+      // make cartoon stroke (=black) / realistic stroke an option (=below)
+      ctx.strokeStyle = 
+        `rgba(${round(clr[0]*255)}, ${round(clr[1]*255)}, ${round(clr[2]*255)}, ${1.0})`;
       ctx.stroke();
     }
     if (PaintMode === "fillstroke") {
-      ctx.fillStyle = `rgba(${round(clr[0]*255)}, ${round(clr[1]*255)}, ${round(clr[2]*255)}, ${1.0})`;
+      ctx.fillStyle = 
+        `rgba(${round(clr[0]*255)}, ${round(clr[1]*255)}, ${round(clr[2]*255)}, ${1.0})`;
       ctx.fill();
-      ctx.strokeStyle = "rgba(0,0,0, .3)";  // light lines, less cartoony, more render-y
+      ctx.strokeStyle = "rgba(0,0,0,0.3)";  // light lines, less cartoony, more render-y
       ctx.stroke();
     }
     if (PaintMode === "stroke") {
-      ctx.strokeStyle = "rgba(0,0,0, .8)";
+      ctx.strokeStyle = "rgba(0,0,0,0.8)";
       ctx.stroke();
     }
   }
 
   // reset coords, for setting absolute rotation, as poly is passed by ref
-  return poly.xyz = oldxyz;
+  poly.xyz = oldxyz;
 };
 
 
@@ -201,44 +190,24 @@ const drawpoly = function(poly, tvec) {
 // -----------------------------------------------------------------------------------
 const drawShape = function() {
   clear();
-  return globPolys.map((p, i) =>
-    drawpoly(p,[0+(3*i),0,3]));
+  globPolys.map((p, i) => drawpoly(p,[0+(3*i),0,3]));
 };
 
 // update V E F stats on page
 // -----------------------------------------------------------------------------------
-const updateStats = () =>
-  (() => {
-    const result = [];
-    for (let i = 0; i < globPolys.length; i++) {
-      const p = globPolys[i];
-      $("#basicstats").text(p.data());
-      result.push($("#morestats").text(p.moreData()));
-    }
-    return result;
-  })()
-;
-
-// loop for animation
-// -----------------------------------------------------------------------------------
-var animateShape = function() {
-  clear();
-  const globtheta=((2*Math.PI)/180.0)*globtime.getSeconds()*0.1;
+const updateStats = function() {
   for (let i = 0; i < globPolys.length; i++) {
     const p = globPolys[i];
-    drawpoly(p,[0+(3*i),0,3]);
+    $("#basicstats").text(p.data());
+    $("#morestats").text(p.moreData());
   }
-  return setTimeout(animateShape, 100);
-};
+}
 
 
 // Initialization and Basic UI
 //===================================================================================================
 
 $( function() { //wait for page to load
-
-  // incorrectly added by decaffeinate I believe, shadows these globals:
-  // let PALETTE, specs;
 
   init(); //init canvas
 
@@ -278,14 +247,14 @@ $( function() { //wait for page to load
     updateStats();
     //animateShape()
     setlink();
-    return drawShape();
+    drawShape();
   });
 
   // when palette changes in input, redraw polyhedra
   $("#palette").change(function(e) {
     PALETTE = $(this).val().split(/\s+/g);
     setlink();
-    return drawShape();
+    drawShape();
   });
 
   // Basic manipulation: rotation and scaling of geometry
@@ -295,7 +264,7 @@ $( function() { //wait for page to load
   $("#poly").mousewheel( function(e,delta, deltaX, deltaY){
     e.preventDefault();
     perspective_scale*=(10+delta)/10;
-    return drawShape();
+    drawShape();
   });
 
   // Implement standard trackball routines
@@ -313,17 +282,17 @@ $( function() { //wait for page to load
       LastSphVec = tmpvec;
     }
     // copy last transform state
-    return globlastRotM = clone(globRotM); 
+    globLastRotM = clone(globRotM); 
   });
-  $("#poly").mouseup( function(e){
+  $("#poly").mouseup(function(e){
     e.preventDefault();
-    return MOUSEDOWN=false;
+    MOUSEDOWN=false;
   });
-  $("#poly").mouseleave( function(e){
+  $("#poly").mouseleave(function(e){
     e.preventDefault();
-    return MOUSEDOWN=false;
+    MOUSEDOWN=false;
   });
-  $("#poly").mousemove( function(e){
+  $("#poly").mousemove(function(e){
     e.preventDefault();
     if (MOUSEDOWN) {
       const MouseX=e.clientX-$(this).offset().left;
@@ -336,44 +305,42 @@ $( function() { //wait for page to load
       // quick NaN check
       if (((SphVec[0]*SphVec[1]*SphVec[2]*0) === 0) && 
            ((LastSphVec[0]*LastSphVec[1]*LastSphVec[2]*0) === 0)) {
-        globRotM = mm3(getVec2VecRotM(LastSphVec,SphVec),globlastRotM);
+        globRotM = mm3(getVec2VecRotM(LastSphVec, SphVec), globLastRotM);
       }
-
-      return drawShape();
+      drawShape();
     }
   });
 
   // State control via some buttons
   // ---------------------------------------
-
   $("#strokeonly").click(function(e) {
     PaintMode = "stroke";
-    return drawShape();
+    drawShape();
   });
   
   $("#fillonly").click(function(e) {
     PaintMode = "fill";
-    return drawShape();
+    drawShape();
   });
   
   $("#fillandstroke").click(function(e) {
     PaintMode = "fillstroke";
-    return drawShape();
+    drawShape();
   });
 
   $("#siderot").click(function(e) {
     globRotM = vec_rotm(PI/2,0,1,0);
-    return drawShape();
+    drawShape();
   });
   
   $("#toprot").click(function(e) {
     globRotM = vec_rotm(PI/2,1,0,0);
-    return drawShape();
+    drawShape();
   });
 
   $("#frontrot").click(function(e) {
     globRotM = rotm(0,0,0);
-    return drawShape();
+    drawShape();
   });
 
   // Export Options
@@ -382,21 +349,21 @@ $( function() { //wait for page to load
     const canvas=$("#poly")[0];
     const spec = $("#spec").val().split(/\s+/g)[0];
     const filename = `polyhedronisme-${spec.replace(/\([^\)]+\)/g, "")}.png`;
-    return canvas.toBlobHD(blob => saveAs(blob, filename));
+    canvas.toBlobHD(blob => saveAs(blob, filename));
   });
 
   $("#objsavebutton").click(function(e){
     const objtxt = globPolys[0].toOBJ();
     const spec = $("#spec").val().split(/\s+/g)[0];
     const filename = `polyhedronisme-${spec.replace(/\([^\)]+\)/g, "")}.obj`;
-    return saveText(objtxt,filename);
+    saveText(objtxt,filename);
   });
 
-  return $("#x3dsavebutton").click(function(e){
+  $("#x3dsavebutton").click(function(e){
     const triangulated = triangulate(globPolys[0],true); //triangulate to preserve face_colors for 3d printing
     const x3dtxt = triangulated.toVRML();
     const spec = $("#spec").val().split(/\s+/g)[0];
     const filename = `polyhedronisme-${spec.replace(/\([^\)]+\)/g, "")}.wrl`;
-    return saveText(x3dtxt,filename);
+    saveText(x3dtxt,filename);
   });
 });
