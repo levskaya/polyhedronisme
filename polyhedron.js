@@ -6,14 +6,16 @@
 // Copyright 2019, Anselm Levskaya
 // Released under the MIT License
 //
-/*
- * decaffeinate suggestions:
- * DS101: Remove unnecessary use of Array.from
- * DS102: Remove unnecessary code created because of implicit returns
- * DS202: Simplify dynamic range loops
- * DS205: Consider reworking code to avoid use of IIFEs
- * Full docs: https://github.com/decaffeinate/decaffeinate/blob/master/docs/suggestions.md
- */
+
+function __range__(left, right, inclusive) {
+  let range = [];
+  let ascending = left < right;
+  let end = !inclusive ? right : ascending ? right + 1 : right - 1;
+  for (let i = left; ascending ? i < end : i > end; ascending ? i++ : i--) {
+    range.push(i);
+  }
+  return range;
+}
 
 // Polyhedra Functions
 //===================================================================================================
@@ -24,7 +26,7 @@
 // Generate an array of edges [v1,v2] for the face.
 const faceToEdges = function(face) {
   const edges = [];
-  let [v1] = Array.from(face.slice(-1));
+  let [v1] = face.slice(-1);
   for (let v2 of face) {
     edges.push([v1,v2]);
     v1 = v2;
@@ -77,7 +79,7 @@ const paintPolyhedron = function(poly) {
   poly.face_class = [];
   const colormemory={};
 
-  //memoized color assignment to faces of similar areas
+  // memoized color assignment to faces of similar areas
   const colorassign = function(ar, colormemory) {
     const hash = round(100*ar);
     if (hash in colormemory) {
@@ -93,26 +95,15 @@ const paintPolyhedron = function(poly) {
     var clr, face_verts;
     if (COLOR_METHOD === "area") {
       // color by face area (quick proxy for different kinds of faces) convexarea
-      face_verts = ((() => {
-        const result = [];
-        for (v of f) {           result.push(poly.xyz[v]);
-        }
-        return result;
-      })());
+      face_verts = f.map(v=>poly.xyz[v])
       clr = colorassign(convexarea(face_verts), colormemory);
     } else if (COLOR_METHOD === "signature") {
-      face_verts = ((() => {
-        const result1 = [];
-        for (v of f) {           result1.push(poly.xyz[v]);
-        }
-        return result1;
-      })());
+      face_verts = f.map(v=>poly.xyz[v])
       clr = colorassign(faceSignature(face_verts), colormemory);
     } else {
       // color by face-sidedness
-      clr = f.length-3;
+      clr = f.length - 3;
     }
-
     poly.face_class.push(clr);
   }
   console.log(_.toArray(colormemory).length+" face classes");
@@ -133,11 +124,10 @@ const sortfaces = function(poly) {
   // !!! there is something wrong with this. even triangulated surfaces have artifacts.
   const planesort = (a,b)=>
     //console.log dot(sub(ray_origin,a[0]),a[1]), dot(sub(b[0],a[0]),a[1])
-    -dot(sub(ray_origin,a[0]),a[1])*dot(sub(b[0],a[0]),a[1])
-  ;
+    -dot(sub(ray_origin,a[0]),a[1])*dot(sub(b[0],a[0]),a[1]);
 
   // sort by centroid z-depth: not correct but more stable heuristic w. weird non-planar "polygons"
-  const zcentroidsort = (a,b)=> a[0][2]-b[0][2];
+  const zcentroidsort = (a, b)=> a[0][2]-b[0][2];
 
   const zsortIndex = _.zip(centroids, normals, __range__(0, poly.face.length, false))
     //.sort(planesort)
@@ -145,20 +135,8 @@ const sortfaces = function(poly) {
     .map(x=> x[2]);
 
   // sort all face-associated properties
-  poly.face = ((() => {
-    const result = [];
-    for (idx of zsortIndex) {
-      result.push(poly.face[idx]);
-    }
-    return result;
-  })());
-  poly.face_class = ((() => {
-    const result1 = [];
-    for (idx of zsortIndex) {
-      result1.push(poly.face_class[idx]);
-    }
-    return result1;
-  })());
+  poly.face = zsortIndex.map(idx=>poly.face[idx]);
+  poly.face_class = zsortIndex.map(idx=>poly.face_class[idx]);
 };
 
 
@@ -190,9 +168,9 @@ class polyhedron {
       for (e of edgeset) {
         var a, b;
         if (e[0] < e[1]) {
-          [a,b] = Array.from(e);
+          [a, b] = e;
         } else {
-          [b,a] = Array.from(e);
+          [b, a] = e;
         }
         finalset[a+'~'+b] = e;
       }
@@ -277,12 +255,13 @@ class polyhedron {
 
     objstr += "#normal vector defs \n";
     for (f of this.face) {
-      const norm = normal((() => {
-        const result = [];
-        for (v of f) {           result.push(this.xyz[v]);
-        }
-        return result;
-      })());
+      // const norm = normal((() => {
+      //   const result = [];
+      //   for (v of f) {           result.push(this.xyz[v]);
+      //   }
+      //   return result;
+      // })());
+      const norm = normal(f.map(v=>this.xyz[v]))
       objstr += `vn ${norm[0]} ${norm[1]} ${norm[2]}\n`;
     }
 
@@ -571,14 +550,3 @@ const pyramid = function(n) {
   poly = canonicalXYZ(poly, 3);
   return poly;
 };
-
-
-function __range__(left, right, inclusive) {
-  let range = [];
-  let ascending = left < right;
-  let end = !inclusive ? right : ascending ? right + 1 : right - 1;
-  for (let i = left; ascending ? i < end : i > end; ascending ? i++ : i--) {
-    range.push(i);
-  }
-  return range;
-}

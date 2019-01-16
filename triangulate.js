@@ -6,11 +6,6 @@
 // Copyright 2019, Anselm Levskaya
 // Released under the MIT License
 //
-/*
- * decaffeinate suggestions:
- * DS102: Remove unnecessary code created because of implicit returns
- * Full docs: https://github.com/decaffeinate/decaffeinate/blob/master/docs/suggestions.md
- */
 
 // Polyhedra Functions
 //===================================================================================================
@@ -18,6 +13,16 @@
 // Set of routines for transforming N-face meshes into triangular meshes, necessary for exporting
 // STL or VRML for 3D Printing.
 //
+
+function __range__(left, right, inclusive) {
+  let range = [];
+  let ascending = left < right;
+  let end = !inclusive ? right : ascending ? right + 1 : right - 1;
+  for (let i = left; ascending ? i < end : i > end; ascending ? i++ : i--) {
+    range.push(i);
+  }
+  return range;
+}
 
 // Ear-based triangulation of 2d faces, takes array of 2d coords in the face ordering
 // Returns indices of the new diagonal lines to cut.
@@ -33,12 +38,12 @@ const getDiagonals = function(verts){
   let facelen = verts.length;
 
   const XOR = (x, y) => (x || y) && !(x && y);
-  const Area2     = (Va,Vb,Vc)   => ((Vb[0]-Va[0])*(Vc[1]-Va[1])) - ((Vc[0]-Va[0])*(Vb[1]-Va[1]));
-  const Left      = (Va, Vb, Vc) => Area2(Va, Vb, Vc) > 0;
-  const LeftOn    = (Va, Vb, Vc) => Area2(Va, Vb, Vc) >= 0;
+  const Area2 = (Va,Vb,Vc)  => ((Vb[0]-Va[0])*(Vc[1]-Va[1])) - ((Vc[0]-Va[0])*(Vb[1]-Va[1]));
+  const Left = (Va, Vb, Vc) => Area2(Va, Vb, Vc) > 0;
+  const LeftOn = (Va, Vb, Vc) => Area2(Va, Vb, Vc) >= 0;
   const Collinear = (Va, Vb, Vc) => Area2(Va, Vb, Vc) === 0;
 
-  const Between   = function(Va, Vb, Vc) {
+  const Between = function(Va, Vb, Vc) {
     if (Collinear(Va, Vb, Vc)) { return false; }
     if (Va[0] !== Vb[0]) {
       return ((Va[0] <= Vc[0]) && (Vc[0] <= Vb[0])) || ((Va[0] >= Vc[0]) && (Vc[0] >= Vb[0]));
@@ -48,7 +53,10 @@ const getDiagonals = function(verts){
   };
 
   const IntersectProp = function(Va, Vb, Vc, Vd) {
-    if (Collinear(Va, Vb, Vc) || Collinear(Va, Vb, Vd) || Collinear(Vc, Vd, Va) || Collinear(Vc, Vd, Vb)) { return false; }
+    if (Collinear(Va, Vb, Vc) || Collinear(Va, Vb, Vd) || 
+        Collinear(Vc, Vd, Va) || Collinear(Vc, Vd, Vb)) { 
+      return false; 
+    }
     return XOR(Left(Va, Vb, Vc), Left(Va, Vb, Vd)) && XOR(Left(Vc, Vd, Va), Left(Vc, Vd, Vb));
   };
 
@@ -56,7 +64,8 @@ const getDiagonals = function(verts){
     if (IntersectProp(Va, Vb, Vc, Vd)) {
       return true;
     } else {
-      if (Between(Va, Vb, Vc) || Between(Va, Vb, Vd) || Between(Vc, Vd, Va) || Between(Vc, Vd, Vb)) {
+      if (Between(Va, Vb, Vc) || Between(Va, Vb, Vd) || 
+          Between(Vc, Vd, Va) || Between(Vc, Vd, Vb)) {
         return true;
       } else {
         return false;
@@ -77,7 +86,8 @@ const getDiagonals = function(verts){
     let c = 0;
     while (true) {
       const c1 = (c+1+facelen)%facelen;
-      if ((c !== a) && (c1 !== a) && (c !== b) && (c1 !== b) && IntersectProp(verts[a], verts[b], verts[c], verts[c1])) {
+      if ((c !== a) && (c1 !== a) && (c !== b) && (c1 !== b) && 
+          IntersectProp(verts[a], verts[b], verts[c], verts[c1])) {
         return false;
       }
       c  = (c+1+facelen)%facelen;
@@ -118,7 +128,7 @@ const getDiagonals = function(verts){
         ear[v3] = Diagonal(v1, v4);
         //v1.next = v3
         //v3.prev = v1
-        verts   = verts.slice(0, +v2 + 1 || undefined).concat(verts.slice(v3));
+        verts = verts.slice(0, +v2 + 1 || undefined).concat(verts.slice(v3));
         origIdx = origIdx.slice(0, +v2 + 1 || undefined).concat(origIdx.slice(v3));
         if (v0>v2) { v0 -= 1; }
         if (v1>v2) { v1 -= 1; }
@@ -134,12 +144,11 @@ const getDiagonals = function(verts){
     }
   }
 
-  //return diagonals
   return diagonals;
 };
 
 // equates triplets of numbers if they can be rotated into identity
-const triEq = function(tri1,tri2){
+const triEq = function(tri1, tri2){
     if (((tri1[0] === tri2[0]) && (tri1[1] === tri2[1]) && (tri1[2] === tri2[2]))
     ||  ((tri1[0] === tri2[1]) && (tri1[1] === tri2[2]) && (tri1[2] === tri2[0]))
     ||  ((tri1[0] === tri2[2]) && (tri1[1] === tri2[0]) && (tri1[2] === tri2[1]))) {
@@ -156,7 +165,8 @@ const diagsToTris = function(f,diags){
   const edges = [];
   const redges = [];
   // get edges from faces as assoc arrays
-  for (let [v1,v2] of (__range__(0, f.length-1, true).map((i) => [i,(i+1)%f.length]))) {
+  for (let [v1, v2] of 
+       (__range__(0, f.length-1, true).map((i) => [i,(i+1)%f.length]))) {
     edges[v1]  = [v2];
     redges[v2] = [v1];
   }
@@ -229,13 +239,3 @@ const triangulate = function(poly, colors){
   newpoly.name = poly.name; // don't change the name for export
   return newpoly;
 };
-
-function __range__(left, right, inclusive) {
-  let range = [];
-  let ascending = left < right;
-  let end = !inclusive ? right : ascending ? right + 1 : right - 1;
-  for (let i = left; ascending ? i < end : i > end; ascending ? i++ : i--) {
-    range.push(i);
-  }
-  return range;
-}

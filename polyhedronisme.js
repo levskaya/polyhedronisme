@@ -14,10 +14,11 @@
 // Math / Vector / Matrix Functions
 //===================================================================================================
 
-// Math is primal, people.
 // import math functions to local namespace
-const { random, round, floor, sqrt, sin, cos, tan, asin, acos, atan, abs,
-        PI, LN10, pow, log
+const { random, round, floor, sqrt, 
+        sin, cos, tan, asin, acos, atan, 
+        abs, pow, log,
+        PI, LN10
       } = Math;
 const log10 = x=> log(x)/LN10;
 
@@ -47,7 +48,7 @@ const randomchoice = function(array){
 
 // 3d scalar multiplication
 const mult = (c, vec) => 
-  [c*vec[0],c*vec[1],c*vec[2]];
+  [c*vec[0], c*vec[1], c*vec[2]];
 
 // 3d element-wise multiply
 const _mult = (vec1, vec2) => 
@@ -72,19 +73,19 @@ const cross = (d1, d2) =>
    (d1[0]*d2[1]) - (d1[1]*d2[0]) ];
 
 // vector norm
-const mag = vec => sqrt(dot(vec,vec));
+const mag = vec => sqrt(dot(vec, vec));
 
 // vector magnitude squared
-const mag2 = vec => dot(vec,vec);
+const mag2 = vec => dot(vec, vec);
 
 // makes vector unit length
-const unit = vec => mult( 1/sqrt(mag2(vec)), vec);
+const unit = vec => mult(1 / sqrt(mag2(vec)), vec);
 
 // midpoint between vec1, vec2
-const midpoint = (vec1, vec2) => mult(1/2.0,add(vec1,vec2));
+const midpoint = (vec1, vec2) => mult(1/2.0, add(vec1, vec2));
 
 // parametric segment between vec1, vec2 w. parameter t ranging from 0 to 1
-const tween = (vec1,vec2,t) => 
+const tween = (vec1, vec2, t) => 
   [((1-t)*vec1[0]) + (t*vec2[0]), 
    ((1-t)*vec1[1]) + (t*vec2[1]), 
    ((1-t)*vec1[2]) + (t*vec2[2])];
@@ -151,7 +152,7 @@ const intersect = function(set1, set2, set3) {
       }
     }
   }
-  return null; // oh noes!
+  return null; // empty intersection
 };
 
 // calculate centroid of array of vertices
@@ -183,7 +184,7 @@ const convexarea = function(xyzs) {
     let [v1,v2] = xyzs.slice(0, 2);
     for (let v3 of xyzs.slice(2)) {
       //area of sub-triangle
-      area += mag( cross(sub(v2,v1), sub(v3,v1)) );
+      area += mag( cross(sub(v2, v1), sub(v3, v1)) );
       v2 = v3;
     } // shift over one
     return area;
@@ -196,11 +197,11 @@ const faceSignature = function(xyzs) {
     let [v1,v2] = xyzs.slice(0, 2);
     for (let v3 of xyzs.slice(2)) {
       //area of sub-triangle
-      cross_array.push(mag( cross(sub(v2,v1), sub(v3,v1)) ));
+      cross_array.push(mag( cross(sub(v2, v1), sub(v3, v1)) ));
       v2 = v3;
     } // shift over one
 
-    cross_array.sort((a,b)=> a-b); //sort for uniqueness
+    cross_array.sort((a,b)=>a-b); //sort for uniqueness
 
     let sig=""; // turn it into a string
     for (x of cross_array) { sig+=sigfigs(x,2); }
@@ -371,14 +372,16 @@ const getVec2VecRotM = function(vec1, vec2){
 // Copyright 2019, Anselm Levskaya
 // Released under the MIT License
 //
-/*
- * decaffeinate suggestions:
- * DS101: Remove unnecessary use of Array.from
- * DS102: Remove unnecessary code created because of implicit returns
- * DS202: Simplify dynamic range loops
- * DS205: Consider reworking code to avoid use of IIFEs
- * Full docs: https://github.com/decaffeinate/decaffeinate/blob/master/docs/suggestions.md
- */
+
+function __range__(left, right, inclusive) {
+  let range = [];
+  let ascending = left < right;
+  let end = !inclusive ? right : ascending ? right + 1 : right - 1;
+  for (let i = left; ascending ? i < end : i > end; ascending ? i++ : i--) {
+    range.push(i);
+  }
+  return range;
+}
 
 // Polyhedra Functions
 //===================================================================================================
@@ -389,7 +392,7 @@ const getVec2VecRotM = function(vec1, vec2){
 // Generate an array of edges [v1,v2] for the face.
 const faceToEdges = function(face) {
   const edges = [];
-  let [v1] = Array.from(face.slice(-1));
+  let [v1] = face.slice(-1);
   for (let v2 of face) {
     edges.push([v1,v2]);
     v1 = v2;
@@ -442,7 +445,7 @@ const paintPolyhedron = function(poly) {
   poly.face_class = [];
   const colormemory={};
 
-  //memoized color assignment to faces of similar areas
+  // memoized color assignment to faces of similar areas
   const colorassign = function(ar, colormemory) {
     const hash = round(100*ar);
     if (hash in colormemory) {
@@ -458,26 +461,15 @@ const paintPolyhedron = function(poly) {
     var clr, face_verts;
     if (COLOR_METHOD === "area") {
       // color by face area (quick proxy for different kinds of faces) convexarea
-      face_verts = ((() => {
-        const result = [];
-        for (v of f) {           result.push(poly.xyz[v]);
-        }
-        return result;
-      })());
+      face_verts = f.map(v=>poly.xyz[v])
       clr = colorassign(convexarea(face_verts), colormemory);
     } else if (COLOR_METHOD === "signature") {
-      face_verts = ((() => {
-        const result1 = [];
-        for (v of f) {           result1.push(poly.xyz[v]);
-        }
-        return result1;
-      })());
+      face_verts = f.map(v=>poly.xyz[v])
       clr = colorassign(faceSignature(face_verts), colormemory);
     } else {
       // color by face-sidedness
-      clr = f.length-3;
+      clr = f.length - 3;
     }
-
     poly.face_class.push(clr);
   }
   console.log(_.toArray(colormemory).length+" face classes");
@@ -498,11 +490,10 @@ const sortfaces = function(poly) {
   // !!! there is something wrong with this. even triangulated surfaces have artifacts.
   const planesort = (a,b)=>
     //console.log dot(sub(ray_origin,a[0]),a[1]), dot(sub(b[0],a[0]),a[1])
-    -dot(sub(ray_origin,a[0]),a[1])*dot(sub(b[0],a[0]),a[1])
-  ;
+    -dot(sub(ray_origin,a[0]),a[1])*dot(sub(b[0],a[0]),a[1]);
 
   // sort by centroid z-depth: not correct but more stable heuristic w. weird non-planar "polygons"
-  const zcentroidsort = (a,b)=> a[0][2]-b[0][2];
+  const zcentroidsort = (a, b)=> a[0][2]-b[0][2];
 
   const zsortIndex = _.zip(centroids, normals, __range__(0, poly.face.length, false))
     //.sort(planesort)
@@ -510,20 +501,8 @@ const sortfaces = function(poly) {
     .map(x=> x[2]);
 
   // sort all face-associated properties
-  poly.face = ((() => {
-    const result = [];
-    for (idx of zsortIndex) {
-      result.push(poly.face[idx]);
-    }
-    return result;
-  })());
-  poly.face_class = ((() => {
-    const result1 = [];
-    for (idx of zsortIndex) {
-      result1.push(poly.face_class[idx]);
-    }
-    return result1;
-  })());
+  poly.face = zsortIndex.map(idx=>poly.face[idx]);
+  poly.face_class = zsortIndex.map(idx=>poly.face_class[idx]);
 };
 
 
@@ -555,9 +534,9 @@ class polyhedron {
       for (e of edgeset) {
         var a, b;
         if (e[0] < e[1]) {
-          [a,b] = Array.from(e);
+          [a, b] = e;
         } else {
-          [b,a] = Array.from(e);
+          [b, a] = e;
         }
         finalset[a+'~'+b] = e;
       }
@@ -642,12 +621,13 @@ class polyhedron {
 
     objstr += "#normal vector defs \n";
     for (f of this.face) {
-      const norm = normal((() => {
-        const result = [];
-        for (v of f) {           result.push(this.xyz[v]);
-        }
-        return result;
-      })());
+      // const norm = normal((() => {
+      //   const result = [];
+      //   for (v of f) {           result.push(this.xyz[v]);
+      //   }
+      //   return result;
+      // })());
+      const norm = normal(f.map(v=>this.xyz[v]))
       objstr += `vn ${norm[0]} ${norm[1]} ${norm[2]}\n`;
     }
 
@@ -936,17 +916,7 @@ const pyramid = function(n) {
   poly = canonicalXYZ(poly, 3);
   return poly;
 };
-
-
-function __range__(left, right, inclusive) {
-  let range = [];
-  let ascending = left < right;
-  let end = !inclusive ? right : ascending ? right + 1 : right - 1;
-  for (let i = left; ascending ? i < end : i > end; ascending ? i++ : i--) {
-    range.push(i);
-  }
-  return range;
-}// Polyhédronisme
+// Polyhédronisme
 //===================================================================================================
 //
 // A toy for constructing and manipulating polyhedra and other meshes
@@ -957,14 +927,6 @@ function __range__(left, right, inclusive) {
 //
 // Copyright 2019, Anselm Levskaya
 // Released under the MIT License
-/*
- * decaffeinate suggestions:
- * DS101: Remove unnecessary use of Array.from
- * DS102: Remove unnecessary code created because of implicit returns
- * DS202: Simplify dynamic range loops
- * Full docs: https://github.com/decaffeinate/decaffeinate/blob/master/docs/suggestions.md
- */
-
 
 //===================================================================================================
 // Polyhedron Flagset Construct
@@ -982,8 +944,8 @@ function __range__(left, right, inclusive) {
 //
 class polyflag {
   constructor() {
-    this.flags= new Object(); // flags[face][vertex] = next vertex of flag; symbolic triples
-    this.verts= new Object(); // XYZ coordinates
+    this.flags = new Object(); // flags[face][vertex] = next vertex of flag; symbolic triples
+    this.verts = new Object(); // XYZ coordinates
     this.xyzs = new Object(); // [symbolic names] holds vertex index
   }
 
@@ -991,7 +953,7 @@ class polyflag {
   newV(name, xyz) {
     if (this.verts[name] === undefined) {
       this.verts[name] = 0;
-      return this.xyzs[name] = xyz;
+      this.xyzs[name] = xyz;
     }
   }
 
@@ -999,7 +961,7 @@ class polyflag {
     if (this.flags[facename] === undefined) {
       this.flags[facename] = {};
     }
-    return this.flags[facename][v1] = v2;
+    this.flags[facename][v1] = v2;
   }
 
   topoly() {
@@ -1130,7 +1092,13 @@ const ambo = function(poly){
 
   // helper func to insure unique names of midpoints
   const midName = function(v1, v2) { 
-    if (v1<v2) { return v1+"_"+v2; } else { return v2+"_"+v1; } };
+    if (v1<v2) { 
+      return v1+"_"+v2; 
+    } 
+    else { 
+      return v2+"_"+v1; 
+    } 
+  };
 
   const flag = new polyflag();
 
@@ -1253,15 +1221,15 @@ const propellor = function(poly) {
 // geometric reflection through origin
 const reflect = function(poly) {
   let i;
-  let asc, end;
-  let asc1, end1;
   console.log(`Taking reflection of ${poly.name}...`);
-  for (i = 0, end = poly.xyz.length-1, asc = 0 <= end; asc ? i <= end : i >= end; asc ? i++ : i--) {
+  // reflect each point through origin
+  for (i = 0; i <= poly.xyz.length-1; i++) {
      poly.xyz[i] = mult(-1, poly.xyz[i]);
-  }         // reflect each point through origin
-  for (i = 0, end1 = poly.face.length-1, asc1 = 0 <= end1; asc1 ? i <= end1 : i >= end1; asc1 ? i++ : i--) {
+  }
+  // repair clockwise-ness of faces
+  for (i = 0; i <= poly.face.length-1; i++) {
      poly.face[i] = poly.face[i].reverse();
-  }       // repair clockwise-ness of faces!
+  }
   poly.name = `r${poly.name}`;
   return poly;
 };
@@ -1279,14 +1247,12 @@ const reflect = function(poly) {
 //
 const dual = function(poly) {
   let f, i, v1, v2;
-  let asc, end;
-  let asc1, end1;
   console.log(`Taking dual of ${poly.name}...`);
 
   const flag = new polyflag();
 
   const face = []; // make table of face as fn of edge
-  for (i = 0, end = poly.xyz.length-1, asc = 0 <= end; asc ? i <= end : i >= end; asc ? i++ : i--) {
+  for (i = 0; i <= poly.xyz.length-1; i++) {
     face[i] = {};
   } // create empty associative table
 
@@ -1302,7 +1268,7 @@ const dual = function(poly) {
   } // current becomes previous
 
   const centers = poly.centers();
-  for (i = 0, end1 = poly.face.length-1, asc1 = 0 <= end1; asc1 ? i <= end1 : i >= end1; asc1 ? i++ : i--) {
+  for (i = 0; i <= poly.face.length-1; i++) {
     flag.newV(`${i}`,centers[i]);
   }
 
@@ -1320,7 +1286,7 @@ const dual = function(poly) {
   // match F index ordering to V index ordering on dual
   const sortF = [];
   for (f of dpoly.face) {
-    const k = intersect(poly.face[f[0]],poly.face[f[1]],poly.face[f[2]]);
+    const k = intersect(poly.face[f[0]], poly.face[f[1]], poly.face[f[2]]);
     sortF[k] = f;
   }
   dpoly.face = sortF;
@@ -1723,14 +1689,6 @@ const stellaN = function(poly){
 //
 // Copyright 2019, Anselm Levskaya
 // Released under the MIT License
-/*
- * decaffeinate suggestions:
- * DS102: Remove unnecessary code created because of implicit returns
- * DS201: Simplify complex destructure assignments
- * DS202: Simplify dynamic range loops
- * DS205: Consider reworking code to avoid use of IIFEs
- * Full docs: https://github.com/decaffeinate/decaffeinate/blob/master/docs/suggestions.md
- */
 
 
 //===================================================================================================
@@ -1769,29 +1727,24 @@ const tangentify = function(xyzs, edges) {
 
 // recenters entire polyhedron such that center of mass is at origin
 const recenter = function(xyzs, edges) {
-  const edgecenters = ((() => {
-    const result = [];
-    for (let [a,b] of edges) {
-      result.push(tangentPoint(xyzs[a], xyzs[b]));
-    }
-    return result;
-  })()); //centers of edges
-  let polycenter = [0,0,0];
+  //centers of edges
+  const edgecenters = edges.map(([a, b])=>tangentPoint(xyzs[a], xyzs[b]));
+  let polycenter = [0, 0, 0];
   // sum centers to find center of gravity
   for (let v of edgecenters) { 
     polycenter = add(polycenter, v);
   }
   polycenter = mult(1/edges.length, polycenter);
   // subtract off any deviation from center
-  return _.map(xyzs, x=> sub(x, polycenter));
+  return _.map(xyzs, x=>sub(x, polycenter));
 };
 
 // rescales maximum radius of polyhedron to 1
 const rescale = function(xyzs) {
-  const polycenter = [0,0,0];
+  const polycenter = [0, 0, 0];
   const maxExtent = _.max(_.map(xyzs, x=>mag(x)));
   const s = 1 / maxExtent;
-  return _.map(xyzs, x=>[s*x[0],s*x[1],s*x[2]]);
+  return _.map(xyzs, x=>[s*x[0], s*x[1], s*x[2]]);
 };
 
 // adjusts vertices in each face to improve its planarity
@@ -1800,20 +1753,15 @@ const planarize = function(xyzs, faces) {
   const STABILITY_FACTOR = 0.1; // Hack to improve convergence
   const newVs = copyVecArray(xyzs); // copy vertices
   for (var f of faces) {
-    const coords = ((() => {
-      const result = [];
-      for (v of f) {         
-        result.push(xyzs[v]);
-      }
-      return result;
-    })());
+    const coords = f.map(v=>xyzs[v])
     let n = normal(coords); // find avg of normals for each vertex triplet
     const c = calcCentroid(coords); // find planar centroid
-    if (dot(n,c) < 0) { // correct sign if needed
-      n = mult(-1.0,n);
+    if (dot(n, c) < 0) { // correct sign if needed
+      n = mult(-1.0, n);
     }
     for (v of f) {  // project (vertex - centroid) onto normal, subtract off this component
-      newVs[v] = add(newVs[v], mult(dot(mult(STABILITY_FACTOR, n), sub(c, xyzs[v])), n) );
+      newVs[v] = add(newVs[v], 
+                     mult(dot(mult(STABILITY_FACTOR, n), sub(c, xyzs[v])), n));
     }
   }
   return newVs;
@@ -1821,22 +1769,22 @@ const planarize = function(xyzs, faces) {
 
 // combines above three constraint adjustments in iterative cycle
 const canonicalize = function(poly, Niter) {
-  if (!Niter) { Niter = 1; }
+  if (!Niter) { 
+    Niter = 1;
+  }
   console.log(`Canonicalizing ${poly.name}...`);
   const faces = poly.face;
   const edges = poly.edges();
   let newVs = poly.xyz;
-  let maxChange=1.0; // convergence tracker
-  for (let i = 0, end = Niter, asc = 0 <= end; asc ? i <= end : i >= end; asc ? i++ : i--) {
+  let maxChange = 1.0; // convergence tracker
+  for (let i = 0; i <= Niter; i++) {
     const oldVs = copyVecArray(newVs); //copy vertices
     newVs = tangentify(newVs, edges);
     newVs = recenter(newVs, edges);
     newVs = planarize(newVs, faces);
-    maxChange = _.max(_.map(_.zip(newVs,oldVs), 
-      function(...args){ 
-        const [x,y] = args[0]; 
-        return mag(sub(x,y));  
-      }));
+    maxChange = _.max(_.map(_.zip(newVs, oldVs), 
+                            ([x, y])=>mag(sub(x, y))
+                            ));
     if (maxChange < 1e-8) {
       break;
     }
@@ -1929,11 +1877,6 @@ const adjustXYZ = function(poly, nIterations) {
 // Copyright 2019, Anselm Levskaya
 // Released under the MIT License
 //
-/*
- * decaffeinate suggestions:
- * DS102: Remove unnecessary code created because of implicit returns
- * Full docs: https://github.com/decaffeinate/decaffeinate/blob/master/docs/suggestions.md
- */
 
 // Polyhedra Functions
 //===================================================================================================
@@ -1941,6 +1884,16 @@ const adjustXYZ = function(poly, nIterations) {
 // Set of routines for transforming N-face meshes into triangular meshes, necessary for exporting
 // STL or VRML for 3D Printing.
 //
+
+function __range__(left, right, inclusive) {
+  let range = [];
+  let ascending = left < right;
+  let end = !inclusive ? right : ascending ? right + 1 : right - 1;
+  for (let i = left; ascending ? i < end : i > end; ascending ? i++ : i--) {
+    range.push(i);
+  }
+  return range;
+}
 
 // Ear-based triangulation of 2d faces, takes array of 2d coords in the face ordering
 // Returns indices of the new diagonal lines to cut.
@@ -1956,12 +1909,12 @@ const getDiagonals = function(verts){
   let facelen = verts.length;
 
   const XOR = (x, y) => (x || y) && !(x && y);
-  const Area2     = (Va,Vb,Vc)   => ((Vb[0]-Va[0])*(Vc[1]-Va[1])) - ((Vc[0]-Va[0])*(Vb[1]-Va[1]));
-  const Left      = (Va, Vb, Vc) => Area2(Va, Vb, Vc) > 0;
-  const LeftOn    = (Va, Vb, Vc) => Area2(Va, Vb, Vc) >= 0;
+  const Area2 = (Va,Vb,Vc)  => ((Vb[0]-Va[0])*(Vc[1]-Va[1])) - ((Vc[0]-Va[0])*(Vb[1]-Va[1]));
+  const Left = (Va, Vb, Vc) => Area2(Va, Vb, Vc) > 0;
+  const LeftOn = (Va, Vb, Vc) => Area2(Va, Vb, Vc) >= 0;
   const Collinear = (Va, Vb, Vc) => Area2(Va, Vb, Vc) === 0;
 
-  const Between   = function(Va, Vb, Vc) {
+  const Between = function(Va, Vb, Vc) {
     if (Collinear(Va, Vb, Vc)) { return false; }
     if (Va[0] !== Vb[0]) {
       return ((Va[0] <= Vc[0]) && (Vc[0] <= Vb[0])) || ((Va[0] >= Vc[0]) && (Vc[0] >= Vb[0]));
@@ -1971,7 +1924,10 @@ const getDiagonals = function(verts){
   };
 
   const IntersectProp = function(Va, Vb, Vc, Vd) {
-    if (Collinear(Va, Vb, Vc) || Collinear(Va, Vb, Vd) || Collinear(Vc, Vd, Va) || Collinear(Vc, Vd, Vb)) { return false; }
+    if (Collinear(Va, Vb, Vc) || Collinear(Va, Vb, Vd) || 
+        Collinear(Vc, Vd, Va) || Collinear(Vc, Vd, Vb)) { 
+      return false; 
+    }
     return XOR(Left(Va, Vb, Vc), Left(Va, Vb, Vd)) && XOR(Left(Vc, Vd, Va), Left(Vc, Vd, Vb));
   };
 
@@ -1979,7 +1935,8 @@ const getDiagonals = function(verts){
     if (IntersectProp(Va, Vb, Vc, Vd)) {
       return true;
     } else {
-      if (Between(Va, Vb, Vc) || Between(Va, Vb, Vd) || Between(Vc, Vd, Va) || Between(Vc, Vd, Vb)) {
+      if (Between(Va, Vb, Vc) || Between(Va, Vb, Vd) || 
+          Between(Vc, Vd, Va) || Between(Vc, Vd, Vb)) {
         return true;
       } else {
         return false;
@@ -2000,7 +1957,8 @@ const getDiagonals = function(verts){
     let c = 0;
     while (true) {
       const c1 = (c+1+facelen)%facelen;
-      if ((c !== a) && (c1 !== a) && (c !== b) && (c1 !== b) && IntersectProp(verts[a], verts[b], verts[c], verts[c1])) {
+      if ((c !== a) && (c1 !== a) && (c !== b) && (c1 !== b) && 
+          IntersectProp(verts[a], verts[b], verts[c], verts[c1])) {
         return false;
       }
       c  = (c+1+facelen)%facelen;
@@ -2041,7 +1999,7 @@ const getDiagonals = function(verts){
         ear[v3] = Diagonal(v1, v4);
         //v1.next = v3
         //v3.prev = v1
-        verts   = verts.slice(0, +v2 + 1 || undefined).concat(verts.slice(v3));
+        verts = verts.slice(0, +v2 + 1 || undefined).concat(verts.slice(v3));
         origIdx = origIdx.slice(0, +v2 + 1 || undefined).concat(origIdx.slice(v3));
         if (v0>v2) { v0 -= 1; }
         if (v1>v2) { v1 -= 1; }
@@ -2057,12 +2015,11 @@ const getDiagonals = function(verts){
     }
   }
 
-  //return diagonals
   return diagonals;
 };
 
 // equates triplets of numbers if they can be rotated into identity
-const triEq = function(tri1,tri2){
+const triEq = function(tri1, tri2){
     if (((tri1[0] === tri2[0]) && (tri1[1] === tri2[1]) && (tri1[2] === tri2[2]))
     ||  ((tri1[0] === tri2[1]) && (tri1[1] === tri2[2]) && (tri1[2] === tri2[0]))
     ||  ((tri1[0] === tri2[2]) && (tri1[1] === tri2[0]) && (tri1[2] === tri2[1]))) {
@@ -2079,7 +2036,8 @@ const diagsToTris = function(f,diags){
   const edges = [];
   const redges = [];
   // get edges from faces as assoc arrays
-  for (let [v1,v2] of (__range__(0, f.length-1, true).map((i) => [i,(i+1)%f.length]))) {
+  for (let [v1, v2] of 
+       (__range__(0, f.length-1, true).map((i) => [i,(i+1)%f.length]))) {
     edges[v1]  = [v2];
     redges[v2] = [v1];
   }
@@ -2152,16 +2110,7 @@ const triangulate = function(poly, colors){
   newpoly.name = poly.name; // don't change the name for export
   return newpoly;
 };
-
-function __range__(left, right, inclusive) {
-  let range = [];
-  let ascending = left < right;
-  let end = !inclusive ? right : ascending ? right + 1 : right - 1;
-  for (let i = left; ascending ? i < end : i > end; ascending ? i++ : i--) {
-    range.push(i);
-  }
-  return range;
-}// Polyhédronisme
+// Polyhédronisme
 //===================================================================================================
 //
 // A toy for constructing and manipulating polyhedra and other meshes
@@ -2543,7 +2492,6 @@ const updateStats = function() {
 //===================================================================================================
 
 $( function() { //wait for page to load
-
   init(); //init canvas
 
   const urlParams = parseurl(); //see if recipe is spec'd in URL
@@ -2611,7 +2559,10 @@ $( function() { //wait for page to load
     LastMouseX = e.clientX-$(this).offset().left;
     LastMouseY = e.clientY-($(this).offset().top-$(window).scrollTop());
     // calculate inverse projection of point to sphere
-    const tmpvec=invperspT(LastMouseX,LastMouseY,_2d_x_offset,_2d_y_offset,persp_z_max,persp_z_min,persp_ratio,perspective_scale);
+    const tmpvec = invperspT(LastMouseX, LastMouseY, 
+                             _2d_x_offset, _2d_y_offset, 
+                             persp_z_max, persp_z_min, 
+                             persp_ratio, perspective_scale);
     // quick NaN check
     if ((tmpvec[0]*tmpvec[1]*tmpvec[2]*0) === 0) {
       LastSphVec = tmpvec;
@@ -2652,7 +2603,7 @@ $( function() { //wait for page to load
     PaintMode = "stroke";
     drawShape();
   });
-  
+
   $("#fillonly").click(function(e) {
     PaintMode = "fill";
     drawShape();

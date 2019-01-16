@@ -9,14 +9,6 @@
 //
 // Copyright 2019, Anselm Levskaya
 // Released under the MIT License
-/*
- * decaffeinate suggestions:
- * DS101: Remove unnecessary use of Array.from
- * DS102: Remove unnecessary code created because of implicit returns
- * DS202: Simplify dynamic range loops
- * Full docs: https://github.com/decaffeinate/decaffeinate/blob/master/docs/suggestions.md
- */
-
 
 //===================================================================================================
 // Polyhedron Flagset Construct
@@ -34,8 +26,8 @@
 //
 class polyflag {
   constructor() {
-    this.flags= new Object(); // flags[face][vertex] = next vertex of flag; symbolic triples
-    this.verts= new Object(); // XYZ coordinates
+    this.flags = new Object(); // flags[face][vertex] = next vertex of flag; symbolic triples
+    this.verts = new Object(); // XYZ coordinates
     this.xyzs = new Object(); // [symbolic names] holds vertex index
   }
 
@@ -43,7 +35,7 @@ class polyflag {
   newV(name, xyz) {
     if (this.verts[name] === undefined) {
       this.verts[name] = 0;
-      return this.xyzs[name] = xyz;
+      this.xyzs[name] = xyz;
     }
   }
 
@@ -51,7 +43,7 @@ class polyflag {
     if (this.flags[facename] === undefined) {
       this.flags[facename] = {};
     }
-    return this.flags[facename][v1] = v2;
+    this.flags[facename][v1] = v2;
   }
 
   topoly() {
@@ -182,7 +174,13 @@ const ambo = function(poly){
 
   // helper func to insure unique names of midpoints
   const midName = function(v1, v2) { 
-    if (v1<v2) { return v1+"_"+v2; } else { return v2+"_"+v1; } };
+    if (v1<v2) { 
+      return v1+"_"+v2; 
+    } 
+    else { 
+      return v2+"_"+v1; 
+    } 
+  };
 
   const flag = new polyflag();
 
@@ -305,15 +303,15 @@ const propellor = function(poly) {
 // geometric reflection through origin
 const reflect = function(poly) {
   let i;
-  let asc, end;
-  let asc1, end1;
   console.log(`Taking reflection of ${poly.name}...`);
-  for (i = 0, end = poly.xyz.length-1, asc = 0 <= end; asc ? i <= end : i >= end; asc ? i++ : i--) {
+  // reflect each point through origin
+  for (i = 0; i <= poly.xyz.length-1; i++) {
      poly.xyz[i] = mult(-1, poly.xyz[i]);
-  }         // reflect each point through origin
-  for (i = 0, end1 = poly.face.length-1, asc1 = 0 <= end1; asc1 ? i <= end1 : i >= end1; asc1 ? i++ : i--) {
+  }
+  // repair clockwise-ness of faces
+  for (i = 0; i <= poly.face.length-1; i++) {
      poly.face[i] = poly.face[i].reverse();
-  }       // repair clockwise-ness of faces!
+  }
   poly.name = `r${poly.name}`;
   return poly;
 };
@@ -331,14 +329,12 @@ const reflect = function(poly) {
 //
 const dual = function(poly) {
   let f, i, v1, v2;
-  let asc, end;
-  let asc1, end1;
   console.log(`Taking dual of ${poly.name}...`);
 
   const flag = new polyflag();
 
   const face = []; // make table of face as fn of edge
-  for (i = 0, end = poly.xyz.length-1, asc = 0 <= end; asc ? i <= end : i >= end; asc ? i++ : i--) {
+  for (i = 0; i <= poly.xyz.length-1; i++) {
     face[i] = {};
   } // create empty associative table
 
@@ -354,7 +350,7 @@ const dual = function(poly) {
   } // current becomes previous
 
   const centers = poly.centers();
-  for (i = 0, end1 = poly.face.length-1, asc1 = 0 <= end1; asc1 ? i <= end1 : i >= end1; asc1 ? i++ : i--) {
+  for (i = 0; i <= poly.face.length-1; i++) {
     flag.newV(`${i}`,centers[i]);
   }
 
@@ -372,7 +368,7 @@ const dual = function(poly) {
   // match F index ordering to V index ordering on dual
   const sortF = [];
   for (f of dpoly.face) {
-    const k = intersect(poly.face[f[0]],poly.face[f[1]],poly.face[f[2]]);
+    const k = intersect(poly.face[f[0]], poly.face[f[1]], poly.face[f[2]]);
     sortF[k] = f;
   }
   dpoly.face = sortF;

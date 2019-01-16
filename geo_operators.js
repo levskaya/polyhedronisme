@@ -9,14 +9,6 @@
 //
 // Copyright 2019, Anselm Levskaya
 // Released under the MIT License
-/*
- * decaffeinate suggestions:
- * DS102: Remove unnecessary code created because of implicit returns
- * DS201: Simplify complex destructure assignments
- * DS202: Simplify dynamic range loops
- * DS205: Consider reworking code to avoid use of IIFEs
- * Full docs: https://github.com/decaffeinate/decaffeinate/blob/master/docs/suggestions.md
- */
 
 
 //===================================================================================================
@@ -55,29 +47,24 @@ const tangentify = function(xyzs, edges) {
 
 // recenters entire polyhedron such that center of mass is at origin
 const recenter = function(xyzs, edges) {
-  const edgecenters = ((() => {
-    const result = [];
-    for (let [a,b] of edges) {
-      result.push(tangentPoint(xyzs[a], xyzs[b]));
-    }
-    return result;
-  })()); //centers of edges
-  let polycenter = [0,0,0];
+  //centers of edges
+  const edgecenters = edges.map(([a, b])=>tangentPoint(xyzs[a], xyzs[b]));
+  let polycenter = [0, 0, 0];
   // sum centers to find center of gravity
   for (let v of edgecenters) { 
     polycenter = add(polycenter, v);
   }
   polycenter = mult(1/edges.length, polycenter);
   // subtract off any deviation from center
-  return _.map(xyzs, x=> sub(x, polycenter));
+  return _.map(xyzs, x=>sub(x, polycenter));
 };
 
 // rescales maximum radius of polyhedron to 1
 const rescale = function(xyzs) {
-  const polycenter = [0,0,0];
+  const polycenter = [0, 0, 0];
   const maxExtent = _.max(_.map(xyzs, x=>mag(x)));
   const s = 1 / maxExtent;
-  return _.map(xyzs, x=>[s*x[0],s*x[1],s*x[2]]);
+  return _.map(xyzs, x=>[s*x[0], s*x[1], s*x[2]]);
 };
 
 // adjusts vertices in each face to improve its planarity
@@ -86,20 +73,15 @@ const planarize = function(xyzs, faces) {
   const STABILITY_FACTOR = 0.1; // Hack to improve convergence
   const newVs = copyVecArray(xyzs); // copy vertices
   for (var f of faces) {
-    const coords = ((() => {
-      const result = [];
-      for (v of f) {         
-        result.push(xyzs[v]);
-      }
-      return result;
-    })());
+    const coords = f.map(v=>xyzs[v])
     let n = normal(coords); // find avg of normals for each vertex triplet
     const c = calcCentroid(coords); // find planar centroid
-    if (dot(n,c) < 0) { // correct sign if needed
-      n = mult(-1.0,n);
+    if (dot(n, c) < 0) { // correct sign if needed
+      n = mult(-1.0, n);
     }
     for (v of f) {  // project (vertex - centroid) onto normal, subtract off this component
-      newVs[v] = add(newVs[v], mult(dot(mult(STABILITY_FACTOR, n), sub(c, xyzs[v])), n) );
+      newVs[v] = add(newVs[v], 
+                     mult(dot(mult(STABILITY_FACTOR, n), sub(c, xyzs[v])), n));
     }
   }
   return newVs;
@@ -107,22 +89,22 @@ const planarize = function(xyzs, faces) {
 
 // combines above three constraint adjustments in iterative cycle
 const canonicalize = function(poly, Niter) {
-  if (!Niter) { Niter = 1; }
+  if (!Niter) { 
+    Niter = 1;
+  }
   console.log(`Canonicalizing ${poly.name}...`);
   const faces = poly.face;
   const edges = poly.edges();
   let newVs = poly.xyz;
-  let maxChange=1.0; // convergence tracker
-  for (let i = 0, end = Niter, asc = 0 <= end; asc ? i <= end : i >= end; asc ? i++ : i--) {
+  let maxChange = 1.0; // convergence tracker
+  for (let i = 0; i <= Niter; i++) {
     const oldVs = copyVecArray(newVs); //copy vertices
     newVs = tangentify(newVs, edges);
     newVs = recenter(newVs, edges);
     newVs = planarize(newVs, faces);
-    maxChange = _.max(_.map(_.zip(newVs,oldVs), 
-      function(...args){ 
-        const [x,y] = args[0]; 
-        return mag(sub(x,y));  
-      }));
+    maxChange = _.max(_.map(_.zip(newVs, oldVs), 
+                            ([x, y])=>mag(sub(x, y))
+                            ));
     if (maxChange < 1e-8) {
       break;
     }

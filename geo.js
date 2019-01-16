@@ -14,10 +14,11 @@
 // Math / Vector / Matrix Functions
 //===================================================================================================
 
-// Math is primal, people.
 // import math functions to local namespace
-const { random, round, floor, sqrt, sin, cos, tan, asin, acos, atan, abs,
-        PI, LN10, pow, log
+const { random, round, floor, sqrt, 
+        sin, cos, tan, asin, acos, atan, 
+        abs, pow, log,
+        PI, LN10
       } = Math;
 const log10 = x=> log(x)/LN10;
 
@@ -47,7 +48,7 @@ const randomchoice = function(array){
 
 // 3d scalar multiplication
 const mult = (c, vec) => 
-  [c*vec[0],c*vec[1],c*vec[2]];
+  [c*vec[0], c*vec[1], c*vec[2]];
 
 // 3d element-wise multiply
 const _mult = (vec1, vec2) => 
@@ -72,19 +73,19 @@ const cross = (d1, d2) =>
    (d1[0]*d2[1]) - (d1[1]*d2[0]) ];
 
 // vector norm
-const mag = vec => sqrt(dot(vec,vec));
+const mag = vec => sqrt(dot(vec, vec));
 
 // vector magnitude squared
-const mag2 = vec => dot(vec,vec);
+const mag2 = vec => dot(vec, vec);
 
 // makes vector unit length
-const unit = vec => mult( 1/sqrt(mag2(vec)), vec);
+const unit = vec => mult(1 / sqrt(mag2(vec)), vec);
 
 // midpoint between vec1, vec2
-const midpoint = (vec1, vec2) => mult(1/2.0,add(vec1,vec2));
+const midpoint = (vec1, vec2) => mult(1/2.0, add(vec1, vec2));
 
 // parametric segment between vec1, vec2 w. parameter t ranging from 0 to 1
-const tween = (vec1,vec2,t) => 
+const tween = (vec1, vec2, t) => 
   [((1-t)*vec1[0]) + (t*vec2[0]), 
    ((1-t)*vec1[1]) + (t*vec2[1]), 
    ((1-t)*vec1[2]) + (t*vec2[2])];
@@ -151,7 +152,7 @@ const intersect = function(set1, set2, set3) {
       }
     }
   }
-  return null; // oh noes!
+  return null; // empty intersection
 };
 
 // calculate centroid of array of vertices
@@ -183,7 +184,7 @@ const convexarea = function(xyzs) {
     let [v1,v2] = xyzs.slice(0, 2);
     for (let v3 of xyzs.slice(2)) {
       //area of sub-triangle
-      area += mag( cross(sub(v2,v1), sub(v3,v1)) );
+      area += mag( cross(sub(v2, v1), sub(v3, v1)) );
       v2 = v3;
     } // shift over one
     return area;
@@ -196,11 +197,11 @@ const faceSignature = function(xyzs) {
     let [v1,v2] = xyzs.slice(0, 2);
     for (let v3 of xyzs.slice(2)) {
       //area of sub-triangle
-      cross_array.push(mag( cross(sub(v2,v1), sub(v3,v1)) ));
+      cross_array.push(mag( cross(sub(v2, v1), sub(v3, v1)) ));
       v2 = v3;
     } // shift over one
 
-    cross_array.sort((a,b)=> a-b); //sort for uniqueness
+    cross_array.sort((a,b)=>a-b); //sort for uniqueness
 
     let sig=""; // turn it into a string
     for (x of cross_array) { sig+=sigfigs(x,2); }
