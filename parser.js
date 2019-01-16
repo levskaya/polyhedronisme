@@ -53,8 +53,9 @@ const basemap = {
   "D": dodecahedron,
   "P": prism,     //takes integer arg
   "A": antiprism, //takes integer arg
-  "Y": pyramid   //takes integer arg
-  };
+  "Y": pyramid,   //takes integer arg
+  "J": johnson,   //takes integer arg
+};
 
 const opmap = {
   "d": dual,
