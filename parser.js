@@ -73,7 +73,8 @@ const opmap = {
   "z": triangulate,
   "K": canonicalXYZ,
   "C": canonicalize,
-  "A": adjustXYZ
+  "A": adjustXYZ,
+  "u": trisub
   };
 
 //list of basic equivalences, easier to replace before parsing

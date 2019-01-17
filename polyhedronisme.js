@@ -6522,6 +6522,90 @@ const whirl = function(poly, n) {
 };
   
 
+// Triangular Subdivision Operator
+// ----------------------------------------------------------------------------------------------
+// limited version of the Goldberg-Coxeter u_n operator for triangular meshes
+// We subdivide manually here, instead of using the usual flag machinery.
+const trisub = function(poly, n) {
+  console.log(`Taking trisub of ${poly.name}...`);
+  if (!n) { n = 2; }
+  
+  // No-Op for non-triangular meshes.
+  for (let fn = 0; fn < poly.face.length; fn++) {
+    if(poly.face[fn].length != 3){
+      return poly;
+    }
+  }
+
+  // Calculate redundant set of new vertices for subdivided mesh.
+  let newVs=[];
+  let vmap={};
+  let pos = 0;
+  for (let fn = 0; fn < poly.face.length; fn++) {
+    const f = poly.face[fn];
+    let [i1, i2, i3] = Array.from(f.slice(-3));
+    v1 = poly.xyz[i1];
+    v2 = poly.xyz[i2];
+    v3 = poly.xyz[i3];
+    v21 = sub(v2, v1);
+    v31 = sub(v3, v1);
+    for (let i = 0; i <= n; i++) {
+      for (let j = 0; j+i <= n; j++) {
+        let v = add(add(v1, mult(i * 1.0 / n, v21)), mult(j * 1.0 / n, v31));
+        vmap[`v${fn}-${i}-${j}`] = pos++;
+        newVs.push(v);
+      }
+    }
+  }
+
+  // The above vertices are redundant along original edges, 
+  // we need to build an index map into a uniqueified list of them.
+  // We identify vertices that are closer than a certain epsilon distance.
+  const epsilon_close = 1.0e-8;
+  let uniqVs = [];
+  let newpos = 0;
+  let uniqmap = {};
+  for (const [i, v] of newVs.entries()) {
+    if (i in uniqmap) { continue; } // already mapped
+    uniqmap[i] = newpos;
+    uniqVs.push(v);
+    for(let j = i+1; j < newVs.length; j++) {
+      w = newVs[j];
+      if (mag(sub(v, w)) < epsilon_close) {
+        uniqmap[j] = newpos;
+      }
+    }
+    newpos++;
+  }
+
+  let faces = [];
+  for (fn = 0; fn < poly.face.length; fn++) {
+    for (let i = 0; i < n; i++) {
+      for (let j = 0; j+i < n; j++) {
+        faces.push([uniqmap[vmap[`v${fn}-${i}-${j}`]], 
+                    uniqmap[vmap[`v${fn}-${i+1}-${j}`]], 
+                    uniqmap[vmap[`v${fn}-${i}-${j+1}`]]])
+      }
+    }
+    for (let i = 1; i < n; i++) {
+      for (let j = 0; j+i < n; j++) {
+        faces.push([uniqmap[vmap[`v${fn}-${i}-${j}`]], 
+                    uniqmap[vmap[`v${fn}-${i}-${j+1}`]], 
+                    uniqmap[vmap[`v${fn}-${i-1}-${j+1}`]]])
+      }
+    }
+  }
+
+  // Create new polygon out of faces and unique vertices.
+  const newpoly = new polyhedron();
+  newpoly.name = `u${n}${poly.name}`;
+  newpoly.face = faces;
+  newpoly.xyz = uniqVs; 
+
+  return newpoly;
+};
+
+
 // insetN
 // ------------------------------------------------------------------------------------------
 const insetN = function(poly, n, inset_dist, popout_dist){
@@ -7323,7 +7407,8 @@ const opmap = {
   "z": triangulate,
   "K": canonicalXYZ,
   "C": canonicalize,
-  "A": adjustXYZ
+  "A": adjustXYZ,
+  "u": trisub
   };
 
 //list of basic equivalences, easier to replace before parsing
