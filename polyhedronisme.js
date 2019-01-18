@@ -24,8 +24,8 @@ const log10 = x=> log(x)/LN10;
 
 //returns string w. nsigs digits ignoring magnitude
 const sigfigs = function(N, nsigs){
-  const normed = pow(10, log10(N)-floor(log10(N)));
-  return `${round(normed*(nsigs-1))}`;
+  const normed = pow(10, log10(N) - floor(log10(N)));
+  return `${round(normed * pow(10, (nsigs-1)))}`;
 };
 
 // general recursive deep-copy function
@@ -159,69 +159,73 @@ const intersect = function(set1, set2, set3) {
 const calcCentroid = function(xyzs) {
   // running sum of vertex coords
   let centroidV = [0,0,0];
-    for (let v of xyzs) {
-      centroidV = add(centroidV, v);
-    }
-    return mult(1 / xyzs.length, centroidV );
-  };
+  for (let v of xyzs) {
+    centroidV = add(centroidV, v);
+  }
+  return mult(1 / xyzs.length, centroidV );
+};
 
 // calculate average normal vector for array of vertices
 const normal = function(xyzs) {
   // running sum of normal vectors
   let normalV = [0,0,0]; 
-    let [v1,v2] = xyzs.slice(-2);
-    for (let v3 of xyzs) {
-      normalV = add(normalV, orthogonal(v1, v2, v3));
-      [v1,v2] = [v2,v3];
-    } // shift over one
-    return unit(normalV);
-  };
+  let [v1, v2] = xyzs.slice(-2);
+  for (let v3 of xyzs) {
+    normalV = add(normalV, orthogonal(v1, v2, v3));
+    [v1, v2] = [v2, v3];
+  } // shift over one
+  return unit(normalV);
+};
 
 // calculates area planar face by summing over subtriangle areas
-//  _Assumes_ Convexity!
-const convexarea = function(xyzs) {
-    let area = 0.0;
-    let [v1,v2] = xyzs.slice(0, 2);
-    for (let v3 of xyzs.slice(2)) {
-      //area of sub-triangle
-      area += mag( cross(sub(v2, v1), sub(v3, v1)) );
-      v2 = v3;
-    } // shift over one
-    return area;
-  };
+// this assumes planarity.
+const planararea = function(xyzs) {
+  let area = 0.0;
+  let vsum = [0.,0.,0.];
+  let [v1, v2] = xyzs.slice(-2);
+  for (let v3 of xyzs) {
+    vsum = add(vsum, cross(v1, v2));
+    [v1, v2] = [v2, v3];
+  }
+  area = abs(dot(normal(xyzs), vsum) / 2.0);
+  return area;
+};
 
-//returns array of ~3sigfig angle
-const faceSignature = function(xyzs) {
-    let x;
-    const cross_array = [];
-    let [v1,v2] = xyzs.slice(0, 2);
-    for (let v3 of xyzs.slice(2)) {
-      //area of sub-triangle
-      cross_array.push(mag( cross(sub(v2, v1), sub(v3, v1)) ));
-      v2 = v3;
-    } // shift over one
+// congruence signature for assigning same colors to congruent faces
+const faceSignature = function(xyzs, sensitivity) {
+  let x;
+  const cross_array = [];
+  let [v1, v2] = xyzs.slice(-2);
+  for (let v3 of xyzs) {
+    // accumulate inner angles
+    cross_array.push(mag( cross(sub(v1, v2), sub(v3, v2)) ));
+    [v1, v2] = [v2, v3];
+  }
+  // sort angles to create unique sequence
+  cross_array.sort((a,b)=>a-b);
 
-    cross_array.sort((a,b)=>a-b); //sort for uniqueness
+  // render sorted angles as quantized digit strings
+  // this is the congruence signature
+  let sig = "";
+  for (x of cross_array) { sig+=sigfigs(x, sensitivity); }
+  // hack to make reflected faces share the same signature
+  for (x of cross_array.reverse()) { sig+=sigfigs(x, sensitivity); }
 
-    let sig=""; // turn it into a string
-    for (x of cross_array) { sig+=sigfigs(x,2); }
-    // hack to make reflected faces share the same signature
-    for (x of cross_array.reverse()) { sig+=sigfigs(x,2); }
-    return sig;
-  };
+  return sig;
+};
 
 // projects 3d polyhedral face to 2d polygon
 // for triangulation and face display
 const project2dface = function(verts){
   let tmpverts = clone(verts);
-  const v0=verts[0];
-  tmpverts = _.map(tmpverts, x=> x-v0);
+  const v0 = verts[0];
+  tmpverts = _.map(tmpverts, x=>x-v0);
 
   const n = normal(verts);
   const c = unit(calcCentroid(verts));
   const p = cross(n,c);
 
-  return tmpverts.map((v) => [dot(n,v),dot(p,v)]);
+  return tmpverts.map((v) => [dot(n, v), dot(p, v)]);
 };
 
 // copies array of arrays by value (deep copy)
@@ -239,8 +243,7 @@ const mv3 = (mat,vec) =>
   //example matrix: [[a,b,c],[d,e,f],[g,h,i]]
   [(mat[0][0]*vec[0])+(mat[0][1]*vec[1])+(mat[0][2]*vec[2]),
    (mat[1][0]*vec[0])+(mat[1][1]*vec[1])+(mat[1][2]*vec[2]),
-   (mat[2][0]*vec[0])+(mat[2][1]*vec[1])+(mat[2][2]*vec[2])]
-;
+   (mat[2][0]*vec[0])+(mat[2][1]*vec[1])+(mat[2][2]*vec[2])];
 
 // 3d matrix matrix multiply
 const mm3 = (A,B) =>
@@ -252,30 +255,28 @@ const mm3 = (A,B) =>
    (A[1][0]*B[0][2])+(A[1][1]*B[1][2])+(A[1][2]*B[2][2])],
   [(A[2][0]*B[0][0])+(A[2][1]*B[1][0])+(A[2][2]*B[2][0]),
    (A[2][0]*B[0][1])+(A[2][1]*B[1][1])+(A[2][2]*B[2][1]),
-   (A[2][0]*B[0][2])+(A[2][1]*B[1][2])+(A[2][2]*B[2][2])]]
-;
+   (A[2][0]*B[0][2])+(A[2][1]*B[1][2])+(A[2][2]*B[2][2])]];
 
-const eye3 = [[1,0,0],[0,1,0],[0,0,1]];
+const eye3 = [[1,0,0], [0,1,0], [0,0,1]];
 
 // Rotation Matrix
 // Totally ghetto, not at all in agreement with euler angles!
 // use quaternions instead
 const rotm = function(phi,theta,psi){
-    const xy_mat = [
-      [cos(phi), -1.0*sin(phi),  0.0],
-      [sin(phi),      cos(phi),  0.0],
-      [0.0,                0.0,  1.0]];
-    const yz_mat = [
-      [cos(theta), 0, -1.0*sin(theta)],
-      [         0, 1,               0],
-      [sin(theta), 0,      cos(theta)]];
-    const xz_mat = [
-      [1.0,        0,             0],
-      [  0, cos(psi), -1.0*sin(psi)],
-      [  0, sin(psi),      cos(psi)]];
-
-    return mm3(xz_mat, mm3(yz_mat,xy_mat));
-  };
+  const xy_mat = [
+    [cos(phi), -1.0*sin(phi),  0.0],
+    [sin(phi),      cos(phi),  0.0],
+    [0.0,                0.0,  1.0]];
+  const yz_mat = [
+    [cos(theta), 0, -1.0*sin(theta)],
+    [         0, 1,               0],
+    [sin(theta), 0,      cos(theta)]];
+  const xz_mat = [
+    [1.0,        0,             0],
+    [  0, cos(psi), -1.0*sin(psi)],
+    [  0, sin(psi),      cos(psi)]];
+  return mm3(xz_mat, mm3(yz_mat,xy_mat));
+};
 
 
 // Rotation Matrix defined by rotation about (unit) axis [x,y,z] for angle radians
@@ -287,12 +288,11 @@ const vec_rotm = function(angle, x, y, z) {
   const sinA2 = sinA*sinA;
   const length = mag([x,y,z]);
   if (length === 0) {
-    [x,y,z] = [0,0,1];
+    [x, y, z] = [0, 0, 1];
   }
   if (length !== 1) {
-    [x,y,z] = unit([x,y,z]);
+    [x, y, z] = unit([x, y, z]);
   }
-
   if ((x === 1) && (y === 0) && (z === 0)) {
       m = [[1,              0,           0],
           [0,    1-(2*sinA2), 2*sinA*cosA],
@@ -314,7 +314,6 @@ const vec_rotm = function(angle, x, y, z) {
         [2*((y*x*sinA2)-(z*sinA*cosA)), 1-(2*(z2+x2)*sinA2), 2*((y*z*sinA2)+(x*sinA*cosA))],
         [2*((z*x*sinA2)+(y*sinA*cosA)), 2*((z*y*sinA2)-(x*sinA*cosA)), 1-(2*(x2+y2)*sinA2)]];
     }
-
   return m;
 };
 
@@ -416,6 +415,28 @@ const vertColors = function(poly) {
 
 const rwb_palette  = ["#ff7777","#dddddd","#889999","#fff0e5","#aa3333","#ff0000","#ffffff","#aaaaaa"];
 
+function hsl2rgb(h, s, l) {
+  let r, g, b;
+  if (s == 0) {
+    r = g = b = l; // achromatic
+  } else {
+    const hue2rgb = function(p, q, t) {
+      if (t < 0) t += 1;
+      if (t > 1) t -= 1;
+      if (t < 1/6) return p + (q - p) * 6 * t;
+      if (t < 1/2) return q;
+      if (t < 2/3) return p + (q - p) * (2/3 - t) * 6;
+      return p;
+    }
+    let q = l < 0.5 ? l * (1 + s) : l + s - l * s;
+    let p = 2 * l - q;
+    r = hue2rgb(p, q, h + 1/3);
+    g = hue2rgb(p, q, h);
+    b = hue2rgb(p, q, h - 1/3);
+  }
+  return [r, g, b];
+}
+
 // converts #xxxxxx / #xxx format into list of [r,g,b] floats
 const hextofloats = function(hexstr){
   let rgb;
@@ -423,20 +444,37 @@ const hextofloats = function(hexstr){
     hexstr = hexstr.slice(1);
   }
   if (hexstr.length === 3) {
-    rgb = hexstr.split('').map(       c=> parseInt(c+c, 16)/255);
+    rgb = hexstr.split('').map(c=> parseInt(c+c, 16)/255);
   } else {
-    rgb = hexstr.match(/.{2}/g).map(  c=> parseInt(c, 16)/255);
+    rgb = hexstr.match(/.{2}/g).map(c=> parseInt(c, 16)/255);
   }
   return rgb;
 };
 
+const floatstohex = function(rgb){
+  let r_hex = Number(parseInt(255 * rgb[0], 10)).toString(16);
+  let g_hex = Number(parseInt(255 * rgb[1], 10)).toString(16);
+  let b_hex = Number(parseInt(255 * rgb[2], 10)).toString(16);
+  return "#" + r_hex + g_hex + b_hex;
+}
+
+// randomize color palette
+const rndcolors = function(){
+  let newpalette=[];
+  for(let i=0; i<100; i++){
+    let h = random();
+    let s = 0.5*random() + 0.3;
+    let l = 0.5*random() + 0.45;
+    let rgb = hsl2rgb(h, s, l);
+    newpalette.push(floatstohex(rgb));
+  }
+  return newpalette;
+}
+
 let PALETTE = rwb_palette; //GLOBAL
 const palette = function(n) {
-  if (n < PALETTE.length) {
-    return hextofloats(PALETTE[n]);
-  } else {
-    return hextofloats(PALETTE[PALETTE.length-1]);
-  }
+  const k = n % PALETTE.length;
+  return hextofloats(PALETTE[k])
 };
 
 const paintPolyhedron = function(poly) {
@@ -446,12 +484,12 @@ const paintPolyhedron = function(poly) {
   const colormemory={};
 
   // memoized color assignment to faces of similar areas
-  const colorassign = function(ar, colormemory) {
-    const hash = round(100*ar);
+  const colorassign = function(hash, colormemory) {
+    //const hash = ar;
     if (hash in colormemory) {
       return colormemory[hash];
     } else {
-      const fclr = _.toArray(colormemory).length; //palette _.toArray(colormemory).length
+      const fclr = _.toArray(colormemory).length;
       colormemory[hash] = fclr;
       return fclr;
     }
@@ -460,12 +498,13 @@ const paintPolyhedron = function(poly) {
   for (var f of poly.face) {
     var clr, face_verts;
     if (COLOR_METHOD === "area") {
-      // color by face area (quick proxy for different kinds of faces) convexarea
+      // color by face planar area assuming flatness
       face_verts = f.map(v=>poly.xyz[v])
-      clr = colorassign(convexarea(face_verts), colormemory);
+      clr = colorassign(sigfigs(planararea(face_verts), COLOR_SENSITIVITY), colormemory);
     } else if (COLOR_METHOD === "signature") {
+      // color by congruence signature
       face_verts = f.map(v=>poly.xyz[v])
-      clr = colorassign(faceSignature(face_verts), colormemory);
+      clr = colorassign(faceSignature(face_verts, COLOR_SENSITIVITY), colormemory);
     } else {
       // color by face-sidedness
       clr = f.length - 3;
@@ -6110,25 +6149,25 @@ class polyflag {
 //===================================================================================================
 // Polyhedron Operators
 //===================================================================================================
-//          for each vertex of new polyhedron:
-//              call newV(Vname, xyz) with a symbolic name and coordinates
-//          for each flag of new polyhedron:
-//              call newFlag(Fname, Vname1, Vname2) with a symbolic name for the new face
-//              and the symbolic name for two vertices forming an oriented edge
-//          ORIENTATION -must- be dealt with properly to make a manifold (correct) mesh.
-//          Specifically, no edge v1->v2 can ever be crossed in the -same direction- by
-//          two different faces
-//
-//          call topoly() to assemble flags into polyhedron structure by following the orbits
-//          of the vertex mapping stored in the flagset for each new face
-//
-//          set name as appropriate
+// for each vertex of new polyhedron:
+//     call newV(Vname, xyz) with a symbolic name and coordinates
+// for each flag of new polyhedron:
+//     call newFlag(Fname, Vname1, Vname2) with a symbolic name for the new face
+//     and the symbolic name for two vertices forming an oriented edge
+// ORIENTATION -must- be dealt with properly to make a manifold (correct) mesh.
+// Specifically, no edge v1->v2 can ever be crossed in the -same direction- by
+// two different faces
+// 
+// call topoly() to assemble flags into polyhedron structure by following the orbits
+// of the vertex mapping stored in the flagset for each new face
+// 
+// set name as appropriate
 
 // Kis(N)
 // ------------------------------------------------------------------------------------------
 // Kis (abbreviated from triakis) transforms an N-sided face into an N-pyramid rooted at the
 // same base vertices.
-// only kis n-sided faces, but n==0 means kiss all.
+// only kis n-sided faces, but n==0 means kis all.
 //
 const kisN = function(poly, n, apexdist){
   let i;
@@ -6172,8 +6211,6 @@ const kisN = function(poly, n, apexdist){
 
   const newpoly = flag.topoly();
   newpoly.name = `k${n === 0 ? "" : n}${poly.name}`;
-  //newpoly.xyz = adjustXYZ(newpoly, 3)
-  //newpoly.xyz = canonicalXYZ(newpoly, 3)  # this tends to make results look like shit
   return newpoly;
 };
 
@@ -6202,7 +6239,7 @@ const ambo = function(poly){
   // For each face f in the original poly
   for (let i = 0; i < poly.face.length; i++) {
     const f = poly.face[i];
-    let [v1, v2] = Array.from(f.slice(-2));
+    let [v1, v2] = f.slice(-2);
     for (let v3 of f) {
       if (v1 < v2) { // vertices are the midpoints of all edges of original poly
         flag.newV(midName(v1,v2), midpoint(poly.xyz[v1], poly.xyz[v2]));
@@ -6213,13 +6250,12 @@ const ambo = function(poly){
       // Another flag whose face  corresponds to (the truncated) v2:
       flag.newFlag(`dual${v2}`, midName(v2,v3), midName(v1,v2));
       // shift over one
-      [v1, v2] = Array.from([v2, v3]);
+      [v1, v2] = [v2, v3];
     }
   }
 
   const newpoly = flag.topoly();
   newpoly.name = `a${poly.name}`;
-  //newpoly.xyz = adjustXYZ(newpoly, 2)
   return newpoly;
 };
 
@@ -6251,7 +6287,7 @@ const gyro = function(poly){
 
   for (i = 0; i < poly.face.length; i++) {
     f = poly.face[i];
-    let [v1, v2] = Array.from(f.slice(-2));
+    let [v1, v2] = f.slice(-2);
     for (let j = 0; j < f.length; j++) {
       v = f[j];
       const v3 = v;
@@ -6262,13 +6298,12 @@ const gyro = function(poly){
       flag.newFlag(fname, v2+"~"+v1,  `v${v2}`);
       flag.newFlag(fname, `v${v2}`,     v2+"~"+v3);
       flag.newFlag(fname, v2+"~"+v3,  `center${i}`);
-      [v1, v2] = Array.from([v2, v3]);
+      [v1, v2] = [v2, v3];
     }
   }                       // shift over one
 
   const newpoly = flag.topoly();
   newpoly.name = `g${poly.name}`;
-  //newpoly.xyz = adjustXYZ(newpoly, 3)
   return newpoly;
 };
 
@@ -6292,7 +6327,7 @@ const propellor = function(poly) {
 
   for (i = 0; i < poly.face.length; i++) {
     const f = poly.face[i];
-    let [v1, v2] = Array.from(f.slice(-2));
+    let [v1, v2] = f.slice(-2);
     for (v of f) {
       const v3 = `${v}`;
       flag.newV(v1+"~"+v2, oneThird(poly.xyz[v1], poly.xyz[v2]));  // new v in face, 1/3rd along edge
@@ -6302,13 +6337,12 @@ const propellor = function(poly) {
       flag.newFlag(fname,   v2+"~"+v1,     `v${v2}`);
       flag.newFlag(fname,      `v${v2}`,  v2+"~"+v3);
       flag.newFlag(fname,   v2+"~"+v3,  v1+"~"+v2);
-      [v1, v2] = Array.from([v2, v3]);
+      [v1, v2] = [v2, v3];
     }
-  }                       // shift over one
+  } // shift over one
 
   const newpoly = flag.topoly();
   newpoly.name = `p${poly.name}`;
-  //newpoly.xyz  = adjustXYZ(newpoly, 3)
   return newpoly;
 };
 
@@ -6477,19 +6511,21 @@ const whirl = function(poly, n) {
   
   const flag = new polyflag();
 
+  // each old vertex is a new vertex
   for (i = 0; i < poly.xyz.length; i++) {
     v = poly.xyz[i];
     flag.newV(`v${i}`, unit(v));
-  }  // each old vertex is a new vertex
+  }
 
-  const centers = poly.centers(); // new vertices around center of each face
+  // new vertices around center of each face
+  const centers = poly.centers();
   //for f,i in poly.face
   //  # Whirl: use "center"+i+"~"+v1
   //  flag.newV "center"+i+"~"+v1, unit(centers[i])
 
   for (i = 0; i < poly.face.length; i++) {
     const f = poly.face[i];
-    let [v1, v2] = Array.from(f.slice(-2));
+    let [v1, v2] = f.slice(-2);
     for (let j = 0; j < f.length; j++) {
       v = f[j];
       const v3 = v;
@@ -6502,25 +6538,74 @@ const whirl = function(poly, n) {
       flag.newV(cv1name, unit(oneThird(centers[i], v1_2))); 
       const fname = i+"f"+v1;
       // New hexagon for each original edge
-      flag.newFlag(fname, cv1name,      v1+"~"+v2);
-      flag.newFlag(fname, v1+"~"+v2,  v2+"~"+v1); //*
-      flag.newFlag(fname, v2+"~"+v1,  `v${v2}`);    //*
-      flag.newFlag(fname, `v${v2}`,     v2+"~"+v3); //*
-      flag.newFlag(fname, v2+"~"+v3,  cv2name);
-      flag.newFlag(fname, cv2name, cv1name);
+      flag.newFlag(fname, cv1name,   v1+"~"+v2);
+      flag.newFlag(fname, v1+"~"+v2, v2+"~"+v1); //*
+      flag.newFlag(fname, v2+"~"+v1, `v${v2}`);  //*
+      flag.newFlag(fname, `v${v2}`,  v2+"~"+v3); //*
+      flag.newFlag(fname, v2+"~"+v3, cv2name);
+      flag.newFlag(fname, cv2name,   cv1name);
       // New face in center of each old face      
       flag.newFlag(`c${i}`, cv1name, cv2name);
       
-      [v1, v2] = Array.from([v2, v3]);
+      [v1, v2] = [v2, v3];
     }
-  }                       // shift over one
+  } // shift over one
 
   const newpoly = flag.topoly();
   newpoly.name = `w${poly.name}`;
-  //newpoly.xyz = adjustXYZ(newpoly, 3)
   return newpoly;
 };
   
+// Quinto
+
+const quinto = function(poly){
+  console.log(`Taking quinto of ${poly.name}...`);
+
+  // helper func to insure unique names of midpoints
+  const midName = function(v1, v2) { 
+    if (v1<v2) { return v1+"_"+v2; } 
+    else       { return v2+"_"+v1; } 
+  };
+
+  const flag = new polyflag();
+
+  // For each face f in the original poly
+  for (let i = 0; i < poly.face.length; i++) {
+    const f = poly.face[i];
+    centroid = calcCentroid(f.map(idx=>poly.xyz[idx]))
+    // walk over face vertex-triplets
+    let [v1, v2] = f.slice(-2);
+    for (let v3 of f) {
+      // for each face-corner, we make two new points:
+      midpt = midpoint(poly.xyz[v1], poly.xyz[v2])
+      innerpt = midpoint(midpt, centroid)
+      flag.newV(midName(v1,v2), midpt);
+      flag.newV(`inner_${i}_` + midName(v1,v2), innerpt);
+      // and add the old corner-vertex
+      flag.newV(`${v2}`, poly.xyz[v2]);
+    
+      // pentagon for each vertex in original face
+      flag.newFlag(`f${i}_${v2}`, `inner_${i}_`+midName(v1, v2), midName(v1, v2));
+      flag.newFlag(`f${i}_${v2}`, midName(v1, v2), `${v2}`);
+      flag.newFlag(`f${i}_${v2}`, `${v2}`, midName(v2, v3));
+      flag.newFlag(`f${i}_${v2}`, midName(v2, v3), `inner_${i}_`+midName(v2, v3));
+      flag.newFlag(`f${i}_${v2}`, `inner_${i}_`+midName(v2, v3), `inner_${i}_`+midName(v1, v2));
+
+      // inner rotated face of same vertex-number as original
+      flag.newFlag(`f_in_${i}`, `inner_${i}_`+midName(v1, v2), `inner_${i}_`+midName(v2, v3));
+
+      // shift over one
+      [v1, v2] = [v2, v3];
+    }
+  }
+
+  const newpoly = flag.topoly();
+  newpoly.name = `q${poly.name}`;
+  //topolog(newpoly);
+  //console.log(newpoly);
+  return newpoly;
+};
+
 
 // Triangular Subdivision Operator
 // ----------------------------------------------------------------------------------------------
@@ -6543,7 +6628,7 @@ const trisub = function(poly, n) {
   let pos = 0;
   for (let fn = 0; fn < poly.face.length; fn++) {
     const f = poly.face[fn];
-    let [i1, i2, i3] = Array.from(f.slice(-3));
+    let [i1, i2, i3] = f.slice(-3);
     v1 = poly.xyz[i1];
     v2 = poly.xyz[i2];
     v3 = poly.xyz[i3];
@@ -6629,12 +6714,13 @@ const insetN = function(poly, n, inset_dist, popout_dist){
     f = poly.face[i];
     if ((f.length === n) || (n === 0)) {
       for (v of f) {
-        flag.newV(`f${i}v${v}`, add(tween(poly.xyz[v],centers[i],inset_dist),mult(popout_dist,normals[i])));
+        flag.newV(`f${i}v${v}`, add(tween(poly.xyz[v],centers[i],inset_dist), 
+                                    mult(popout_dist,normals[i])));
       }
     }
   }
 
-  let foundAny = false;                 // alert if don't find any
+  let foundAny = false;    // alert if don't find any
   for (i = 0; i < poly.face.length; i++) {
     f = poly.face[i];
     let v1 = `v${f[f.length-1]}`;
@@ -6662,12 +6748,11 @@ const insetN = function(poly, n, inset_dist, popout_dist){
 
   const newpoly = flag.topoly();
   newpoly.name = `n${n === 0 ? "" : n}${poly.name}`;
-  //newpoly.xyz = adjustXYZ(newpoly, 3)
-  //newpoly.xyz = canonicalXYZ(newpoly, 3)  # this tends to make results look like shit
   return newpoly;
 };
 
-// ExtrudeN
+
+// extrudeN
 // ------------------------------------------------------------------------------------------
 const extrudeN = function(poly, n){
   let f, i, v;
@@ -6721,11 +6806,9 @@ const extrudeN = function(poly, n){
 
   const newpoly = flag.topoly();
   newpoly.name = `x${n === 0 ? "" : n}${poly.name}`;
-  //console.log newpoly
-  //newpoly.xyz = adjustXYZ(newpoly, 3)
-  //newpoly.xyz = canonicalXYZ(newpoly, 3)  # this tends to make results look like shit
   return newpoly;
 };
+
 
 // hollow / skeletonize
 // ------------------------------------------------------------------------------------------
@@ -6748,17 +6831,18 @@ const hollow = function(poly, n, inset_dist, thickness){
     flag.newV(`v${i}`, p);
     flag.newV(`downv${i}`,  add(p,mult(-1*thickness,dualnormals[i])));
   }
-
-  for (i = 0; i < poly.face.length; i++) { //new inset vertex for every vert in face
+  // new inset vertex for every vert in face
+  for (i = 0; i < poly.face.length; i++) {
     //if f.length is n or n is 0
     f = poly.face[i];
     for (v of f) {
       flag.newV(`fin${i}v${v}`, tween(poly.xyz[v],centers[i],inset_dist));
-      flag.newV(`findown${i}v${v}`, add(tween(poly.xyz[v],centers[i],inset_dist),mult(-1*thickness,normals[i])));
+      flag.newV(`findown${i}v${v}`, add(tween(poly.xyz[v],centers[i],inset_dist), 
+                                        mult(-1*thickness,normals[i])));
     }
   }
 
-  //foundAny = false                 # alert if don't find any
+  //foundAny = false    # alert if we don't find any N-ary faces
   for (i = 0; i < poly.face.length; i++) {
     f = poly.face[i];
     let v1 = `v${f[f.length-1]}`;
@@ -6798,8 +6882,6 @@ const hollow = function(poly, n, inset_dist, thickness){
   const newpoly = flag.topoly();
   //newpoly.name = "h" + (if n is 0 then "" else n) + poly.name
   newpoly.name = `h${poly.name}`;
-  //newpoly.xyz = adjustXYZ(newpoly, 3)
-  //newpoly.xyz = canonicalXYZ(newpoly, 3)  # this tends to make results look like shit
   return newpoly;
 };
 
@@ -6848,15 +6930,13 @@ const stellaN = function(poly){
       flag.newFlag(`f${v12}`,     v21,       v12);
       flag.newFlag(`f${v12}`,      v12,       v1);
 
-      [v1,v2]=Array.from([v2,v3]);  // current becomes previous
-      [vert1,vert2]=Array.from([vert2,vert3]);
+      [v1, v2] = [v2, v3];  // current becomes previous
+      [vert1, vert2] = [vert2, vert3];
     }
   }
 
   const newpoly = flag.topoly();
   newpoly.name = `l${poly.name}`;
-  //newpoly.xyz = adjustXYZ(newpoly, 3)
-  //newpoly.xyz = canonicalXYZ(newpoly, 3)  # this tends to make results look like shit
   return newpoly;
 };
 // Polyhédronisme
@@ -7310,6 +7390,7 @@ const triangulate = function(poly, colors){
 const topolog = function(poly) {
   let str = "";
   for (let f of poly.face) {
+    str += `${f.length}: `
     for (let v of f) {
       str += `${v}->`;
     }
@@ -7408,7 +7489,8 @@ const opmap = {
   "K": canonicalXYZ,
   "C": canonicalize,
   "A": adjustXYZ,
-  "u": trisub
+  "u": trisub,
+  "q": quinto,
   };
 
 //list of basic equivalences, easier to replace before parsing
@@ -7478,20 +7560,22 @@ const newgeneratePoly = function(notation) {
 let ctx = {}; // for global access to canvas context
 let globPolys = {}; // constructed polyhedras
 
-const CANVAS_WIDTH  = 500; //canvas dims
-const CANVAS_HEIGHT = 400; //canvas dims
+const CANVAS_WIDTH  = 720; //canvas dims
+const CANVAS_HEIGHT = 500; //canvas dims
 let globRotM = clone(eye3);
 let globLastRotM = clone(eye3);
 let perspective_scale = 800;
 const persp_z_max = 5;
 const persp_z_min = 0;
 const persp_ratio = 0.8;
-const _2d_x_offset = CANVAS_WIDTH/2; //300
-const _2d_y_offset = CANVAS_HEIGHT/2; //140
+const _2d_x_offset = CANVAS_WIDTH/2;
+const _2d_y_offset = CANVAS_HEIGHT/2;
 
 const BG_CLEAR = true; // clear background or colored?
 const BG_COLOR = "rgba(255,255,255,1.0)"; // background color
-const COLOR_METHOD = "signature"; //"area"
+let COLOR_METHOD = "signature"; // "area", "edges"
+let COLOR_SENSITIVITY = 2; // color sensitivity to variation 
+                           // in congruence signature or planar area
 const ctx_linewidth = 0.5; // for outline of faces
 let PaintMode = "fillstroke";
 
@@ -7506,7 +7590,7 @@ let LastSphVec = [1, 0, 0];
 const DEFAULT_RECIPES = [
   "C2dakD", "oC20kkkT", "kn4C40A0dA4", "opD",
   "lT", "lK5oC", "knD", "dn6x4K5bT", "oox4P7",
-  "n18n18n9n9n9soxY9"];
+  "qqJ37", "aobD"];
 
 // File-saving objects used to export txt/canvas-png
 const saveText = function(text, filename) {
@@ -7719,6 +7803,15 @@ $( function() { //wait for page to load
   // when palette changes in input, redraw polyhedra
   $("#palette").change(function(e) {
     PALETTE = $(this).val().split(/\s+/g);
+    setlink();
+    drawShape();
+  });
+
+  // randomize palette
+  $("#rndcolors").click(function(e) {
+    let newpalette = rndcolors();
+    PALETTE = newpalette;
+    $('#palette').val(newpalette.join(" "));
     setlink();
     drawShape();
   });
