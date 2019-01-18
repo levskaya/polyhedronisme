@@ -17,6 +17,7 @@
 const topolog = function(poly) {
   let str = "";
   for (let f of poly.face) {
+    str += `${f.length}: `
     for (let v of f) {
       str += `${v}->`;
     }

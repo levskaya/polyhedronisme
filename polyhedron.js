@@ -50,6 +50,28 @@ const vertColors = function(poly) {
 
 const rwb_palette  = ["#ff7777","#dddddd","#889999","#fff0e5","#aa3333","#ff0000","#ffffff","#aaaaaa"];
 
+function hsl2rgb(h, s, l) {
+  let r, g, b;
+  if (s == 0) {
+    r = g = b = l; // achromatic
+  } else {
+    const hue2rgb = function(p, q, t) {
+      if (t < 0) t += 1;
+      if (t > 1) t -= 1;
+      if (t < 1/6) return p + (q - p) * 6 * t;
+      if (t < 1/2) return q;
+      if (t < 2/3) return p + (q - p) * (2/3 - t) * 6;
+      return p;
+    }
+    let q = l < 0.5 ? l * (1 + s) : l + s - l * s;
+    let p = 2 * l - q;
+    r = hue2rgb(p, q, h + 1/3);
+    g = hue2rgb(p, q, h);
+    b = hue2rgb(p, q, h - 1/3);
+  }
+  return [r, g, b];
+}
+
 // converts #xxxxxx / #xxx format into list of [r,g,b] floats
 const hextofloats = function(hexstr){
   let rgb;
@@ -57,20 +79,37 @@ const hextofloats = function(hexstr){
     hexstr = hexstr.slice(1);
   }
   if (hexstr.length === 3) {
-    rgb = hexstr.split('').map(       c=> parseInt(c+c, 16)/255);
+    rgb = hexstr.split('').map(c=> parseInt(c+c, 16)/255);
   } else {
-    rgb = hexstr.match(/.{2}/g).map(  c=> parseInt(c, 16)/255);
+    rgb = hexstr.match(/.{2}/g).map(c=> parseInt(c, 16)/255);
   }
   return rgb;
 };
 
+const floatstohex = function(rgb){
+  let r_hex = Number(parseInt(255 * rgb[0], 10)).toString(16);
+  let g_hex = Number(parseInt(255 * rgb[1], 10)).toString(16);
+  let b_hex = Number(parseInt(255 * rgb[2], 10)).toString(16);
+  return "#" + r_hex + g_hex + b_hex;
+}
+
+// randomize color palette
+const rndcolors = function(){
+  let newpalette=[];
+  for(let i=0; i<100; i++){
+    let h = random();
+    let s = 0.5*random() + 0.3;
+    let l = 0.5*random() + 0.45;
+    let rgb = hsl2rgb(h, s, l);
+    newpalette.push(floatstohex(rgb));
+  }
+  return newpalette;
+}
+
 let PALETTE = rwb_palette; //GLOBAL
 const palette = function(n) {
-  if (n < PALETTE.length) {
-    return hextofloats(PALETTE[n]);
-  } else {
-    return hextofloats(PALETTE[PALETTE.length-1]);
-  }
+  const k = n % PALETTE.length;
+  return hextofloats(PALETTE[k])
 };
 
 const paintPolyhedron = function(poly) {
@@ -80,12 +119,12 @@ const paintPolyhedron = function(poly) {
   const colormemory={};
 
   // memoized color assignment to faces of similar areas
-  const colorassign = function(ar, colormemory) {
-    const hash = round(100*ar);
+  const colorassign = function(hash, colormemory) {
+    //const hash = ar;
     if (hash in colormemory) {
       return colormemory[hash];
     } else {
-      const fclr = _.toArray(colormemory).length; //palette _.toArray(colormemory).length
+      const fclr = _.toArray(colormemory).length;
       colormemory[hash] = fclr;
       return fclr;
     }
@@ -94,12 +133,13 @@ const paintPolyhedron = function(poly) {
   for (var f of poly.face) {
     var clr, face_verts;
     if (COLOR_METHOD === "area") {
-      // color by face area (quick proxy for different kinds of faces) convexarea
+      // color by face planar area assuming flatness
       face_verts = f.map(v=>poly.xyz[v])
-      clr = colorassign(convexarea(face_verts), colormemory);
+      clr = colorassign(sigfigs(planararea(face_verts), COLOR_SENSITIVITY), colormemory);
     } else if (COLOR_METHOD === "signature") {
+      // color by congruence signature
       face_verts = f.map(v=>poly.xyz[v])
-      clr = colorassign(faceSignature(face_verts), colormemory);
+      clr = colorassign(faceSignature(face_verts, COLOR_SENSITIVITY), colormemory);
     } else {
       // color by face-sidedness
       clr = f.length - 3;

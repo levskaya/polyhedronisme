@@ -95,25 +95,25 @@ class polyflag {
 //===================================================================================================
 // Polyhedron Operators
 //===================================================================================================
-//          for each vertex of new polyhedron:
-//              call newV(Vname, xyz) with a symbolic name and coordinates
-//          for each flag of new polyhedron:
-//              call newFlag(Fname, Vname1, Vname2) with a symbolic name for the new face
-//              and the symbolic name for two vertices forming an oriented edge
-//          ORIENTATION -must- be dealt with properly to make a manifold (correct) mesh.
-//          Specifically, no edge v1->v2 can ever be crossed in the -same direction- by
-//          two different faces
-//
-//          call topoly() to assemble flags into polyhedron structure by following the orbits
-//          of the vertex mapping stored in the flagset for each new face
-//
-//          set name as appropriate
+// for each vertex of new polyhedron:
+//     call newV(Vname, xyz) with a symbolic name and coordinates
+// for each flag of new polyhedron:
+//     call newFlag(Fname, Vname1, Vname2) with a symbolic name for the new face
+//     and the symbolic name for two vertices forming an oriented edge
+// ORIENTATION -must- be dealt with properly to make a manifold (correct) mesh.
+// Specifically, no edge v1->v2 can ever be crossed in the -same direction- by
+// two different faces
+// 
+// call topoly() to assemble flags into polyhedron structure by following the orbits
+// of the vertex mapping stored in the flagset for each new face
+// 
+// set name as appropriate
 
 // Kis(N)
 // ------------------------------------------------------------------------------------------
 // Kis (abbreviated from triakis) transforms an N-sided face into an N-pyramid rooted at the
 // same base vertices.
-// only kis n-sided faces, but n==0 means kiss all.
+// only kis n-sided faces, but n==0 means kis all.
 //
 const kisN = function(poly, n, apexdist){
   let i;
@@ -157,8 +157,6 @@ const kisN = function(poly, n, apexdist){
 
   const newpoly = flag.topoly();
   newpoly.name = `k${n === 0 ? "" : n}${poly.name}`;
-  //newpoly.xyz = adjustXYZ(newpoly, 3)
-  //newpoly.xyz = canonicalXYZ(newpoly, 3)  # this tends to make results look like shit
   return newpoly;
 };
 
@@ -187,7 +185,7 @@ const ambo = function(poly){
   // For each face f in the original poly
   for (let i = 0; i < poly.face.length; i++) {
     const f = poly.face[i];
-    let [v1, v2] = Array.from(f.slice(-2));
+    let [v1, v2] = f.slice(-2);
     for (let v3 of f) {
       if (v1 < v2) { // vertices are the midpoints of all edges of original poly
         flag.newV(midName(v1,v2), midpoint(poly.xyz[v1], poly.xyz[v2]));
@@ -198,13 +196,12 @@ const ambo = function(poly){
       // Another flag whose face  corresponds to (the truncated) v2:
       flag.newFlag(`dual${v2}`, midName(v2,v3), midName(v1,v2));
       // shift over one
-      [v1, v2] = Array.from([v2, v3]);
+      [v1, v2] = [v2, v3];
     }
   }
 
   const newpoly = flag.topoly();
   newpoly.name = `a${poly.name}`;
-  //newpoly.xyz = adjustXYZ(newpoly, 2)
   return newpoly;
 };
 
@@ -236,7 +233,7 @@ const gyro = function(poly){
 
   for (i = 0; i < poly.face.length; i++) {
     f = poly.face[i];
-    let [v1, v2] = Array.from(f.slice(-2));
+    let [v1, v2] = f.slice(-2);
     for (let j = 0; j < f.length; j++) {
       v = f[j];
       const v3 = v;
@@ -247,13 +244,12 @@ const gyro = function(poly){
       flag.newFlag(fname, v2+"~"+v1,  `v${v2}`);
       flag.newFlag(fname, `v${v2}`,     v2+"~"+v3);
       flag.newFlag(fname, v2+"~"+v3,  `center${i}`);
-      [v1, v2] = Array.from([v2, v3]);
+      [v1, v2] = [v2, v3];
     }
   }                       // shift over one
 
   const newpoly = flag.topoly();
   newpoly.name = `g${poly.name}`;
-  //newpoly.xyz = adjustXYZ(newpoly, 3)
   return newpoly;
 };
 
@@ -277,7 +273,7 @@ const propellor = function(poly) {
 
   for (i = 0; i < poly.face.length; i++) {
     const f = poly.face[i];
-    let [v1, v2] = Array.from(f.slice(-2));
+    let [v1, v2] = f.slice(-2);
     for (v of f) {
       const v3 = `${v}`;
       flag.newV(v1+"~"+v2, oneThird(poly.xyz[v1], poly.xyz[v2]));  // new v in face, 1/3rd along edge
@@ -287,13 +283,12 @@ const propellor = function(poly) {
       flag.newFlag(fname,   v2+"~"+v1,     `v${v2}`);
       flag.newFlag(fname,      `v${v2}`,  v2+"~"+v3);
       flag.newFlag(fname,   v2+"~"+v3,  v1+"~"+v2);
-      [v1, v2] = Array.from([v2, v3]);
+      [v1, v2] = [v2, v3];
     }
-  }                       // shift over one
+  } // shift over one
 
   const newpoly = flag.topoly();
   newpoly.name = `p${poly.name}`;
-  //newpoly.xyz  = adjustXYZ(newpoly, 3)
   return newpoly;
 };
 
@@ -462,19 +457,21 @@ const whirl = function(poly, n) {
   
   const flag = new polyflag();
 
+  // each old vertex is a new vertex
   for (i = 0; i < poly.xyz.length; i++) {
     v = poly.xyz[i];
     flag.newV(`v${i}`, unit(v));
-  }  // each old vertex is a new vertex
+  }
 
-  const centers = poly.centers(); // new vertices around center of each face
+  // new vertices around center of each face
+  const centers = poly.centers();
   //for f,i in poly.face
   //  # Whirl: use "center"+i+"~"+v1
   //  flag.newV "center"+i+"~"+v1, unit(centers[i])
 
   for (i = 0; i < poly.face.length; i++) {
     const f = poly.face[i];
-    let [v1, v2] = Array.from(f.slice(-2));
+    let [v1, v2] = f.slice(-2);
     for (let j = 0; j < f.length; j++) {
       v = f[j];
       const v3 = v;
@@ -487,25 +484,74 @@ const whirl = function(poly, n) {
       flag.newV(cv1name, unit(oneThird(centers[i], v1_2))); 
       const fname = i+"f"+v1;
       // New hexagon for each original edge
-      flag.newFlag(fname, cv1name,      v1+"~"+v2);
-      flag.newFlag(fname, v1+"~"+v2,  v2+"~"+v1); //*
-      flag.newFlag(fname, v2+"~"+v1,  `v${v2}`);    //*
-      flag.newFlag(fname, `v${v2}`,     v2+"~"+v3); //*
-      flag.newFlag(fname, v2+"~"+v3,  cv2name);
-      flag.newFlag(fname, cv2name, cv1name);
+      flag.newFlag(fname, cv1name,   v1+"~"+v2);
+      flag.newFlag(fname, v1+"~"+v2, v2+"~"+v1); //*
+      flag.newFlag(fname, v2+"~"+v1, `v${v2}`);  //*
+      flag.newFlag(fname, `v${v2}`,  v2+"~"+v3); //*
+      flag.newFlag(fname, v2+"~"+v3, cv2name);
+      flag.newFlag(fname, cv2name,   cv1name);
       // New face in center of each old face      
       flag.newFlag(`c${i}`, cv1name, cv2name);
       
-      [v1, v2] = Array.from([v2, v3]);
+      [v1, v2] = [v2, v3];
     }
-  }                       // shift over one
+  } // shift over one
 
   const newpoly = flag.topoly();
   newpoly.name = `w${poly.name}`;
-  //newpoly.xyz = adjustXYZ(newpoly, 3)
   return newpoly;
 };
   
+// Quinto
+
+const quinto = function(poly){
+  console.log(`Taking quinto of ${poly.name}...`);
+
+  // helper func to insure unique names of midpoints
+  const midName = function(v1, v2) { 
+    if (v1<v2) { return v1+"_"+v2; } 
+    else       { return v2+"_"+v1; } 
+  };
+
+  const flag = new polyflag();
+
+  // For each face f in the original poly
+  for (let i = 0; i < poly.face.length; i++) {
+    const f = poly.face[i];
+    centroid = calcCentroid(f.map(idx=>poly.xyz[idx]))
+    // walk over face vertex-triplets
+    let [v1, v2] = f.slice(-2);
+    for (let v3 of f) {
+      // for each face-corner, we make two new points:
+      midpt = midpoint(poly.xyz[v1], poly.xyz[v2])
+      innerpt = midpoint(midpt, centroid)
+      flag.newV(midName(v1,v2), midpt);
+      flag.newV(`inner_${i}_` + midName(v1,v2), innerpt);
+      // and add the old corner-vertex
+      flag.newV(`${v2}`, poly.xyz[v2]);
+    
+      // pentagon for each vertex in original face
+      flag.newFlag(`f${i}_${v2}`, `inner_${i}_`+midName(v1, v2), midName(v1, v2));
+      flag.newFlag(`f${i}_${v2}`, midName(v1, v2), `${v2}`);
+      flag.newFlag(`f${i}_${v2}`, `${v2}`, midName(v2, v3));
+      flag.newFlag(`f${i}_${v2}`, midName(v2, v3), `inner_${i}_`+midName(v2, v3));
+      flag.newFlag(`f${i}_${v2}`, `inner_${i}_`+midName(v2, v3), `inner_${i}_`+midName(v1, v2));
+
+      // inner rotated face of same vertex-number as original
+      flag.newFlag(`f_in_${i}`, `inner_${i}_`+midName(v1, v2), `inner_${i}_`+midName(v2, v3));
+
+      // shift over one
+      [v1, v2] = [v2, v3];
+    }
+  }
+
+  const newpoly = flag.topoly();
+  newpoly.name = `q${poly.name}`;
+  //topolog(newpoly);
+  //console.log(newpoly);
+  return newpoly;
+};
+
 
 // Triangular Subdivision Operator
 // ----------------------------------------------------------------------------------------------
@@ -528,7 +574,7 @@ const trisub = function(poly, n) {
   let pos = 0;
   for (let fn = 0; fn < poly.face.length; fn++) {
     const f = poly.face[fn];
-    let [i1, i2, i3] = Array.from(f.slice(-3));
+    let [i1, i2, i3] = f.slice(-3);
     v1 = poly.xyz[i1];
     v2 = poly.xyz[i2];
     v3 = poly.xyz[i3];
@@ -614,12 +660,13 @@ const insetN = function(poly, n, inset_dist, popout_dist){
     f = poly.face[i];
     if ((f.length === n) || (n === 0)) {
       for (v of f) {
-        flag.newV(`f${i}v${v}`, add(tween(poly.xyz[v],centers[i],inset_dist),mult(popout_dist,normals[i])));
+        flag.newV(`f${i}v${v}`, add(tween(poly.xyz[v],centers[i],inset_dist), 
+                                    mult(popout_dist,normals[i])));
       }
     }
   }
 
-  let foundAny = false;                 // alert if don't find any
+  let foundAny = false;    // alert if don't find any
   for (i = 0; i < poly.face.length; i++) {
     f = poly.face[i];
     let v1 = `v${f[f.length-1]}`;
@@ -647,12 +694,11 @@ const insetN = function(poly, n, inset_dist, popout_dist){
 
   const newpoly = flag.topoly();
   newpoly.name = `n${n === 0 ? "" : n}${poly.name}`;
-  //newpoly.xyz = adjustXYZ(newpoly, 3)
-  //newpoly.xyz = canonicalXYZ(newpoly, 3)  # this tends to make results look like shit
   return newpoly;
 };
 
-// ExtrudeN
+
+// extrudeN
 // ------------------------------------------------------------------------------------------
 const extrudeN = function(poly, n){
   let f, i, v;
@@ -706,11 +752,9 @@ const extrudeN = function(poly, n){
 
   const newpoly = flag.topoly();
   newpoly.name = `x${n === 0 ? "" : n}${poly.name}`;
-  //console.log newpoly
-  //newpoly.xyz = adjustXYZ(newpoly, 3)
-  //newpoly.xyz = canonicalXYZ(newpoly, 3)  # this tends to make results look like shit
   return newpoly;
 };
+
 
 // hollow / skeletonize
 // ------------------------------------------------------------------------------------------
@@ -733,17 +777,18 @@ const hollow = function(poly, n, inset_dist, thickness){
     flag.newV(`v${i}`, p);
     flag.newV(`downv${i}`,  add(p,mult(-1*thickness,dualnormals[i])));
   }
-
-  for (i = 0; i < poly.face.length; i++) { //new inset vertex for every vert in face
+  // new inset vertex for every vert in face
+  for (i = 0; i < poly.face.length; i++) {
     //if f.length is n or n is 0
     f = poly.face[i];
     for (v of f) {
       flag.newV(`fin${i}v${v}`, tween(poly.xyz[v],centers[i],inset_dist));
-      flag.newV(`findown${i}v${v}`, add(tween(poly.xyz[v],centers[i],inset_dist),mult(-1*thickness,normals[i])));
+      flag.newV(`findown${i}v${v}`, add(tween(poly.xyz[v],centers[i],inset_dist), 
+                                        mult(-1*thickness,normals[i])));
     }
   }
 
-  //foundAny = false                 # alert if don't find any
+  //foundAny = false    # alert if we don't find any N-ary faces
   for (i = 0; i < poly.face.length; i++) {
     f = poly.face[i];
     let v1 = `v${f[f.length-1]}`;
@@ -783,8 +828,6 @@ const hollow = function(poly, n, inset_dist, thickness){
   const newpoly = flag.topoly();
   //newpoly.name = "h" + (if n is 0 then "" else n) + poly.name
   newpoly.name = `h${poly.name}`;
-  //newpoly.xyz = adjustXYZ(newpoly, 3)
-  //newpoly.xyz = canonicalXYZ(newpoly, 3)  # this tends to make results look like shit
   return newpoly;
 };
 
@@ -833,14 +876,12 @@ const stellaN = function(poly){
       flag.newFlag(`f${v12}`,     v21,       v12);
       flag.newFlag(`f${v12}`,      v12,       v1);
 
-      [v1,v2]=Array.from([v2,v3]);  // current becomes previous
-      [vert1,vert2]=Array.from([vert2,vert3]);
+      [v1, v2] = [v2, v3];  // current becomes previous
+      [vert1, vert2] = [vert2, vert3];
     }
   }
 
   const newpoly = flag.topoly();
   newpoly.name = `l${poly.name}`;
-  //newpoly.xyz = adjustXYZ(newpoly, 3)
-  //newpoly.xyz = canonicalXYZ(newpoly, 3)  # this tends to make results look like shit
   return newpoly;
 };

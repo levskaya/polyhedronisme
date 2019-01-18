@@ -11,20 +11,22 @@
 let ctx = {}; // for global access to canvas context
 let globPolys = {}; // constructed polyhedras
 
-const CANVAS_WIDTH  = 500; //canvas dims
-const CANVAS_HEIGHT = 400; //canvas dims
+const CANVAS_WIDTH  = 720; //canvas dims
+const CANVAS_HEIGHT = 500; //canvas dims
 let globRotM = clone(eye3);
 let globLastRotM = clone(eye3);
 let perspective_scale = 800;
 const persp_z_max = 5;
 const persp_z_min = 0;
 const persp_ratio = 0.8;
-const _2d_x_offset = CANVAS_WIDTH/2; //300
-const _2d_y_offset = CANVAS_HEIGHT/2; //140
+const _2d_x_offset = CANVAS_WIDTH/2;
+const _2d_y_offset = CANVAS_HEIGHT/2;
 
 const BG_CLEAR = true; // clear background or colored?
 const BG_COLOR = "rgba(255,255,255,1.0)"; // background color
-const COLOR_METHOD = "signature"; //"area"
+let COLOR_METHOD = "signature"; // "area", "edges"
+let COLOR_SENSITIVITY = 2; // color sensitivity to variation 
+                           // in congruence signature or planar area
 const ctx_linewidth = 0.5; // for outline of faces
 let PaintMode = "fillstroke";
 
@@ -39,7 +41,7 @@ let LastSphVec = [1, 0, 0];
 const DEFAULT_RECIPES = [
   "C2dakD", "oC20kkkT", "kn4C40A0dA4", "opD",
   "lT", "lK5oC", "knD", "dn6x4K5bT", "oox4P7",
-  "n18n18n9n9n9soxY9"];
+  "qqJ37", "aobD"];
 
 // File-saving objects used to export txt/canvas-png
 const saveText = function(text, filename) {
@@ -252,6 +254,15 @@ $( function() { //wait for page to load
   // when palette changes in input, redraw polyhedra
   $("#palette").change(function(e) {
     PALETTE = $(this).val().split(/\s+/g);
+    setlink();
+    drawShape();
+  });
+
+  // randomize palette
+  $("#rndcolors").click(function(e) {
+    let newpalette = rndcolors();
+    PALETTE = newpalette;
+    $('#palette').val(newpalette.join(" "));
     setlink();
     drawShape();
   });

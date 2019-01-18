@@ -24,8 +24,8 @@ const log10 = x=> log(x)/LN10;
 
 //returns string w. nsigs digits ignoring magnitude
 const sigfigs = function(N, nsigs){
-  const normed = pow(10, log10(N)-floor(log10(N)));
-  return `${round(normed*(nsigs-1))}`;
+  const normed = pow(10, log10(N) - floor(log10(N)));
+  return `${round(normed * pow(10, (nsigs-1)))}`;
 };
 
 // general recursive deep-copy function
@@ -159,69 +159,73 @@ const intersect = function(set1, set2, set3) {
 const calcCentroid = function(xyzs) {
   // running sum of vertex coords
   let centroidV = [0,0,0];
-    for (let v of xyzs) {
-      centroidV = add(centroidV, v);
-    }
-    return mult(1 / xyzs.length, centroidV );
-  };
+  for (let v of xyzs) {
+    centroidV = add(centroidV, v);
+  }
+  return mult(1 / xyzs.length, centroidV );
+};
 
 // calculate average normal vector for array of vertices
 const normal = function(xyzs) {
   // running sum of normal vectors
   let normalV = [0,0,0]; 
-    let [v1,v2] = xyzs.slice(-2);
-    for (let v3 of xyzs) {
-      normalV = add(normalV, orthogonal(v1, v2, v3));
-      [v1,v2] = [v2,v3];
-    } // shift over one
-    return unit(normalV);
-  };
+  let [v1, v2] = xyzs.slice(-2);
+  for (let v3 of xyzs) {
+    normalV = add(normalV, orthogonal(v1, v2, v3));
+    [v1, v2] = [v2, v3];
+  } // shift over one
+  return unit(normalV);
+};
 
 // calculates area planar face by summing over subtriangle areas
-//  _Assumes_ Convexity!
-const convexarea = function(xyzs) {
-    let area = 0.0;
-    let [v1,v2] = xyzs.slice(0, 2);
-    for (let v3 of xyzs.slice(2)) {
-      //area of sub-triangle
-      area += mag( cross(sub(v2, v1), sub(v3, v1)) );
-      v2 = v3;
-    } // shift over one
-    return area;
-  };
+// this assumes planarity.
+const planararea = function(xyzs) {
+  let area = 0.0;
+  let vsum = [0.,0.,0.];
+  let [v1, v2] = xyzs.slice(-2);
+  for (let v3 of xyzs) {
+    vsum = add(vsum, cross(v1, v2));
+    [v1, v2] = [v2, v3];
+  }
+  area = abs(dot(normal(xyzs), vsum) / 2.0);
+  return area;
+};
 
-//returns array of ~3sigfig angle
-const faceSignature = function(xyzs) {
-    let x;
-    const cross_array = [];
-    let [v1,v2] = xyzs.slice(0, 2);
-    for (let v3 of xyzs.slice(2)) {
-      //area of sub-triangle
-      cross_array.push(mag( cross(sub(v2, v1), sub(v3, v1)) ));
-      v2 = v3;
-    } // shift over one
+// congruence signature for assigning same colors to congruent faces
+const faceSignature = function(xyzs, sensitivity) {
+  let x;
+  const cross_array = [];
+  let [v1, v2] = xyzs.slice(-2);
+  for (let v3 of xyzs) {
+    // accumulate inner angles
+    cross_array.push(mag( cross(sub(v1, v2), sub(v3, v2)) ));
+    [v1, v2] = [v2, v3];
+  }
+  // sort angles to create unique sequence
+  cross_array.sort((a,b)=>a-b);
 
-    cross_array.sort((a,b)=>a-b); //sort for uniqueness
+  // render sorted angles as quantized digit strings
+  // this is the congruence signature
+  let sig = "";
+  for (x of cross_array) { sig+=sigfigs(x, sensitivity); }
+  // hack to make reflected faces share the same signature
+  for (x of cross_array.reverse()) { sig+=sigfigs(x, sensitivity); }
 
-    let sig=""; // turn it into a string
-    for (x of cross_array) { sig+=sigfigs(x,2); }
-    // hack to make reflected faces share the same signature
-    for (x of cross_array.reverse()) { sig+=sigfigs(x,2); }
-    return sig;
-  };
+  return sig;
+};
 
 // projects 3d polyhedral face to 2d polygon
 // for triangulation and face display
 const project2dface = function(verts){
   let tmpverts = clone(verts);
-  const v0=verts[0];
-  tmpverts = _.map(tmpverts, x=> x-v0);
+  const v0 = verts[0];
+  tmpverts = _.map(tmpverts, x=>x-v0);
 
   const n = normal(verts);
   const c = unit(calcCentroid(verts));
   const p = cross(n,c);
 
-  return tmpverts.map((v) => [dot(n,v),dot(p,v)]);
+  return tmpverts.map((v) => [dot(n, v), dot(p, v)]);
 };
 
 // copies array of arrays by value (deep copy)
@@ -239,8 +243,7 @@ const mv3 = (mat,vec) =>
   //example matrix: [[a,b,c],[d,e,f],[g,h,i]]
   [(mat[0][0]*vec[0])+(mat[0][1]*vec[1])+(mat[0][2]*vec[2]),
    (mat[1][0]*vec[0])+(mat[1][1]*vec[1])+(mat[1][2]*vec[2]),
-   (mat[2][0]*vec[0])+(mat[2][1]*vec[1])+(mat[2][2]*vec[2])]
-;
+   (mat[2][0]*vec[0])+(mat[2][1]*vec[1])+(mat[2][2]*vec[2])];
 
 // 3d matrix matrix multiply
 const mm3 = (A,B) =>
@@ -252,30 +255,28 @@ const mm3 = (A,B) =>
    (A[1][0]*B[0][2])+(A[1][1]*B[1][2])+(A[1][2]*B[2][2])],
   [(A[2][0]*B[0][0])+(A[2][1]*B[1][0])+(A[2][2]*B[2][0]),
    (A[2][0]*B[0][1])+(A[2][1]*B[1][1])+(A[2][2]*B[2][1]),
-   (A[2][0]*B[0][2])+(A[2][1]*B[1][2])+(A[2][2]*B[2][2])]]
-;
+   (A[2][0]*B[0][2])+(A[2][1]*B[1][2])+(A[2][2]*B[2][2])]];
 
-const eye3 = [[1,0,0],[0,1,0],[0,0,1]];
+const eye3 = [[1,0,0], [0,1,0], [0,0,1]];
 
 // Rotation Matrix
 // Totally ghetto, not at all in agreement with euler angles!
 // use quaternions instead
 const rotm = function(phi,theta,psi){
-    const xy_mat = [
-      [cos(phi), -1.0*sin(phi),  0.0],
-      [sin(phi),      cos(phi),  0.0],
-      [0.0,                0.0,  1.0]];
-    const yz_mat = [
-      [cos(theta), 0, -1.0*sin(theta)],
-      [         0, 1,               0],
-      [sin(theta), 0,      cos(theta)]];
-    const xz_mat = [
-      [1.0,        0,             0],
-      [  0, cos(psi), -1.0*sin(psi)],
-      [  0, sin(psi),      cos(psi)]];
-
-    return mm3(xz_mat, mm3(yz_mat,xy_mat));
-  };
+  const xy_mat = [
+    [cos(phi), -1.0*sin(phi),  0.0],
+    [sin(phi),      cos(phi),  0.0],
+    [0.0,                0.0,  1.0]];
+  const yz_mat = [
+    [cos(theta), 0, -1.0*sin(theta)],
+    [         0, 1,               0],
+    [sin(theta), 0,      cos(theta)]];
+  const xz_mat = [
+    [1.0,        0,             0],
+    [  0, cos(psi), -1.0*sin(psi)],
+    [  0, sin(psi),      cos(psi)]];
+  return mm3(xz_mat, mm3(yz_mat,xy_mat));
+};
 
 
 // Rotation Matrix defined by rotation about (unit) axis [x,y,z] for angle radians
@@ -287,12 +288,11 @@ const vec_rotm = function(angle, x, y, z) {
   const sinA2 = sinA*sinA;
   const length = mag([x,y,z]);
   if (length === 0) {
-    [x,y,z] = [0,0,1];
+    [x, y, z] = [0, 0, 1];
   }
   if (length !== 1) {
-    [x,y,z] = unit([x,y,z]);
+    [x, y, z] = unit([x, y, z]);
   }
-
   if ((x === 1) && (y === 0) && (z === 0)) {
       m = [[1,              0,           0],
           [0,    1-(2*sinA2), 2*sinA*cosA],
@@ -314,7 +314,6 @@ const vec_rotm = function(angle, x, y, z) {
         [2*((y*x*sinA2)-(z*sinA*cosA)), 1-(2*(z2+x2)*sinA2), 2*((y*z*sinA2)+(x*sinA*cosA))],
         [2*((z*x*sinA2)+(y*sinA*cosA)), 2*((z*y*sinA2)-(x*sinA*cosA)), 1-(2*(x2+y2)*sinA2)]];
     }
-
   return m;
 };
 

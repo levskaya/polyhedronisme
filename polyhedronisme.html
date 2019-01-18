@@ -26,13 +26,9 @@
 </h2>
 
 <div class="canvaswrapper clearfix">
-  <div class="leftside" width="110" height="400">
-
-  </div>
-  <canvas id="poly" width="500" height="400"></canvas>
-  <div class="rightside" width="110" height="400">
-
-  </div>
+  <!-- <div class="leftside" width="10" height="500"></div> -->
+  <canvas id="poly" width="700" height="500"></canvas>
+  <!-- <div class="rightside" width="10" height="500"></div> -->
 </div>
 
 <div class="controlswrapper">
@@ -58,6 +54,7 @@
   <a id="link" href="#" title="Copy this URL to share"><img src="media/link.png"></a>
   <br>
   <label>palette <input id="palette"></input></label>
+  <span id="rndcolors" class="textbutton" title="Randomize Colors">RANDOM</span>
 </div>
 
 <br />
@@ -112,6 +109,7 @@ Each recipe looks like: </p>
   <li><b>p</b> - propellor</li>
   <li><b>c</b> - chamfer</li>
   <li><b>w</b> - whirl</li>
+  <li><b>q</b> - quinto</li>
   <!--
   <li><b>h</b> - half (caution: requires even-sided faces, and can produce digons)</li>
   -->
@@ -168,18 +166,26 @@ Each recipe looks like: </p>
 <p>These can blow up the geometry of the weirder polyhedra, which can
 be interesting too!</p>
 
-<h4> 3D Printing </h4>
+<b> 3D Printing </b>
 <p>You can export these shapes in forms appropriate for 3D printing by
 shapeways. Export in VRML2 format to preserve face colors if you want
 to use their colored fused-sand process.  You'll probably want to rescale 
 the exported geometry to a non-tiny size.</p>
 
-<p>Some relevant links: </p>
+<p>More Information: </p>
 <ul>
 <li><a href="http://en.wikipedia.org/wiki/Conway_polyhedron_notation">
   Wikipedia on Conway Polyhedral Notation</a></li>
 <li><a href="http://www.georgehart.com/">George W. Hart's Polyhedral Site</a></li>
+<li><a href="http://dmccooey.com/polyhedra/index.html">Visual Polyhedra</a></li>
 <li><a href="http://github.com/levskaya/polyhedronisme">Source and more information at Github</a></li>
+</ul>
+
+<p>Thanks:</p>
+<ul>
+  <li>George Hart - for his original pages, artworks and software characterizing higher polyhedra.</li>
+  <li>Lei Willems - for adding several new operators, inventing quinto, and helping improve this site.</li>
+  <li>Everyone else - for all of your kind words and suggestions!</li>
 </ul>
 
 <div class="footer">

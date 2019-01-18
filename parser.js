@@ -74,7 +74,8 @@ const opmap = {
   "K": canonicalXYZ,
   "C": canonicalize,
   "A": adjustXYZ,
-  "u": trisub
+  "u": trisub,
+  "q": quinto,
   };
 
 //list of basic equivalences, easier to replace before parsing
