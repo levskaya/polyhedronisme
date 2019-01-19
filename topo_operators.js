@@ -53,7 +53,7 @@ class polyflag {
     let ctr=0; // first number the vertices
     for (i in this.verts) {
       v = this.verts[i];
-      poly.xyz[ctr]=this.xyzs[i]; // store in array
+      poly.vertices[ctr]=this.xyzs[i]; // store in array
       this.verts[i] = ctr;
       ctr++;
     }
@@ -62,7 +62,7 @@ class polyflag {
     for (i in this.flags) {
       var v0;
       const f = this.flags[i];
-      poly.face[ctr] = []; // new face
+      poly.faces[ctr] = []; // new face
       // grab _any_ vertex as starting point
       for (let j in f) {
         v = f[j];
@@ -71,11 +71,11 @@ class polyflag {
       }  // need just one
       // build face out of all the edge relations in the flag assoc array
       v = v0; // v moves around face
-      poly.face[ctr].push(this.verts[v]); //record index
+      poly.faces[ctr].push(this.verts[v]); //record index
       v = this.flags[i][v]; // goto next vertex
       let faceCTR=0;
       while (v !== v0) { // loop until back to start
-        poly.face[ctr].push(this.verts[v]);
+        poly.faces[ctr].push(this.verts[v]);
         v = this.flags[i][v];
         faceCTR++;
         if (faceCTR>1000) { // necessary to prevent browser hangs on badly formed flagsets!
@@ -122,17 +122,17 @@ const kisN = function(poly, n, apexdist){
   console.log(`Taking kis of ${n===0 ? "" : n}-sided faces of ${poly.name}...`);
 
   const flag = new polyflag();
-  for (i = 0; i < poly.xyz.length; i++) {
+  for (i = 0; i < poly.vertices.length; i++) {
     // each old vertex is a new vertex
-    const p = poly.xyz[i];
+    const p = poly.vertices[i];
     flag.newV(`v${i}`, p);
   }
 
   const normals = poly.normals();
   const centers = poly.centers();
   let foundAny = false;                 // alert if don't find any
-  for (i = 0; i < poly.face.length; i++) {
-    const f = poly.face[i];
+  for (i = 0; i < poly.faces.length; i++) {
+    const f = poly.faces[i];
     let v1 = `v${f[f.length-1]}`;
     for (let v of f) {
       const v2 = `v${v}`;
@@ -183,12 +183,12 @@ const ambo = function(poly){
   const flag = new polyflag();
 
   // For each face f in the original poly
-  for (let i = 0; i < poly.face.length; i++) {
-    const f = poly.face[i];
+  for (let i = 0; i < poly.faces.length; i++) {
+    const f = poly.faces[i];
     let [v1, v2] = f.slice(-2);
     for (let v3 of f) {
       if (v1 < v2) { // vertices are the midpoints of all edges of original poly
-        flag.newV(midName(v1,v2), midpoint(poly.xyz[v1], poly.xyz[v2]));
+        flag.newV(midName(v1,v2), midpoint(poly.vertices[v1], poly.vertices[v2]));
       }
       // two new flags:
       // One whose face corresponds to the original f:
@@ -220,24 +220,24 @@ const gyro = function(poly){
 
   const flag = new polyflag();
 
-  for (i = 0; i < poly.xyz.length; i++) {
-    v = poly.xyz[i];
+  for (i = 0; i < poly.vertices.length; i++) {
+    v = poly.vertices[i];
     flag.newV(`v${i}`, unit(v));
   }  // each old vertex is a new vertex
 
   const centers = poly.centers(); // new vertices in center of each face
-  for (i = 0; i < poly.face.length; i++) {
-    f = poly.face[i];
+  for (i = 0; i < poly.faces.length; i++) {
+    f = poly.faces[i];
     flag.newV(`center${i}`, unit(centers[i]));
   }
 
-  for (i = 0; i < poly.face.length; i++) {
-    f = poly.face[i];
+  for (i = 0; i < poly.faces.length; i++) {
+    f = poly.faces[i];
     let [v1, v2] = f.slice(-2);
     for (let j = 0; j < f.length; j++) {
       v = f[j];
       const v3 = v;
-      flag.newV(v1+"~"+v2, oneThird(poly.xyz[v1],poly.xyz[v2]));  // new v in face
+      flag.newV(v1+"~"+v2, oneThird(poly.vertices[v1],poly.vertices[v2]));  // new v in face
       const fname = i+"f"+v1;
       flag.newFlag(fname, `center${i}`,      v1+"~"+v2); // five new flags
       flag.newFlag(fname, v1+"~"+v2,  v2+"~"+v1);
@@ -266,17 +266,17 @@ const propellor = function(poly) {
 
   const flag = new polyflag();
 
-  for (i = 0; i < poly.xyz.length; i++) {
-    v = poly.xyz[i];
+  for (i = 0; i < poly.vertices.length; i++) {
+    v = poly.vertices[i];
     flag.newV(`v${i}`, unit(v));
   }  // each old vertex is a new vertex
 
-  for (i = 0; i < poly.face.length; i++) {
-    const f = poly.face[i];
+  for (i = 0; i < poly.faces.length; i++) {
+    const f = poly.faces[i];
     let [v1, v2] = f.slice(-2);
     for (v of f) {
       const v3 = `${v}`;
-      flag.newV(v1+"~"+v2, oneThird(poly.xyz[v1], poly.xyz[v2]));  // new v in face, 1/3rd along edge
+      flag.newV(v1+"~"+v2, oneThird(poly.vertices[v1], poly.vertices[v2]));  // new v in face, 1/3rd along edge
       const fname = `${i}f${v2}`;
       flag.newFlag(`v${i}`, v1+"~"+v2,  v2+"~"+v3); // five new flags
       flag.newFlag(fname,   v1+"~"+v2,  v2+"~"+v1);
@@ -300,12 +300,12 @@ const reflect = function(poly) {
   let i;
   console.log(`Taking reflection of ${poly.name}...`);
   // reflect each point through origin
-  for (i = 0; i <= poly.xyz.length-1; i++) {
-     poly.xyz[i] = mult(-1, poly.xyz[i]);
+  for (i = 0; i <= poly.vertices.length-1; i++) {
+     poly.vertices[i] = mult(-1, poly.vertices[i]);
   }
   // repair clockwise-ness of faces
-  for (i = 0; i <= poly.face.length-1; i++) {
-     poly.face[i] = poly.face[i].reverse();
+  for (i = 0; i <= poly.faces.length-1; i++) {
+     poly.faces[i] = poly.faces[i].reverse();
   }
   poly.name = `r${poly.name}`;
   return poly;
@@ -329,12 +329,12 @@ const dual = function(poly) {
   const flag = new polyflag();
 
   const face = []; // make table of face as fn of edge
-  for (i = 0; i <= poly.xyz.length-1; i++) {
+  for (i = 0; i <= poly.vertices.length-1; i++) {
     face[i] = {};
   } // create empty associative table
 
-  for (i = 0; i < poly.face.length; i++) {
-    f = poly.face[i];
+  for (i = 0; i < poly.faces.length; i++) {
+    f = poly.faces[i];
     v1 = f[f.length-1]; //previous vertex
     for (v2 of f) {
       // THIS ASSUMES that no 2 faces that share an edge share it in the same orientation!
@@ -345,12 +345,12 @@ const dual = function(poly) {
   } // current becomes previous
 
   const centers = poly.centers();
-  for (i = 0; i <= poly.face.length-1; i++) {
+  for (i = 0; i <= poly.faces.length-1; i++) {
     flag.newV(`${i}`,centers[i]);
   }
 
-  for (i = 0; i < poly.face.length; i++) {
-    f = poly.face[i];
+  for (i = 0; i < poly.faces.length; i++) {
+    f = poly.faces[i];
     v1 = f[f.length-1]; //previous vertex
     for (v2 of f) {
       flag.newFlag(v1, face[v2][`v${v1}`], `${i}`);
@@ -362,11 +362,11 @@ const dual = function(poly) {
 
   // match F index ordering to V index ordering on dual
   const sortF = [];
-  for (f of dpoly.face) {
-    const k = intersect(poly.face[f[0]], poly.face[f[1]], poly.face[f[2]]);
+  for (f of dpoly.faces) {
+    const k = intersect(poly.faces[f[0]], poly.faces[f[1]], poly.faces[f[2]]);
     sortF[k] = f;
   }
-  dpoly.face = sortF;
+  dpoly.faces = sortF;
 
   if (poly.name[0] !== "d") {
     dpoly.name = `d${poly.name}`;
@@ -408,18 +408,18 @@ const chamfer = function(poly, dist) {
   const normals = poly.normals();
 
   // For each face f in the original poly
-  for (let i = 0; i < poly.face.length; i++) {
-    const f = poly.face[i];
+  for (let i = 0; i < poly.faces.length; i++) {
+    const f = poly.faces[i];
     let v1 = f[f.length-1];
     let v1new = i + "_" + v1;
 
     for (let v2 of f) {
       // TODO: figure out what distances will give us a planar hex face.
       // Move each old vertex further from the origin.
-      flag.newV(v2, mult(1.0 + dist, poly.xyz[v2]));
+      flag.newV(v2, mult(1.0 + dist, poly.vertices[v2]));
       // Add a new vertex, moved parallel to normal.
       const v2new = i + "_" + v2;
-      flag.newV(v2new, add(poly.xyz[v2], mult(dist*1.5, normals[i])));
+      flag.newV(v2new, add(poly.vertices[v2], mult(dist*1.5, normals[i])));
       // Four new flags:
       // One whose face corresponds to the original face:
       flag.newFlag(`orig${i}`, v1new, v2new);
@@ -458,8 +458,8 @@ const whirl = function(poly, n) {
   const flag = new polyflag();
 
   // each old vertex is a new vertex
-  for (i = 0; i < poly.xyz.length; i++) {
-    v = poly.xyz[i];
+  for (i = 0; i < poly.vertices.length; i++) {
+    v = poly.vertices[i];
     flag.newV(`v${i}`, unit(v));
   }
 
@@ -469,14 +469,14 @@ const whirl = function(poly, n) {
   //  # Whirl: use "center"+i+"~"+v1
   //  flag.newV "center"+i+"~"+v1, unit(centers[i])
 
-  for (i = 0; i < poly.face.length; i++) {
-    const f = poly.face[i];
+  for (i = 0; i < poly.faces.length; i++) {
+    const f = poly.faces[i];
     let [v1, v2] = f.slice(-2);
     for (let j = 0; j < f.length; j++) {
       v = f[j];
       const v3 = v;
       // New vertex along edge
-      const v1_2 = oneThird(poly.xyz[v1],poly.xyz[v2]);
+      const v1_2 = oneThird(poly.vertices[v1],poly.vertices[v2]);
       flag.newV(v1+"~"+v2, v1_2);
       // New vertices near center of face
       const cv1name = `center${i}~${v1}`;
@@ -516,19 +516,19 @@ const quinto = function(poly){
   const flag = new polyflag();
 
   // For each face f in the original poly
-  for (let i = 0; i < poly.face.length; i++) {
-    const f = poly.face[i];
-    centroid = calcCentroid(f.map(idx=>poly.xyz[idx]))
+  for (let i = 0; i < poly.faces.length; i++) {
+    const f = poly.faces[i];
+    centroid = calcCentroid(f.map(idx=>poly.vertices[idx]))
     // walk over face vertex-triplets
     let [v1, v2] = f.slice(-2);
     for (let v3 of f) {
       // for each face-corner, we make two new points:
-      midpt = midpoint(poly.xyz[v1], poly.xyz[v2])
+      midpt = midpoint(poly.vertices[v1], poly.vertices[v2])
       innerpt = midpoint(midpt, centroid)
       flag.newV(midName(v1,v2), midpt);
       flag.newV(`inner_${i}_` + midName(v1,v2), innerpt);
       // and add the old corner-vertex
-      flag.newV(`${v2}`, poly.xyz[v2]);
+      flag.newV(`${v2}`, poly.vertices[v2]);
     
       // pentagon for each vertex in original face
       flag.newFlag(`f${i}_${v2}`, `inner_${i}_`+midName(v1, v2), midName(v1, v2));
@@ -562,8 +562,8 @@ const trisub = function(poly, n) {
   if (!n) { n = 2; }
   
   // No-Op for non-triangular meshes.
-  for (let fn = 0; fn < poly.face.length; fn++) {
-    if(poly.face[fn].length != 3){
+  for (let fn = 0; fn < poly.faces.length; fn++) {
+    if(poly.faces[fn].length != 3){
       return poly;
     }
   }
@@ -572,12 +572,12 @@ const trisub = function(poly, n) {
   let newVs=[];
   let vmap={};
   let pos = 0;
-  for (let fn = 0; fn < poly.face.length; fn++) {
-    const f = poly.face[fn];
+  for (let fn = 0; fn < poly.faces.length; fn++) {
+    const f = poly.faces[fn];
     let [i1, i2, i3] = f.slice(-3);
-    v1 = poly.xyz[i1];
-    v2 = poly.xyz[i2];
-    v3 = poly.xyz[i3];
+    v1 = poly.vertices[i1];
+    v2 = poly.vertices[i2];
+    v3 = poly.vertices[i3];
     v21 = sub(v2, v1);
     v31 = sub(v3, v1);
     for (let i = 0; i <= n; i++) {
@@ -610,7 +610,7 @@ const trisub = function(poly, n) {
   }
 
   let faces = [];
-  for (fn = 0; fn < poly.face.length; fn++) {
+  for (fn = 0; fn < poly.faces.length; fn++) {
     for (let i = 0; i < n; i++) {
       for (let j = 0; j+i < n; j++) {
         faces.push([uniqmap[vmap[`v${fn}-${i}-${j}`]], 
@@ -630,8 +630,8 @@ const trisub = function(poly, n) {
   // Create new polygon out of faces and unique vertices.
   const newpoly = new polyhedron();
   newpoly.name = `u${n}${poly.name}`;
-  newpoly.face = faces;
-  newpoly.xyz = uniqVs; 
+  newpoly.faces = faces;
+  newpoly.vertices = uniqVs; 
 
   return newpoly;
 };
@@ -648,27 +648,27 @@ const insetN = function(poly, n, inset_dist, popout_dist){
   console.log(`Taking inset of ${n===0 ? "" : n}-sided faces of ${poly.name}...`);
 
   const flag = new polyflag();
-  for (i = 0; i < poly.xyz.length; i++) {
+  for (i = 0; i < poly.vertices.length; i++) {
     // each old vertex is a new vertex
-    const p = poly.xyz[i];
+    const p = poly.vertices[i];
     flag.newV(`v${i}`, p);
   }
 
   const normals = poly.normals();
   const centers = poly.centers();
-  for (i = 0; i < poly.face.length; i++) { //new inset vertex for every vert in face
-    f = poly.face[i];
+  for (i = 0; i < poly.faces.length; i++) { //new inset vertex for every vert in face
+    f = poly.faces[i];
     if ((f.length === n) || (n === 0)) {
       for (v of f) {
-        flag.newV(`f${i}v${v}`, add(tween(poly.xyz[v],centers[i],inset_dist), 
+        flag.newV(`f${i}v${v}`, add(tween(poly.vertices[v],centers[i],inset_dist), 
                                     mult(popout_dist,normals[i])));
       }
     }
   }
 
   let foundAny = false;    // alert if don't find any
-  for (i = 0; i < poly.face.length; i++) {
-    f = poly.face[i];
+  for (i = 0; i < poly.faces.length; i++) {
+    f = poly.faces[i];
     let v1 = `v${f[f.length-1]}`;
     for (v of f) {
       const v2 = `v${v}`;
@@ -706,27 +706,27 @@ const extrudeN = function(poly, n){
   console.log(`Taking extrusion of ${n===0 ? "" : n}-sided faces of ${poly.name}...`);
 
   const flag = new polyflag();
-  for (i = 0; i < poly.xyz.length; i++) {
+  for (i = 0; i < poly.vertices.length; i++) {
     // each old vertex is a new vertex
-    const p = poly.xyz[i];
+    const p = poly.vertices[i];
     flag.newV(`v${i}`, p);
   }
 
   const normals = poly.normals();
   const centers = poly.centers();
-  for (i = 0; i < poly.face.length; i++) { //new inset vertex for every vert in face
-    f = poly.face[i];
+  for (i = 0; i < poly.faces.length; i++) { //new inset vertex for every vert in face
+    f = poly.faces[i];
     if ((f.length === n) || (n === 0)) {
       for (v of f) {
-        //flag.newV "f"+i+"v"+v, add(midpoint(poly.xyz[v],centers[i]),mult(-0.2,normals[i]))
-        flag.newV(`f${i}v${v}`, add(poly.xyz[v], mult(0.3,normals[i])));
+        //flag.newV "f"+i+"v"+v, add(midpoint(poly.vertices[v],centers[i]),mult(-0.2,normals[i]))
+        flag.newV(`f${i}v${v}`, add(poly.vertices[v], mult(0.3,normals[i])));
       }
     }
   }
 
   let foundAny = false;                 // alert if don't find any
-  for (i = 0; i < poly.face.length; i++) {
-    f = poly.face[i];
+  for (i = 0; i < poly.faces.length; i++) {
+    f = poly.faces[i];
     let v1 = `v${f[f.length-1]}`;
     for (v of f) {
       const v2 = `v${v}`;
@@ -771,26 +771,26 @@ const hollow = function(poly, n, inset_dist, thickness){
   const centers = poly.centers();
 
   const flag = new polyflag();
-  for (i = 0; i < poly.xyz.length; i++) {
+  for (i = 0; i < poly.vertices.length; i++) {
     // each old vertex is a new vertex
-    const p = poly.xyz[i];
+    const p = poly.vertices[i];
     flag.newV(`v${i}`, p);
     flag.newV(`downv${i}`,  add(p,mult(-1*thickness,dualnormals[i])));
   }
   // new inset vertex for every vert in face
-  for (i = 0; i < poly.face.length; i++) {
+  for (i = 0; i < poly.faces.length; i++) {
     //if f.length is n or n is 0
-    f = poly.face[i];
+    f = poly.faces[i];
     for (v of f) {
-      flag.newV(`fin${i}v${v}`, tween(poly.xyz[v],centers[i],inset_dist));
-      flag.newV(`findown${i}v${v}`, add(tween(poly.xyz[v],centers[i],inset_dist), 
+      flag.newV(`fin${i}v${v}`, tween(poly.vertices[v],centers[i],inset_dist));
+      flag.newV(`findown${i}v${v}`, add(tween(poly.vertices[v],centers[i],inset_dist), 
                                         mult(-1*thickness,normals[i])));
     }
   }
 
   //foundAny = false    # alert if we don't find any N-ary faces
-  for (i = 0; i < poly.face.length; i++) {
-    f = poly.face[i];
+  for (i = 0; i < poly.faces.length; i++) {
+    f = poly.faces[i];
     let v1 = `v${f[f.length-1]}`;
     for (v of f) {
       const v2 = `v${v}`;
@@ -841,21 +841,21 @@ const stellaN = function(poly){
   const centers = poly.centers();  // calculate face centers
 
   const flag = new polyflag();
-  for (i = 0; i < poly.xyz.length; i++) {
-    const p = poly.xyz[i];
+  for (i = 0; i < poly.vertices.length; i++) {
+    const p = poly.vertices[i];
     flag.newV(`v${i}`, p);
   }      // each old vertex is a new vertex
 
   // iterate over triplets of faces v1,v2,v3
-  for (i = 0; i < poly.face.length; i++) {
-    const f = poly.face[i];
+  for (i = 0; i < poly.faces.length; i++) {
+    const f = poly.faces[i];
     let v1 = `v${f[f.length-2]}`;
     let v2 = `v${f[f.length-1]}`;
-    let vert1 = poly.xyz[f[f.length-2]];
-    let vert2 = poly.xyz[f[f.length-1]];
+    let vert1 = poly.vertices[f[f.length-2]];
+    let vert2 = poly.vertices[f[f.length-1]];
     for (let v of f) {
       const v3 = `v${v}`;
-      const vert3 = poly.xyz[v];
+      const vert3 = poly.vertices[v];
       const v12=v1+"~"+v2; // names for "oriented" midpoints
       const v21=v2+"~"+v1;
       const v23=v2+"~"+v3;

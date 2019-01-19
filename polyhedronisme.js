@@ -366,7 +366,7 @@ const getVec2VecRotM = function(vec1, vec2){
 // Polyhédronisme
 //===================================================================================================
 //
-// A toy for constructing and manipulating polyhedra and other meshes
+// A toy for constructing and manipulating polyhedra.
 //
 // Copyright 2019, Anselm Levskaya
 // Released under the MIT License
@@ -383,17 +383,17 @@ function __range__(left, right, inclusive) {
 }
 
 // Polyhedra Functions
-//===================================================================================================
+//=================================================================================================
 //
-// Topology stored as set of "faces."  Each face is list of n vertex indices
-// corresponding to one n-sided face.  Vertices listed clockwise as seen from outside.
+// Topology stored as set of faces.  Each face is list of n vertex indices
+// corresponding to one oriented, n-sided face.  Vertices listed clockwise as seen from outside.
 
 // Generate an array of edges [v1,v2] for the face.
 const faceToEdges = function(face) {
   const edges = [];
   let [v1] = face.slice(-1);
   for (let v2 of face) {
-    edges.push([v1,v2]);
+    edges.push([v1, v2]);
     v1 = v2;
   }
   return edges;
@@ -401,19 +401,19 @@ const faceToEdges = function(face) {
 
 const vertColors = function(poly) {
   const vertcolors=[];
-  for (let i = 0; i < poly.face.length; i++) {
-    const f = poly.face[i];
+  for (let i = 0; i < poly.faces.length; i++) {
+    const f = poly.faces[i];
     for (let v of f) {
-      vertcolors[v] = poly.face_class[i];
+      vertcolors[v] = poly.face_classes[i];
     }
   }
   return vertcolors;
 };
 
 // Polyhedra Coloring Functions
-//===================================================================================================
-
-const rwb_palette  = ["#ff7777","#dddddd","#889999","#fff0e5","#aa3333","#ff0000","#ffffff","#aaaaaa"];
+//=================================================================================================
+const rwb_palette = ["#ff7777", "#dddddd", "#889999", "#fff0e5",
+                     "#aa3333", "#ff0000", "#ffffff", "#aaaaaa"];
 
 function hsl2rgb(h, s, l) {
   let r, g, b;
@@ -480,7 +480,7 @@ const palette = function(n) {
 const paintPolyhedron = function(poly) {
   // Color the faces of the polyhedra for display
   let v;
-  poly.face_class = [];
+  poly.face_classes = [];
   const colormemory={};
 
   // memoized color assignment to faces of similar areas
@@ -495,21 +495,21 @@ const paintPolyhedron = function(poly) {
     }
   };
 
-  for (var f of poly.face) {
+  for (var f of poly.faces) {
     var clr, face_verts;
     if (COLOR_METHOD === "area") {
       // color by face planar area assuming flatness
-      face_verts = f.map(v=>poly.xyz[v])
+      face_verts = f.map(v=>poly.vertices[v])
       clr = colorassign(sigfigs(planararea(face_verts), COLOR_SENSITIVITY), colormemory);
     } else if (COLOR_METHOD === "signature") {
       // color by congruence signature
-      face_verts = f.map(v=>poly.xyz[v])
+      face_verts = f.map(v=>poly.vertices[v])
       clr = colorassign(faceSignature(face_verts, COLOR_SENSITIVITY), colormemory);
     } else {
       // color by face-sidedness
       clr = f.length - 3;
     }
-    poly.face_class.push(clr);
+    poly.face_classes.push(clr);
   }
   console.log(_.toArray(colormemory).length+" face classes");
   return poly;
@@ -519,7 +519,7 @@ const paintPolyhedron = function(poly) {
 // -------------------------------------------------------------------------
 const sortfaces = function(poly) {
   //smallestZ = (x) -> _.sortBy(x,(a,b)->a[2]-b[2])[0]
-  //closests = (smallestZ(poly.xyz[v] for v in f) for f in poly.face)
+  //closests = (smallestZ(poly.vertices[v] for v in f) for f in poly.faces)
   let idx;
   const centroids  = poly.centers();
   const normals    = poly.normals();
@@ -534,101 +534,63 @@ const sortfaces = function(poly) {
   // sort by centroid z-depth: not correct but more stable heuristic w. weird non-planar "polygons"
   const zcentroidsort = (a, b)=> a[0][2]-b[0][2];
 
-  const zsortIndex = _.zip(centroids, normals, __range__(0, poly.face.length, false))
+  const zsortIndex = _.zip(centroids, normals, __range__(0, poly.faces.length, false))
     //.sort(planesort)
     .sort(zcentroidsort)
     .map(x=> x[2]);
 
   // sort all face-associated properties
-  poly.face = zsortIndex.map(idx=>poly.face[idx]);
-  poly.face_class = zsortIndex.map(idx=>poly.face_class[idx]);
+  poly.faces = zsortIndex.map(idx=>poly.faces[idx]);
+  poly.face_classes = zsortIndex.map(idx=>poly.face_classes[idx]);
 };
 
 
 class polyhedron {
   // constructor of initially null polyhedron
   constructor(verts, faces, name) {
-    // array of faces.  face.length = # faces
-    this.face = faces || new Array();
-    // array of vertex coords.  xyz.length = # of vertices
-    this.xyz  = verts || new Array();
+    // array of faces.  faces.length = # faces
+    this.faces = faces || new Array();
+    // array of vertex coords.  vertices.length = # of vertices
+    this.vertices  = verts || new Array();
     this.name = name  || "null polyhedron";
   }
 
   data() {   // informative string
-    const nEdges = (this.face.length + this.xyz.length) - 2; // E = V + F - 2
-    return `${this.face.length} faces, ${nEdges} edges, ${this.xyz.length} vertices`;
+    const nEdges = (this.faces.length + this.vertices.length) - 2; // E = V + F - 2
+    return `${this.faces.length} faces, ${nEdges} edges, ${this.vertices.length} vertices`;
   }
-
-  moreData() {
-    return `min. edge length ${this.minEdgeLength().toPrecision(2)}; min. face radius ${this.minFaceRadius().toPrecision(2)}`;
-  }
-    
+  
+  // return a non-redundant list of the polyhedron's edges
   edges() {
-    let e;
-    const finalset={};
-    const uniqedges=[];
-    const alledges = _.map(this.face, faceToEdges);
+    let e, a, b;
+    const finalset = {};
+    const uniqedges = [];
+    const alledges = _.map(this.faces, faceToEdges);
     for (let edgeset of alledges) {
       for (e of edgeset) {
-        var a, b;
         if (e[0] < e[1]) {
           [a, b] = e;
         } else {
           [b, a] = e;
         }
-        finalset[a+'~'+b] = e;
+        finalset[a + '~' + b] = e;
       }
     }
     for (let hash in finalset) {
       e = finalset[hash];
       uniqedges.push(e);
     }
-
-    //return edges
     return uniqedges;
-  }
-
-  minEdgeLength() {
-    let min2 = Number.MAX_VALUE;
-    // Compute minimum edge length
-    for (let e of this.edges()) {
-      // square of edge length
-      const d2 = mag2(sub(this.xyz[e[0]], this.xyz[e[1]]));
-      if (d2 < min2) {
-        min2 = d2;
-      }
-    }
-    // This is normalized if rescaling has happened.
-    return sqrt(min2); 
-  }
-    
-  minFaceRadius() {
-    let min2 = Number.MAX_VALUE;
-    const nFaces = this.face.length;
-    const centers = this.centers();
-    for (let f = 0, end = nFaces; f < end; f++) {
-      const c = centers[f];
-      for (let e of faceToEdges(this.face[f])) {
-        // Check distance from center to each edge.
-        const de2 = linePointDist2(this.xyz[e[0]], this.xyz[e[1]], c);
-        if (de2 < min2) {
-          min2 = de2;
-        }
-      }
-    }
-
-    return sqrt(min2);
   }
       
   centers() {
     // get array of face centers
     const centers_array = [];
-    for (let f of this.face) {
+    for (let f of this.faces) {
       let fcenter = [0, 0, 0];
       // average vertex coords
       for (let v of f) {
-        fcenter = add(fcenter, this.xyz[v]);
+        fcenter = add(fcenter, this.vertices[v]);
       }
       centers_array.push(mult(1.0 / f.length, fcenter));
     }
@@ -639,10 +601,46 @@ class polyhedron {
   normals() {
     // get array of face normals
     const normals_array = [];
-    for (let f of this.face) {
-      normals_array.push(normal(f.map((v) => this.xyz[v])));
+    for (let f of this.faces) {
+      normals_array.push(normal(f.map((v) => this.vertices[v])));
     }
     return normals_array;
+  }
+
+  moreData() {
+    return `min. edge length ${this.minEdgeLength().toPrecision(2)}; ` +
+           `min. face radius ${this.minFaceRadius().toPrecision(2)}`;
+  }
+
+  minEdgeLength() {
+    let min2 = Number.MAX_VALUE;
+    // Compute minimum edge length
+    for (let e of this.edges()) {
+      // square of edge length
+      const d2 = mag2(sub(this.vertices[e[0]], this.vertices[e[1]]));
+      if (d2 < min2) {
+        min2 = d2;
+      }
+    }
+    // This is normalized if rescaling has happened.
+    return sqrt(min2); 
+  }
+    
+  minFaceRadius() {
+    let min2 = Number.MAX_VALUE;
+    const nFaces = this.faces.length;
+    const centers = this.centers();
+    for (let f = 0, end = nFaces; f < end; f++) {
+      const c = centers[f];
+      for (let e of faceToEdges(this.faces[f])) {
+        // Check distance from center to each edge.
+        const de2 = linePointDist2(this.vertices[e[0]], this.vertices[e[1]], c);
+        if (de2 < min2) {
+          min2 = de2;
+        }
+      }
+    }
+    return sqrt(min2);
   }
 
   // Export / Formatting Routines --------------------------------------------------
@@ -654,38 +652,30 @@ class polyhedron {
     let objstr="#Produced by polyHédronisme http://levskaya.github.com/polyhedronisme\n";
     objstr+=`group ${this.name}\n`;
     objstr+="#vertices\n";
-    for (v of this.xyz) {
+    for (v of this.vertices) {
       objstr += `v ${v[0]} ${v[1]} ${v[2]}\n`;
     }
-
     objstr += "#normal vector defs \n";
-    for (f of this.face) {
-      // const norm = normal((() => {
-      //   const result = [];
-      //   for (v of f) {           result.push(this.xyz[v]);
-      //   }
-      //   return result;
-      // })());
-      const norm = normal(f.map(v=>this.xyz[v]))
+    for (f of this.faces) {
+      const norm = normal(f.map(v=>this.vertices[v]))
       objstr += `vn ${norm[0]} ${norm[1]} ${norm[2]}\n`;
     }
-
     objstr += "#face defs \n";
-    for (let i = 0; i < this.face.length; i++) {
-      f = this.face[i];
+    for (let i = 0; i < this.faces.length; i++) {
+      f = this.faces[i];
       objstr += "f ";
       for (v of f) {
         objstr += `${v+1}//${i+1} `;
       }
       objstr += "\n";
     }
-
     return objstr;
   }
 
   toX3D() {
     let v;
-    const SCALE_FACTOR = .01; //ShapeWays uses 1unit = 1meter, so reduce to 1cm scale
+    // ShapeWays uses 1unit = 1meter, so reduce to 3cm scale
+    const SCALE_FACTOR = .03;
     // opening cruft
     let x3dstr=`\
 <?xml version="1.0" encoding ="UTF-8"?>
@@ -700,7 +690,7 @@ class polyhedron {
 <IndexedFaceSet normalPerVertex="false" coordIndex="\
 `;
     // face indices
-    for (let f of this.face) {
+    for (let f of this.faces) {
       for (v of f) {
         x3dstr+=`${v} `;
       }
@@ -718,7 +708,7 @@ class polyhedron {
 
     // re-scaled xyz coordinates
     x3dstr+='<Coordinate point="';
-    for (v of this.xyz) {
+    for (v of this.vertices) {
       x3dstr+=`${v[0]*SCALE_FACTOR} ${v[1]*SCALE_FACTOR} ${v[2]*SCALE_FACTOR} `;
     }
     x3dstr+='"/>\n';
@@ -735,7 +725,8 @@ class polyhedron {
 
   toVRML() {
     let v;
-    const SCALE_FACTOR = .01; //ShapeWays uses 1unit = 1meter, so reduce to 1cm scale
+    // ShapeWays uses 1unit = 1meter, so reduce to 3cm scale
+    const SCALE_FACTOR = .03;
     // opening cruft
     let x3dstr=`\
 #VRML V2.0 utf8
@@ -760,7 +751,7 @@ Transform {
           [\
 `;
     // re-scaled xyz coordinates
-    for (v of this.xyz) {
+    for (v of this.vertices) {
       x3dstr+=`${v[0]*SCALE_FACTOR} ${v[1]*SCALE_FACTOR} ${v[2]*SCALE_FACTOR},`;
     }
     x3dstr=x3dstr.slice(0, +-2 + 1 || undefined);
@@ -773,7 +764,7 @@ color Color
   [\
 `;
     // per-face Color
-    for (let cl of this.face_class) {
+    for (let cl of this.face_classes) {
       const clr=palette(cl);
       x3dstr+=`${clr[0]} ${clr[1]} ${clr[2]} ,`;
     }
@@ -786,7 +777,7 @@ coordIndex
 [\
 `;
     // face indices
-    for (let f of this.face) {
+    for (let f of this.faces) {
       for (v of f) {
         x3dstr+=`${v}, `;
       }
@@ -821,24 +812,24 @@ coordIndex
 const tetrahedron = function() {
   const poly = new polyhedron();
   poly.name = "T";
-  poly.face = [ [0,1,2], [0,2,3], [0,3,1], [1,3,2] ];
-  poly.xyz  = [ [1.0,1.0,1.0], [1.0,-1.0,-1.0], [-1.0,1.0,-1.0], [-1.0,-1.0,1.0] ];
+  poly.faces = [ [0,1,2], [0,2,3], [0,3,1], [1,3,2] ];
+  poly.vertices  = [ [1.0,1.0,1.0], [1.0,-1.0,-1.0], [-1.0,1.0,-1.0], [-1.0,-1.0,1.0] ];
   return poly;
 };
 
 const octahedron = function() {
   const poly = new polyhedron();
   poly.name = "O";
-  poly.face = [ [0,1,2], [0,2,3], [0,3,4], [0,4,1], [1,4,5], [1,5,2], [2,5,3], [3,5,4] ];
-  poly.xyz  = [ [0,0,1.414], [1.414,0,0], [0,1.414,0], [-1.414,0,0], [0,-1.414,0], [0,0,-1.414] ];
+  poly.faces = [ [0,1,2], [0,2,3], [0,3,4], [0,4,1], [1,4,5], [1,5,2], [2,5,3], [3,5,4] ];
+  poly.vertices  = [ [0,0,1.414], [1.414,0,0], [0,1.414,0], [-1.414,0,0], [0,-1.414,0], [0,0,-1.414] ];
   return poly;
 };
 
 const cube = function() {
   const poly = new polyhedron();
   poly.name = "C";
-  poly.face = [ [3,0,1,2], [3,4,5,0], [0,5,6,1], [1,6,7,2], [2,7,4,3], [5,4,7,6] ];
-  poly.xyz  = [ [0.707,0.707,0.707], [-0.707,0.707,0.707], [-0.707,-0.707,0.707], [0.707,-0.707,0.707],
+  poly.faces = [ [3,0,1,2], [3,4,5,0], [0,5,6,1], [1,6,7,2], [2,7,4,3], [5,4,7,6] ];
+  poly.vertices  = [ [0.707,0.707,0.707], [-0.707,0.707,0.707], [-0.707,-0.707,0.707], [0.707,-0.707,0.707],
                 [0.707,-0.707,-0.707], [0.707,0.707,-0.707], [-0.707,0.707,-0.707], [-0.707,-0.707,-0.707] ];
   return poly;
 };
@@ -846,13 +837,13 @@ const cube = function() {
 const icosahedron = function() {
   const poly = new polyhedron();
   poly.name = "I";
-  poly.face = [ [0,1,2], [0,2,3], [0,3,4], [0,4,5],
+  poly.faces = [ [0,1,2], [0,2,3], [0,3,4], [0,4,5],
     [0,5,1], [1,5,7], [1,7,6], [1,6,2],
     [2,6,8], [2,8,3], [3,8,9], [3,9,4],
     [4,9,10], [4,10,5], [5,10,7], [6,7,11],
     [6,11,8], [7,10,11], [8,11,9], [9,11,10] ];
 
-  poly.xyz = [ [0,0,1.176], [1.051,0,0.526],
+  poly.vertices = [ [0,0,1.176], [1.051,0,0.526],
     [0.324,1.0,0.525], [-0.851,0.618,0.526],
     [-0.851,-0.618,0.526], [0.325,-1.0,0.526],
     [0.851,0.618,-0.526], [0.851,-0.618,-0.526],
@@ -864,11 +855,11 @@ const icosahedron = function() {
 const dodecahedron = function() {
    const poly = new polyhedron();
    poly.name = "D";
-   poly.face = [ [0,1,4,7,2], [0,2,6,9,3], [0,3,8,5,1],
+   poly.faces = [ [0,1,4,7,2], [0,2,6,9,3], [0,3,8,5,1],
       [1,5,11,10,4], [2,7,13,12,6], [3,9,15,14,8],
       [4,10,16,13,7], [5,8,14,17,11], [6,12,18,15,9],
       [10,11,17,19,16], [12,13,16,19,18], [14,15,18,19,17] ];
-   poly.xyz = [ [0,0,1.07047], [0.713644,0,0.797878],
+   poly.vertices = [ [0,0,1.07047], [0.713644,0,0.797878],
       [-0.356822,0.618,0.797878], [-0.356822,-0.618,0.797878],
       [0.797878,0.618034,0.356822], [0.797878,-0.618,0.356822],
       [-0.934172,0.381966,0.356822], [0.136294,1.0,0.356822],
@@ -889,16 +880,16 @@ const prism = function(n) {
   poly.name = `P${n}`;
 
   for (i = 0; i < n; i++) { // vertex #'s 0 to n-1 around one face
-    poly.xyz.push([-cos(i*theta), -sin(i*theta),  -h]);
+    poly.vertices.push([-cos(i*theta), -sin(i*theta),  -h]);
   }
   for (i = 0; i < n; i++) { // vertex #'s n to 2n-1 around other
-    poly.xyz.push([-cos(i*theta), -sin(i*theta), h]);
+    poly.vertices.push([-cos(i*theta), -sin(i*theta), h]);
   }
 
-  poly.face.push(__range__(n-1, 0, true));  //top
-  poly.face.push(__range__(n, 2*n, false)); //bottom
+  poly.faces.push(__range__(n-1, 0, true));  //top
+  poly.faces.push(__range__(n, 2*n, false)); //bottom
   for (i = 0; i < n; i++) { //n square sides
-    poly.face.push([i, (i+1)%n, ((i+1)%n)+n, i+n]);
+    poly.faces.push([i, (i+1)%n, ((i+1)%n)+n, i+n]);
   }
 
   poly = adjustXYZ(poly,1);
@@ -918,17 +909,17 @@ const antiprism = function(n) {
   poly.name = `A${n}`;
 
   for (i = 0; i < n; i++) { // vertex #'s 0...n-1 around one face
-    poly.xyz.push([r * cos(i*theta), r * sin(i*theta), h]);
+    poly.vertices.push([r * cos(i*theta), r * sin(i*theta), h]);
   }
   for (i = 0; i < n; i++) { // vertex #'s n...2n-1 around other
-    poly.xyz.push([r * cos((i+0.5)*theta), r * sin((i+0.5)*theta), -h]);
+    poly.vertices.push([r * cos((i+0.5)*theta), r * sin((i+0.5)*theta), -h]);
   }
 
-  poly.face.push(__range__(n-1, 0, true));   //top
-  poly.face.push(__range__(n, (2*n)-1, true)); //bottom
+  poly.faces.push(__range__(n-1, 0, true));   //top
+  poly.faces.push(__range__(n, (2*n)-1, true)); //bottom
   for (i = 0; i <= n-1; i++) { //2n triangular sides
-    poly.face.push([i, (i+1)%n, i+n]);
-    poly.face.push([i, i+n, ((((n+i)-1)%n)+n)]);
+    poly.faces.push([i, (i+1)%n, i+n]);
+    poly.faces.push([i, i+n, ((((n+i)-1)%n)+n)]);
   }
 
   poly = adjustXYZ(poly,1);
@@ -943,13 +934,13 @@ const pyramid = function(n) {
   poly.name = `Y${n}`;
 
   for (i = 0; i < n; i++) { // vertex #'s 0...n-1 around one face
-    poly.xyz.push([-cos(i*theta), -sin(i*theta), -0.2]);
+    poly.vertices.push([-cos(i*theta), -sin(i*theta), -0.2]);
   }
-  poly.xyz.push([0,0, height]); // apex
+  poly.vertices.push([0,0, height]); // apex
 
-  poly.face.push(__range__(n-1, 0, true)); // base
+  poly.faces.push(__range__(n-1, 0, true)); // base
   for (i = 0; i < n; i++) { // n triangular sides
-    poly.face.push([i, (i+1)%n, n]);
+    poly.faces.push([i, (i+1)%n, n]);
   }
 
   poly = canonicalXYZ(poly, 3);
@@ -970,12 +961,12 @@ johnson_polyhedra =
 {J1: function() {
    const poly = new polyhedron();
    poly.name = "J1";
-   poly.face = [[1, 4, 2],
+   poly.faces = [[1, 4, 2],
                 [0, 1, 2],
                 [3, 0, 2],
                 [4, 3, 2],
                 [4, 1, 0, 3]];
-   poly.xyz = [[-0.729665, 0.670121, 0.319155],
+   poly.vertices = [[-0.729665, 0.670121, 0.319155],
                [-0.655235, -0.29213, -0.754096],
                [-0.093922, -0.607123, 0.537818],
                [0.702196, 0.595691, 0.485187],
@@ -985,13 +976,13 @@ johnson_polyhedra =
 J2: function() {
    const poly = new polyhedron();
    poly.name = "J2";
-   poly.face = [[3, 0, 2],
+   poly.faces = [[3, 0, 2],
                 [5, 3, 2],
                 [4, 5, 2],
                 [1, 4, 2],
                 [0, 1, 2],
                 [0, 3, 5, 4, 1]];
-   poly.xyz = [[-0.868849, -0.100041, 0.61257],
+   poly.vertices = [[-0.868849, -0.100041, 0.61257],
                [-0.329458, 0.976099, 0.28078],
                [-0.26629, -0.013796, -0.477654],
                [-0.13392, -1.034115, 0.229829],
@@ -1002,7 +993,7 @@ J2: function() {
 J3: function() {
    const poly = new polyhedron();
    poly.name = "J3";
-   poly.face = [[2, 6, 4],
+   poly.faces = [[2, 6, 4],
                 [6, 5, 8],
                 [4, 7, 3],
                 [2, 0, 1],
@@ -1010,7 +1001,7 @@ J3: function() {
                 [4, 6, 8, 7],
                 [2, 4, 3, 0],
                 [0, 3, 7, 8, 5, 1]];
-   poly.xyz = [[-0.909743, 0.523083, 0.242386],
+   poly.vertices = [[-0.909743, 0.523083, 0.242386],
                [-0.747863, 0.22787, -0.740794],
                [-0.678803, -0.467344, 0.028562],
                [-0.11453, 0.564337, 0.910169],
@@ -1024,7 +1015,7 @@ J3: function() {
 J4: function() {
    const poly = new polyhedron();
    poly.name = "J4";
-   poly.face = [[3, 1, 5],
+   poly.faces = [[3, 1, 5],
                 [7, 9, 11],
                 [6, 10, 8],
                 [2, 4, 0],
@@ -1034,7 +1025,7 @@ J4: function() {
                 [6, 7, 11, 10],
                 [2, 6, 8, 4],
                 [4, 8, 10, 11, 9, 5, 1, 0]];
-   poly.xyz = [[-0.600135, 0.398265, -0.852158],
+   poly.vertices = [[-0.600135, 0.398265, -0.852158],
                [-0.585543, -0.441941, -0.840701],
                [-0.584691, 0.40999, -0.011971],
                [-0.570099, -0.430216, -0.000514],
@@ -1051,7 +1042,7 @@ J4: function() {
 J5: function() {
    const poly = new polyhedron();
    poly.name = "J5";
-   poly.face = [[4, 1, 5],
+   poly.faces = [[4, 1, 5],
                 [8, 9, 12],
                 [10, 14, 13],
                 [7, 11, 6],
@@ -1063,7 +1054,7 @@ J5: function() {
                 [3, 7, 6, 2],
                 [3, 4, 8, 10, 7],
                 [2, 6, 11, 13, 14, 12, 9, 5, 1, 0]];
-   poly.xyz = [[-0.973114, 0.120196, -0.57615],
+   poly.vertices = [[-0.973114, 0.120196, -0.57615],
                [-0.844191, -0.563656, -0.512814],
                [-0.711039, 0.75783, -0.46202],
                [-0.594483, 0.244733, -0.002202],
@@ -1083,7 +1074,7 @@ J5: function() {
 J6: function() {
    const poly = new polyhedron();
    poly.name = "J6";
-   poly.face = [[11, 16, 12],
+   poly.faces = [[11, 16, 12],
                 [16, 17, 19],
                 [12, 15, 9],
                 [15, 18, 14],
@@ -1100,7 +1091,7 @@ J6: function() {
                 [4, 5, 3, 0, 1],
                 [6, 1, 2, 7, 10],
                 [2, 0, 3, 8, 14, 18, 19, 17, 13, 7]];
-   poly.xyz = [[-0.905691, -0.396105, -0.539844],
+   poly.vertices = [[-0.905691, -0.396105, -0.539844],
                [-0.883472, -0.258791, 0.103519],
                [-0.719735, -0.859265, -0.110695],
                [-0.703659, 0.13708, -0.868724],
@@ -1125,14 +1116,14 @@ J6: function() {
 J7: function() {
    const poly = new polyhedron();
    poly.name = "J7";
-   poly.face = [[0, 2, 4],
+   poly.faces = [[0, 2, 4],
                 [5, 3, 1],
                 [5, 1, 6],
                 [5, 6, 3],
                 [3, 2, 0, 1],
                 [1, 0, 4, 6],
                 [6, 4, 2, 3]];
-   poly.xyz = [[-0.793941, -0.708614, 0.016702],
+   poly.vertices = [[-0.793941, -0.708614, 0.016702],
                [-0.451882, 0.284418, 0.56528],
                [-0.252303, -0.348111, -0.97361],
                [0.089756, 0.64492, -0.425033],
@@ -1144,7 +1135,7 @@ J7: function() {
 J8: function() {
    const poly = new polyhedron();
    poly.name = "J8";
-   poly.face = [[8, 7, 5],
+   poly.faces = [[8, 7, 5],
                 [8, 5, 4],
                 [8, 4, 6],
                 [8, 6, 7],
@@ -1153,7 +1144,7 @@ J8: function() {
                 [5, 1, 0, 4],
                 [4, 0, 2, 6],
                 [6, 2, 3, 7]];
-   poly.xyz = [[-0.849167, -0.427323, 0.457421],
+   poly.vertices = [[-0.849167, -0.427323, 0.457421],
                [-0.849167, 0.619869, 0.087182],
                [-0.478929, -0.776386, -0.529881],
                [-0.478929, 0.270805, -0.900119],
@@ -1167,7 +1158,7 @@ J8: function() {
 J9: function() {
    const poly = new polyhedron();
    poly.name = "J9";
-   poly.face = [[6, 1, 5],
+   poly.faces = [[6, 1, 5],
                 [6, 5, 10],
                 [6, 10, 9],
                 [6, 9, 4],
@@ -1178,7 +1169,7 @@ J9: function() {
                 [9, 7, 2, 4],
                 [4, 2, 0, 1],
                 [8, 3, 0, 2, 7]];
-   poly.xyz = [[-0.980309, -0.33878, 0.175213],
+   poly.vertices = [[-0.980309, -0.33878, 0.175213],
                [-0.719686, 0.629425, 0.02221],
                [-0.520232, -0.599402, -0.690328],
                [-0.299303, -0.403757, 0.924054],
@@ -1194,7 +1185,7 @@ J9: function() {
 J10: function() {
    const poly = new polyhedron();
    poly.name = "J10";
-   poly.face = [[4, 7, 8],
+   poly.faces = [[4, 7, 8],
                 [8, 7, 6],
                 [8, 6, 3],
                 [3, 6, 1],
@@ -1207,7 +1198,7 @@ J10: function() {
                 [3, 0, 5],
                 [0, 4, 5],
                 [1, 6, 7, 2]];
-   poly.xyz = [[-0.776892, 0.173498, 0.416855],
+   poly.vertices = [[-0.776892, 0.173498, 0.416855],
                [-0.68155, 0.270757, -0.747914],
                [-0.646922, -0.78715, -0.243069],
                [0.020463, 0.897066, -0.047806],
@@ -1221,7 +1212,7 @@ J10: function() {
 J11: function() {
    const poly = new polyhedron();
    poly.name = "J11";
-   poly.face = [[6, 2, 8],
+   poly.faces = [[6, 2, 8],
                 [8, 2, 4],
                 [8, 4, 9],
                 [9, 4, 3],
@@ -1237,7 +1228,7 @@ J11: function() {
                 [7, 5, 10],
                 [5, 6, 10],
                 [1, 3, 4, 2, 0]];
-   poly.xyz = [[-0.722759, -0.425905, 0.628394],
+   poly.vertices = [[-0.722759, -0.425905, 0.628394],
                [-0.669286, 0.622275, 0.513309],
                [-0.502035, -0.868253, -0.304556],
                [-0.415513, 0.827739, -0.490768],
@@ -1253,13 +1244,13 @@ J11: function() {
 J12: function() {
    const poly = new polyhedron();
    poly.name = "J12";
-   poly.face = [[1, 3, 0],
+   poly.faces = [[1, 3, 0],
                 [3, 4, 0],
                 [3, 1, 4],
                 [0, 2, 1],
                 [0, 4, 2],
                 [2, 4, 1]];
-   poly.xyz = [[-0.610389, 0.243975, 0.531213],
+   poly.vertices = [[-0.610389, 0.243975, 0.531213],
                [-0.187812, -0.48795, -0.664016],
                [-0.187812, 0.9759, -0.664016],
                [0.187812, -0.9759, 0.664016],
@@ -1269,7 +1260,7 @@ J12: function() {
 J13: function() {
    const poly = new polyhedron();
    poly.name = "J13";
-   poly.face = [[3, 2, 0],
+   poly.faces = [[3, 2, 0],
                 [2, 1, 0],
                 [2, 5, 1],
                 [0, 4, 3],
@@ -1279,7 +1270,7 @@ J13: function() {
                 [3, 4, 6],
                 [5, 2, 6],
                 [4, 5, 6]];
-   poly.xyz = [[-1.028778, 0.392027, -0.048786],
+   poly.vertices = [[-1.028778, 0.392027, -0.048786],
                [-0.640503, -0.646161, 0.621837],
                [-0.125162, -0.395663, -0.540059],
                [0.004683, 0.888447, -0.651988],
@@ -1291,7 +1282,7 @@ J13: function() {
 J14: function() {
    const poly = new polyhedron();
    poly.name = "J14";
-   poly.face = [[4, 7, 6],
+   poly.faces = [[4, 7, 6],
                 [5, 3, 1],
                 [2, 4, 6],
                 [3, 0, 1],
@@ -1300,7 +1291,7 @@ J14: function() {
                 [7, 4, 3, 5],
                 [4, 2, 0, 3],
                 [2, 7, 5, 0]];
-   poly.xyz = [[-0.677756, 0.338878, 0.309352],
+   poly.vertices = [[-0.677756, 0.338878, 0.309352],
                [-0.446131, 1.338394, 0.0],
                [-0.338878, -0.677755, 0.309352],
                [-0.169439, 0.508317, -0.618703],
@@ -1313,7 +1304,7 @@ J14: function() {
 J15: function() {
    const poly = new polyhedron();
    poly.name = "J15";
-   poly.face = [[8, 9, 7],
+   poly.faces = [[8, 9, 7],
                 [6, 5, 2],
                 [3, 8, 7],
                 [5, 0, 2],
@@ -1325,7 +1316,7 @@ J15: function() {
                 [8, 3, 0, 5],
                 [3, 4, 1, 0],
                 [4, 9, 6, 1]];
-   poly.xyz = [[-0.669867, 0.334933, -0.529576],
+   poly.vertices = [[-0.669867, 0.334933, -0.529576],
                [-0.669867, 0.334933, 0.529577],
                [-0.4043, 1.212901, 0.0],
                [-0.334933, -0.669867, -0.529576],
@@ -1340,7 +1331,7 @@ J15: function() {
 J16: function() {
    const poly = new polyhedron();
    poly.name = "J16";
-   poly.face = [[11, 10, 8],
+   poly.faces = [[11, 10, 8],
                 [7, 9, 3],
                 [6, 11, 8],
                 [9, 5, 3],
@@ -1355,7 +1346,7 @@ J16: function() {
                 [6, 2, 0, 5],
                 [2, 4, 1, 0],
                 [4, 10, 7, 1]];
-   poly.xyz = [[-0.931836, 0.219976, -0.264632],
+   poly.vertices = [[-0.931836, 0.219976, -0.264632],
                [-0.636706, 0.318353, 0.692816],
                [-0.613483, -0.735083, -0.264632],
                [-0.326545, 0.979634, 0.0],
@@ -1372,7 +1363,7 @@ J16: function() {
 J17: function() {
    const poly = new polyhedron();
    poly.name = "J17";
-   poly.face = [[6, 8, 9],
+   poly.faces = [[6, 8, 9],
                 [9, 8, 7],
                 [9, 7, 3],
                 [3, 7, 1],
@@ -1388,7 +1379,7 @@ J17: function() {
                 [1, 7, 5],
                 [2, 1, 5],
                 [8, 2, 5]];
-   poly.xyz = [[-0.777261, 0.485581, 0.103065],
+   poly.vertices = [[-0.777261, 0.485581, 0.103065],
                [-0.675344, -0.565479, -0.273294],
                [-0.379795, -0.315718, 0.778861],
                [-0.221894, 0.282623, -0.849372],
@@ -1403,7 +1394,7 @@ J17: function() {
 J18: function() {
    const poly = new polyhedron();
    poly.name = "J18";
-   poly.face = [[4, 9, 2],
+   poly.faces = [[4, 9, 2],
                 [9, 12, 11],
                 [2, 6, 0],
                 [4, 1, 8],
@@ -1417,7 +1408,7 @@ J18: function() {
                 [2, 9, 11, 6],
                 [4, 2, 0, 1],
                 [14, 10, 5, 3, 7, 13]];
-   poly.xyz = [[-0.836652, 0.050764, 0.288421],
+   poly.vertices = [[-0.836652, 0.050764, 0.288421],
                [-0.686658, 0.016522, -0.560338],
                [-0.587106, -0.771319, 0.365687],
                [-0.571616, 0.871513, 0.302147],
@@ -1437,7 +1428,7 @@ J18: function() {
 J19: function() {
    const poly = new polyhedron();
    poly.name = "J19";
-   poly.face = [[10, 15, 16],
+   poly.faces = [[10, 15, 16],
                 [7, 13, 8],
                 [1, 2, 0],
                 [5, 3, 12],
@@ -1455,7 +1446,7 @@ J19: function() {
                 [1, 7, 8, 2],
                 [5, 1, 0, 3],
                 [18, 14, 9, 4, 6, 11, 17, 19]];
-   poly.xyz = [[-0.889715, 0.115789, -0.35951],
+   poly.vertices = [[-0.889715, 0.115789, -0.35951],
                [-0.792371, -0.231368, 0.270291],
                [-0.791598, 0.494102, 0.251959],
                [-0.522446, -0.406626, -0.70424],
@@ -1480,7 +1471,7 @@ J19: function() {
 J20: function() {
    const poly = new polyhedron();
    poly.name = "J20";
-   poly.face = [[15, 18, 21],
+   poly.faces = [[15, 18, 21],
                 [12, 20, 16],
                 [6, 10, 2],
                 [3, 0, 1],
@@ -1502,7 +1493,7 @@ J20: function() {
                 [9, 3, 1, 7],
                 [9, 15, 12, 6, 3],
                 [22, 17, 11, 5, 4, 8, 14, 19, 23, 24]];
-   poly.xyz = [[-0.93465, 0.300459, -0.271185],
+   poly.vertices = [[-0.93465, 0.300459, -0.271185],
                [-0.838689, -0.260219, -0.516017],
                [-0.711319, 0.717591, 0.128359],
                [-0.710334, -0.156922, 0.080946],
@@ -1532,7 +1523,7 @@ J20: function() {
 J21: function() {
    const poly = new polyhedron();
    poly.name = "J21";
-   poly.face = [[8, 19, 15],
+   poly.faces = [[8, 19, 15],
                 [19, 20, 25],
                 [15, 21, 13],
                 [21, 26, 23],
@@ -1559,7 +1550,7 @@ J21: function() {
                 [3, 10, 11, 4, 0],
                 [1, 0, 2, 6, 5],
                 [24, 17, 12, 7, 9, 16, 22, 27, 29, 28]];
-   poly.xyz = [[-0.913903, 0.139054, -0.10769],
+   poly.vertices = [[-0.913903, 0.139054, -0.10769],
                [-0.801323, 0.048332, 0.456301],
                [-0.780136, -0.347362, -0.398372],
                [-0.694081, 0.568652, 0.218063],
@@ -1594,7 +1585,7 @@ J21: function() {
 J22: function() {
    const poly = new polyhedron();
    poly.name = "J22";
-   poly.face = [[0, 1, 2],
+   poly.faces = [[0, 1, 2],
                 [2, 1, 5],
                 [2, 5, 8],
                 [8, 5, 11],
@@ -1614,7 +1605,7 @@ J22: function() {
                 [7, 9, 13, 12],
                 [3, 7, 6, 0],
                 [11, 5, 1, 4, 10, 14]];
-   poly.xyz = [[-0.846878, 0.066004, 0.311423],
+   poly.vertices = [[-0.846878, 0.066004, 0.311423],
                [-0.766106, 0.678635, -0.329908],
                [-0.708152, -0.186985, -0.531132],
                [-0.64897, -0.782761, 0.128183],
@@ -1634,7 +1625,7 @@ J22: function() {
 J23: function() {
    const poly = new polyhedron();
    poly.name = "J23";
-   poly.face = [[1, 0, 2],
+   poly.faces = [[1, 0, 2],
                 [2, 0, 4],
                 [2, 4, 8],
                 [8, 4, 10],
@@ -1660,7 +1651,7 @@ J23: function() {
                 [6, 12, 11, 5],
                 [7, 6, 1, 2],
                 [10, 4, 0, 3, 9, 15, 19, 16]];
-   poly.xyz = [[-0.96917, 0.321358, -0.364138],
+   poly.vertices = [[-0.96917, 0.321358, -0.364138],
                [-0.902194, 0.146986, 0.353054],
                [-0.885918, -0.386527, -0.161101],
                [-0.700663, 0.819184, 0.114745],
@@ -1685,7 +1676,7 @@ J23: function() {
 J24: function() {
    const poly = new polyhedron();
    poly.name = "J24";
-   poly.face = [[1, 3, 5],
+   poly.faces = [[1, 3, 5],
                 [5, 3, 8],
                 [5, 8, 12],
                 [12, 8, 14],
@@ -1717,7 +1708,7 @@ J24: function() {
                 [9, 6, 1, 5],
                 [9, 15, 17, 11, 6],
                 [20, 14, 8, 3, 0, 4, 10, 16, 21, 24]];
-   poly.xyz = [[-1.007937, 0.263193, -0.317378],
+   poly.vertices = [[-1.007937, 0.263193, -0.317378],
                [-0.995648, -0.249677, 0.04509],
                [-0.928425, 0.319026, 0.303212],
                [-0.878881, -0.297121, -0.570283],
@@ -1747,7 +1738,7 @@ J24: function() {
 J25: function() {
    const poly = new polyhedron();
    poly.name = "J25";
-   poly.face = [[2, 9, 11],
+   poly.faces = [[2, 9, 11],
                 [11, 9, 16],
                 [11, 16, 19],
                 [19, 16, 23],
@@ -1784,7 +1775,7 @@ J25: function() {
                 [6, 7, 3, 0, 1],
                 [8, 1, 2, 11, 14],
                 [28, 23, 16, 9, 4, 5, 10, 17, 24, 29]];
-   poly.xyz = [[-0.897802, -0.193467, -0.273331],
+   poly.vertices = [[-0.897802, -0.193467, -0.273331],
                [-0.877838, -0.070089, 0.304735],
                [-0.73072, -0.609618, 0.112262],
                [-0.716275, 0.285603, -0.568831],
@@ -1819,7 +1810,7 @@ J25: function() {
 J26: function() {
   const poly = new polyhedron();
   poly.name = "J26";
-  poly.face = [[1, 0, 4],
+  poly.faces = [[1, 0, 4],
                [3, 2, 5],
                [3, 0, 6],
                [1, 2, 7],
@@ -1827,7 +1818,7 @@ J26: function() {
                [1, 4, 5, 2],
                [1, 7, 6, 0],
                [3, 6, 7, 2]];
-  poly.xyz = [[-0.57735, 0.57735, 0.0],
+  poly.vertices = [[-0.57735, 0.57735, 0.0],
               [0.57735, 0.57735, 0.0],
               [0.57735, -0.57735, 0.0],
               [-0.57735, -0.57735, 0.0],
@@ -1840,7 +1831,7 @@ J26: function() {
 J27: function() {
    const poly = new polyhedron();
    poly.name = "J27";
-   poly.face = [[2, 5, 8],
+   poly.faces = [[2, 5, 8],
                 [5, 4, 10],
                 [8, 11, 7],
                 [2, 1, 0],
@@ -1854,7 +1845,7 @@ J27: function() {
                 [3, 6, 4, 0],
                 [9, 3, 1, 7],
                 [6, 9, 11, 10]];
-   poly.xyz = [[-0.96936, 0.238651, 0.058198],
+   poly.vertices = [[-0.96936, 0.238651, 0.058198],
                [-0.683128, -0.715413, 0.146701],
                [-0.623092, -0.255511, -0.739236],
                [-0.478567, -0.06233, 0.875836],
@@ -1871,7 +1862,7 @@ J27: function() {
 J28: function() {
    const poly = new polyhedron();
    poly.name = "J28";
-   poly.face = [[3, 0, 2],
+   poly.faces = [[3, 0, 2],
                 [9, 8, 14],
                 [11, 15, 13],
                 [5, 7, 1],
@@ -1889,7 +1880,7 @@ J28: function() {
                 [12, 6, 7, 13],
                 [10, 12, 15, 14],
                 [4, 10, 8, 2]];
-   poly.xyz = [[-1.055402, 0.383836, -0.00011],
+   poly.vertices = [[-1.055402, 0.383836, -0.00011],
                [-1.017695, -0.474869, 0.000238],
                [-0.474869, 1.017695, -0.000394],
                [-0.448233, 0.410252, -0.607929],
@@ -1910,7 +1901,7 @@ J28: function() {
 J29: function() {
    const poly = new polyhedron();
    poly.name = "J29";
-   poly.face = [[4, 0, 1],
+   poly.faces = [[4, 0, 1],
                 [10, 6, 13],
                 [12, 15, 14],
                 [7, 8, 2],
@@ -1928,7 +1919,7 @@ J29: function() {
                 [9, 3, 2, 8],
                 [11, 9, 14, 15],
                 [5, 11, 13, 6]];
-   poly.xyz = [[-1.105, -0.077473, -0.184867],
+   poly.vertices = [[-1.105, -0.077473, -0.184867],
                [-0.863019, 0.717824, 0.033637],
                [-0.699688, -0.827387, -0.295079],
                [-0.617244, -0.39909, 0.445571],
@@ -1949,7 +1940,7 @@ J29: function() {
 J30: function() {
    const poly = new polyhedron();
    poly.name = "J30";
-   poly.face = [[4, 0, 1],
+   poly.faces = [[4, 0, 1],
                 [10, 5, 11],
                 [16, 17, 19],
                 [13, 18, 14],
@@ -1971,7 +1962,7 @@ J30: function() {
                 [3, 9, 5, 1],
                 [7, 4, 10, 16, 13],
                 [3, 6, 12, 15, 9]];
-   poly.xyz = [[-1.197125, -0.118752, -0.001762],
+   poly.vertices = [[-1.197125, -0.118752, -0.001762],
                [-1.038244, 0.607337, -0.020132],
                [-0.898745, -0.799482, 0.017282],
                [-0.619431, 0.145275, 0.38469],
@@ -1996,7 +1987,7 @@ J30: function() {
 J31: function() {
    const poly = new polyhedron();
    poly.name = "J31";
-   poly.face = [[4, 0, 1],
+   poly.faces = [[4, 0, 1],
                 [8, 3, 10],
                 [14, 17, 19],
                 [13, 18, 16],
@@ -2018,7 +2009,7 @@ J31: function() {
                 [6, 12, 10, 3],
                 [7, 4, 8, 14, 13],
                 [6, 5, 11, 15, 12]];
-   poly.xyz = [[-1.14213, -0.353364, -0.133745],
+   poly.vertices = [[-1.14213, -0.353364, -0.133745],
                [-1.138435, 0.385484, -0.050817],
                [-0.70957, -0.957238, -0.165587],
                [-0.699897, 0.97709, 0.051522],
@@ -2043,7 +2034,7 @@ J31: function() {
 J32: function() {
    const poly = new polyhedron();
    poly.name = "J32";
-   poly.face = [[3, 0, 2],
+   poly.faces = [[3, 0, 2],
                 [9, 7, 16],
                 [15, 21, 23],
                 [12, 19, 14],
@@ -2070,7 +2061,7 @@ J32: function() {
                 [17, 20, 16, 7, 8],
                 [10, 8, 2, 0, 4],
                 [11, 4, 1, 6, 13]];
-   poly.xyz = [[-1.086754, 0.270723, -0.02221],
+   poly.vertices = [[-1.086754, 0.270723, -0.02221],
                [-0.951485, 0.016307, 0.590957],
                [-0.844123, 0.345447, -0.65034],
                [-0.727726, -0.227595, -0.308179],
@@ -2100,7 +2091,7 @@ J32: function() {
 J33: function() {
    const poly = new polyhedron();
    poly.name = "J33";
-   poly.face = [[5, 6, 11],
+   poly.faces = [[5, 6, 11],
                 [9, 15, 19],
                 [8, 17, 13],
                 [3, 7, 4],
@@ -2127,7 +2118,7 @@ J33: function() {
                 [22, 23, 15, 11, 14],
                 [18, 14, 6, 2, 10],
                 [16, 10, 1, 4, 12]];
-   poly.xyz = [[-0.799512, 0.192706, 0.001565],
+   poly.vertices = [[-0.799512, 0.192706, 0.001565],
                [-0.776446, 0.593934, 0.546986],
                [-0.713384, 0.860598, -0.072621],
                [-0.640335, -0.34095, 0.387405],
@@ -2157,7 +2148,7 @@ J33: function() {
 J34: function() {
    const poly = new polyhedron();
    poly.name = "J34";
-   poly.face = [[15, 7, 14],
+   poly.faces = [[15, 7, 14],
                 [7, 3, 1],
                 [14, 12, 21],
                 [12, 5, 11],
@@ -2189,7 +2180,7 @@ J34: function() {
                 [16, 22, 28, 26, 19],
                 [9, 19, 20, 11, 6],
                 [2, 6, 5, 1, 0]];
-   poly.xyz = [[-0.976027, 0.021192, 0.216616],
+   poly.vertices = [[-0.976027, 0.021192, 0.216616],
                [-0.8986, -0.336852, -0.281155],
                [-0.800821, 0.595002, 0.068255],
                [-0.778424, -0.560713, 0.282236],
@@ -2224,7 +2215,7 @@ J34: function() {
 J35: function() {
    const poly = new polyhedron();
    poly.name = "J35";
-   poly.face = [[9, 16, 12],
+   poly.faces = [[9, 16, 12],
                 [16, 13, 17],
                 [12, 15, 7],
                 [9, 3, 6],
@@ -2244,7 +2235,7 @@ J35: function() {
                 [13, 10, 14, 17],
                 [17, 14, 11, 15],
                 [15, 11, 4, 7]];
-   poly.xyz = [[-0.903332, -0.063468, 0.034076],
+   poly.vertices = [[-0.903332, -0.063468, 0.034076],
                [-0.833437, 0.28305, 0.763458],
                [-0.589483, 0.680853, 0.100738],
                [-0.561749, -0.142046, -0.696749],
@@ -2267,7 +2258,7 @@ J35: function() {
 J36: function() {
    const poly = new polyhedron();
    poly.name = "J36";
-   poly.face = [[3, 11, 9],
+   poly.faces = [[3, 11, 9],
                 [11, 10, 16],
                 [9, 13, 5],
                 [3, 0, 2],
@@ -2287,7 +2278,7 @@ J36: function() {
                 [10, 12, 17, 16],
                 [16, 17, 15, 13],
                 [13, 15, 7, 5]];
-   poly.xyz = [[-0.82124, -0.196132, -0.329082],
+   poly.vertices = [[-0.82124, -0.196132, -0.329082],
                [-0.725355, -0.267867, 0.472553],
                [-0.627806, 0.589563, -0.281911],
                [-0.577286, 0.20167, -0.991803],
@@ -2310,7 +2301,7 @@ J36: function() {
  J37: function() {
   const poly = new polyhedron();
   poly.name = "J37";
-  poly.face = [[2, 3, 0],
+  poly.faces = [[2, 3, 0],
                [4, 5, 1],
                [10, 7, 6],
                [11, 9, 8],
@@ -2336,7 +2327,7 @@ J36: function() {
                [9, 16, 21, 5],
                [5, 21, 23, 1],
                [1, 23, 22, 0]];
-  poly.xyz = [[-0.862856, 0.357407, -0.357407],
+  poly.vertices = [[-0.862856, 0.357407, -0.357407],
               [-0.862856, -0.357407, -0.357407],
               [-0.357407, 0.862856, -0.357407],
               [-0.357407, 0.357407, -0.862856],
@@ -2365,7 +2356,7 @@ J36: function() {
 J38: function() {
    const poly = new polyhedron();
    poly.name = "J38";
-   poly.face = [[17, 10, 19],
+   poly.faces = [[17, 10, 19],
                 [24, 26, 29],
                 [23, 28, 22],
                 [15, 14, 7],
@@ -2397,7 +2388,7 @@ J38: function() {
                 [28, 25, 20, 22],
                 [12, 17, 24, 23, 15],
                 [9, 4, 8, 16, 18]];
-   poly.xyz = [[-1.047541, -0.14473, -0.164687],
+   poly.vertices = [[-1.047541, -0.14473, -0.164687],
                [-0.97266, 0.443085, 0.054945],
                [-0.794156, 0.029302, -0.716846],
                [-0.77069, -0.7105, -0.215961],
@@ -2432,7 +2423,7 @@ J38: function() {
 J39: function() {
    const poly = new polyhedron();
    poly.name = "J39";
-   poly.face = [[11, 4, 13],
+   poly.faces = [[11, 4, 13],
                 [19, 21, 26],
                 [20, 28, 24],
                 [12, 15, 7],
@@ -2464,7 +2455,7 @@ J39: function() {
                 [28, 29, 25, 24],
                 [6, 11, 19, 20, 12],
                 [17, 9, 10, 18, 23]];
-   poly.xyz = [[-1.006864, 0.217224, -0.290603],
+   poly.vertices = [[-1.006864, 0.217224, -0.290603],
                [-0.990318, 0.219795, 0.341133],
                [-0.944481, -0.411647, -0.289678],
                [-0.927935, -0.409077, 0.342059],
@@ -2499,7 +2490,7 @@ J39: function() {
 J40: function() {
    const poly = new polyhedron();
    poly.name = "J40";
-   poly.face = [[6, 1, 8],
+   poly.faces = [[6, 1, 8],
                 [14, 16, 24],
                 [18, 27, 26],
                 [11, 19, 9],
@@ -2536,7 +2527,7 @@ J40: function() {
                 [25, 15, 13, 23, 30],
                 [32, 30, 31, 33, 34],
                 [28, 34, 29, 22, 21]];
-   poly.xyz = [[-1.05518, -0.061289, -0.047893],
+   poly.vertices = [[-1.05518, -0.061289, -0.047893],
                [-0.934164, 0.280612, 0.409939],
                [-0.859454, -0.241561, -0.56784],
                [-0.777777, -0.505581, 0.210572],
@@ -2576,7 +2567,7 @@ J40: function() {
 J41: function() {
    const poly = new polyhedron();
    poly.name = "J41";
-   poly.face = [[9, 3, 10],
+   poly.faces = [[9, 3, 10],
                 [18, 21, 27],
                 [20, 30, 25],
                 [12, 17, 8],
@@ -2613,7 +2604,7 @@ J41: function() {
                 [26, 19, 22, 29, 33],
                 [31, 33, 34, 32, 28],
                 [23, 28, 24, 14, 13]];
-   poly.xyz = [[-1.045033, 0.161365, 0.036367],
+   poly.vertices = [[-1.045033, 0.161365, 0.036367],
                [-0.919366, 0.043922, -0.521815],
                [-0.855707, -0.369212, 0.190625],
                [-0.830432, 0.382234, 0.532668],
@@ -2653,7 +2644,7 @@ J41: function() {
 J42: function() {
    const poly = new polyhedron();
    poly.name = "J42";
-   poly.face = [[0, 3, 4],
+   poly.faces = [[0, 3, 4],
                 [3, 7, 11],
                 [4, 12, 8],
                 [12, 18, 22],
@@ -2695,7 +2686,7 @@ J42: function() {
                 [38, 32, 28, 31, 37],
                 [39, 37, 33, 29, 35],
                 [36, 35, 26, 20, 27]];
-   poly.xyz = [[-1.094229, 0.091579, -0.183298],
+   poly.vertices = [[-1.094229, 0.091579, -0.183298],
                [-0.983491, -0.29488, 0.177777],
                [-0.97462, -0.408146, -0.350504],
                [-0.882171, 0.554599, -0.002654],
@@ -2740,7 +2731,7 @@ J42: function() {
 J43: function() {
    const poly = new polyhedron();
    poly.name = "J43";
-   poly.face = [[0, 2, 1],
+   poly.faces = [[0, 2, 1],
                 [2, 7, 10],
                 [1, 8, 5],
                 [8, 13, 19],
@@ -2782,7 +2773,7 @@ J43: function() {
                 [38, 31, 26, 29, 37],
                 [39, 37, 32, 30, 35],
                 [36, 35, 27, 23, 28]];
-   poly.xyz = [[-1.099924, -0.170755, -0.018241],
+   poly.vertices = [[-1.099924, -0.170755, -0.018241],
                [-1.015744, 0.184543, -0.41657],
                [-0.979069, 0.342745, 0.098809],
                [-0.891012, -0.645186, -0.17075],
@@ -2827,7 +2818,7 @@ J43: function() {
 J44: function() {
    const poly = new polyhedron();
    poly.name = "J44";
-   poly.face = [[11, 14, 6],
+   poly.faces = [[11, 14, 6],
                 [14, 17, 12],
                 [6, 4, 0],
                 [11, 5, 13],
@@ -2853,7 +2844,7 @@ J44: function() {
                 [10, 9, 15, 16],
                 [3, 10, 8, 2],
                 [9, 3, 1, 7]];
-   poly.xyz = [[-0.789003, 0.385273, -0.254111],
+   poly.vertices = [[-0.789003, 0.385273, -0.254111],
                [-0.772339, -0.452189, -0.185879],
                [-0.761383, 0.026005, 0.505125],
                [-0.611639, -0.798949, 0.562592],
@@ -2876,7 +2867,7 @@ J44: function() {
 J45: function() {
    const poly = new polyhedron();
    poly.name = "J45";
-   poly.face = [[13, 16, 20],
+   poly.faces = [[13, 16, 20],
                 [9, 18, 12],
                 [2, 4, 0],
                 [5, 1, 8],
@@ -2910,7 +2901,7 @@ J45: function() {
                 [10, 14, 7, 3],
                 [17, 10, 6, 11],
                 [21, 17, 19, 23]];
-   poly.xyz = [[-0.984615, -0.215433, 0.042813],
+   poly.vertices = [[-0.984615, -0.215433, 0.042813],
                [-0.835086, 0.417027, 0.382665],
                [-0.776626, 0.078669, -0.596021],
                [-0.681291, -0.220722, 0.710519],
@@ -2939,7 +2930,7 @@ J45: function() {
 J46: function() {
    const poly = new polyhedron();
    poly.name = "J46";
-   poly.face = [[9, 11, 18],
+   poly.faces = [[9, 11, 18],
                 [16, 23, 25],
                 [10, 19, 12],
                 [3, 6, 1],
@@ -2981,7 +2972,7 @@ J46: function() {
                 [24, 26, 29, 27],
                 [2, 9, 16, 10, 3],
                 [24, 17, 15, 21, 26]];
-   poly.xyz = [[-0.962816, 0.187793, 0.445444],
+   poly.vertices = [[-0.962816, 0.187793, 0.445444],
                [-0.942301, -0.435696, 0.287991],
                [-0.736715, 0.34226, -0.136766],
                [-0.7162, -0.281228, -0.294218],
@@ -3016,7 +3007,7 @@ J46: function() {
 J47: function() {
    const poly = new polyhedron();
    poly.name = "J47";
-   poly.face = [[8, 12, 18],
+   poly.faces = [[8, 12, 18],
                 [13, 21, 20],
                 [7, 16, 11],
                 [2, 4, 0],
@@ -3063,7 +3054,7 @@ J47: function() {
                 [27, 17, 9, 14, 25],
                 [32, 25, 22, 26, 33],
                 [34, 33, 29, 28, 31]];
-   poly.xyz = [[-0.908535, -0.523787, -0.144699],
+   poly.vertices = [[-0.908535, -0.523787, -0.144699],
                [-0.894854, -0.367641, 0.429886],
                [-0.853258, 0.048135, -0.301436],
                [-0.839577, 0.20428, 0.273149],
@@ -3103,7 +3094,7 @@ J47: function() {
 J48: function() {
    const poly = new polyhedron();
    poly.name = "J48";
-   poly.face = [[0, 5, 1],
+   poly.faces = [[0, 5, 1],
                 [5, 10, 11],
                 [1, 7, 3],
                 [7, 13, 15],
@@ -3155,7 +3146,7 @@ J48: function() {
                 [39, 33, 27, 29, 34],
                 [38, 34, 28, 26, 32],
                 [36, 32, 24, 22, 30]];
-   poly.xyz = [[-1.023844, 0.34935, 0.211966],
+   poly.vertices = [[-1.023844, 0.34935, 0.211966],
                [-1.02284, 0.245289, -0.329944],
                [-0.984402, -0.132386, 0.478181],
                [-0.982778, -0.300762, -0.398647],
@@ -3200,7 +3191,7 @@ J48: function() {
 J49: function() {
    const poly = new polyhedron();
    poly.name = "J49";
-   poly.face = [[6, 3, 2],
+   poly.faces = [[6, 3, 2],
                 [3, 0, 2],
                 [0, 3, 4],
                 [2, 5, 6],
@@ -3208,7 +3199,7 @@ J49: function() {
                 [6, 4, 3],
                 [2, 0, 1, 5],
                 [5, 1, 4, 6]];
-   poly.xyz = [[-0.87547, -0.255205, -0.086794],
+   poly.vertices = [[-0.87547, -0.255205, -0.086794],
                [-0.276612, -0.313401, 1.029989],
                [-0.236035, 0.801921, -0.374595],
                [-0.051128, -0.255205, -1.050994],
@@ -3220,7 +3211,7 @@ J49: function() {
 J50: function() {
    const poly = new polyhedron();
    poly.name = "J50";
-   poly.face = [[3, 0, 1],
+   poly.faces = [[3, 0, 1],
                 [1, 0, 2],
                 [1, 2, 5],
                 [4, 0, 3],
@@ -3231,7 +3222,7 @@ J50: function() {
                 [7, 3, 5],
                 [1, 5, 3],
                 [0, 4, 6, 2]];
-   poly.xyz = [[-0.878027, -0.44614, 0.176652],
+   poly.vertices = [[-0.878027, -0.44614, 0.176652],
                [-0.85656, 0.548188, -0.533],
                [-0.47761, 0.616903, 0.626496],
                [-0.069889, -0.364329, -0.736024],
@@ -3244,7 +3235,7 @@ J50: function() {
 J51: function() {
    const poly = new polyhedron();
    poly.name = "J51";
-   poly.face = [[1, 5, 0],
+   poly.faces = [[1, 5, 0],
                 [8, 4, 5],
                 [4, 0, 5],
                 [4, 3, 0],
@@ -3258,7 +3249,7 @@ J51: function() {
                 [0, 2, 1],
                 [2, 6, 1],
                 [1, 6, 5]];
-   poly.xyz = [[-0.837735, -0.140456, -0.298855],
+   poly.vertices = [[-0.837735, -0.140456, -0.298855],
                [-0.67808, 0.951266, 0.116678],
                [-0.424767, 0.019903, 0.793738],
                [-0.041529, -0.887587, 0.145967],
@@ -3272,7 +3263,7 @@ J51: function() {
 J52: function() {
    const poly = new polyhedron();
    poly.name = "J52";
-   poly.face = [[3, 8, 4],
+   poly.faces = [[3, 8, 4],
                 [3, 9, 8],
                 [4, 8, 10],
                 [10, 8, 9],
@@ -3282,7 +3273,7 @@ J52: function() {
                 [0, 2, 7, 5],
                 [0, 1, 3, 4, 2],
                 [7, 10, 9, 6, 5]];
-   poly.xyz = [[-0.81481, 0.221521, -0.662951],
+   poly.vertices = [[-0.81481, 0.221521, -0.662951],
                [-0.660297, -0.683519, -0.326712],
                [-0.53073, 0.852939, 0.027439],
                [-0.280723, -0.611446, 0.571485],
@@ -3298,7 +3289,7 @@ J52: function() {
 J53: function() {
    const poly = new polyhedron();
    poly.name = "J53";
-   poly.face = [[2, 3, 0],
+   poly.faces = [[2, 3, 0],
                 [2, 9, 3],
                 [0, 3, 7],
                 [7, 3, 9],
@@ -3311,7 +3302,7 @@ J53: function() {
                 [1, 0, 7, 8],
                 [4, 5, 2, 0, 1],
                 [8, 7, 9, 11, 10]];
-   poly.xyz = [[-0.736376, 0.261231, -0.409511],
+   poly.vertices = [[-0.736376, 0.261231, -0.409511],
                [-0.572247, -0.640818, -0.200191],
                [-0.430826, 0.786388, 0.30833],
                [-0.352398, 1.103933, -0.573408],
@@ -3328,7 +3319,7 @@ J53: function() {
 J54: function() {
    const poly = new polyhedron();
    poly.name = "J54";
-   poly.face = [[5, 10, 9],
+   poly.faces = [[5, 10, 9],
                 [5, 8, 10],
                 [9, 10, 12],
                 [12, 10, 8],
@@ -3339,7 +3330,7 @@ J54: function() {
                 [0, 3, 6, 2],
                 [0, 1, 5, 9, 7, 3],
                 [11, 12, 8, 4, 2, 6]];
-   poly.xyz = [[-0.973522, 0.38842, -0.100967],
+   poly.vertices = [[-0.973522, 0.38842, -0.100967],
                [-0.837708, -0.464036, -0.18462],
                [-0.457167, 0.537479, -0.781617],
                [-0.449574, 0.863826, 0.400622],
@@ -3357,7 +3348,7 @@ J54: function() {
 J55: function() {
    const poly = new polyhedron();
    poly.name = "J55";
-   poly.face = [[12, 13, 11],
+   poly.faces = [[12, 13, 11],
                 [12, 10, 13],
                 [11, 13, 8],
                 [8, 13, 10],
@@ -3371,7 +3362,7 @@ J55: function() {
                 [3, 6, 4, 1],
                 [5, 9, 12, 11, 6, 3],
                 [4, 8, 10, 7, 2, 1]];
-   poly.xyz = [[-1.129559, 0.266324, 0.624401],
+   poly.vertices = [[-1.129559, 0.266324, 0.624401],
                [-0.925111, 0.008507, -0.145991],
                [-0.655368, -0.416841, 0.523404],
                [-0.5883, 0.71007, 0.164074],
@@ -3390,7 +3381,7 @@ J55: function() {
 J56: function() {
    const poly = new polyhedron();
    poly.name = "J56";
-   poly.face = [[3, 0, 1],
+   poly.faces = [[3, 0, 1],
                 [3, 4, 0],
                 [1, 0, 2],
                 [2, 0, 4],
@@ -3404,7 +3395,7 @@ J56: function() {
                 [12, 10, 11, 13],
                 [12, 8, 3, 1, 5, 10],
                 [6, 2, 4, 9, 13, 11]];
-   poly.xyz = [[-1.111755, 0.435562, -0.458586],
+   poly.vertices = [[-1.111755, 0.435562, -0.458586],
                [-0.808867, 0.159752, 0.27642],
                [-0.700013, -0.297342, -0.421621],
                [-0.454926, 0.822531, -0.102389],
@@ -3423,7 +3414,7 @@ J56: function() {
 J57: function() {
    const poly = new polyhedron();
    poly.name = "J57";
-   poly.face = [[9, 14, 11],
+   poly.faces = [[9, 14, 11],
                 [9, 12, 14],
                 [11, 14, 13],
                 [13, 14, 12],
@@ -3440,7 +3431,7 @@ J57: function() {
                 [0, 2, 5, 3],
                 [0, 4, 9, 11, 8, 2],
                 [10, 13, 12, 7, 3, 5]];
-   poly.xyz = [[-0.902174, -0.044182, -0.142406],
+   poly.vertices = [[-0.902174, -0.044182, -0.142406],
                [-0.852256, -0.16038, -0.950443],
                [-0.65694, 0.352221, 0.529639],
                [-0.484062, 0.483825, -0.606421],
@@ -3460,7 +3451,7 @@ J57: function() {
 J58: function() {
    const poly = new polyhedron();
    poly.name = "J58";
-   poly.face = [[2, 0, 5],
+   poly.faces = [[2, 0, 5],
                 [2, 5, 8],
                 [2, 1, 0],
                 [2, 7, 1],
@@ -3476,7 +3467,7 @@ J58: function() {
                 [4, 6, 3, 0, 1],
                 [13, 14, 9, 3, 6],
                 [3, 9, 10, 5, 0]];
-   poly.xyz = [[-0.906673, 0.136106, 0.246909],
+   poly.vertices = [[-0.906673, 0.136106, 0.246909],
                [-0.827056, 0.097501, -0.456089],
                [-0.822039, 0.728118, -0.133084],
                [-0.682157, -0.474972, 0.526574],
@@ -3502,7 +3493,7 @@ J58: function() {
 J59: function() {
    const poly = new polyhedron();
    poly.name = "J59";
-   poly.face = [[0, 7, 3],
+   poly.faces = [[0, 7, 3],
                 [0, 3, 1],
                 [0, 5, 7],
                 [0, 2, 5],
@@ -3522,7 +3513,7 @@ J59: function() {
                 [20, 19, 15, 13, 17],
                 [16, 10, 9, 15, 19],
                 [15, 9, 3, 7, 13]];
-   poly.xyz = [[-0.987924, -0.168105, -0.565605],
+   poly.vertices = [[-0.987924, -0.168105, -0.565605],
                [-0.950092, -0.216897, 0.133657],
                [-0.877263, 0.407337, -0.179083],
                [-0.637339, -0.699196, -0.269274],
@@ -3549,7 +3540,7 @@ J59: function() {
 J60: function() {
    const poly = new polyhedron();
    poly.name = "J60";
-   poly.face = [[7, 13, 15],
+   poly.faces = [[7, 13, 15],
                 [7, 15, 9],
                 [7, 4, 13],
                 [7, 2, 4],
@@ -3569,7 +3560,7 @@ J60: function() {
                 [14, 19, 21, 16, 11],
                 [17, 18, 20, 21, 19],
                 [21, 20, 15, 13, 16]];
-   poly.xyz = [[-0.858966, -0.256781, -0.362035],
+   poly.vertices = [[-0.858966, -0.256781, -0.362035],
                [-0.807204, -0.391109, 0.326114],
                [-0.719263, 0.425042, -0.461407],
                [-0.63551, 0.207695, 0.652043],
@@ -3596,7 +3587,7 @@ J60: function() {
 J61: function() {
    const poly = new polyhedron();
    poly.name = "J61";
-   poly.face = [[6, 3, 1],
+   poly.faces = [[6, 3, 1],
                 [6, 1, 8],
                 [6, 11, 3],
                 [6, 14, 11],
@@ -3620,7 +3611,7 @@ J61: function() {
                 [16, 13, 5, 3, 11],
                 [15, 9, 2, 5, 13],
                 [2, 0, 1, 3, 5]];
-   poly.xyz = [[-0.875027, -0.215344, -0.354115],
+   poly.vertices = [[-0.875027, -0.215344, -0.354115],
                [-0.822602, -0.401147, 0.315989],
                [-0.733096, 0.465836, -0.400606],
                [-0.648272, 0.1652, 0.683645],
@@ -3648,7 +3639,7 @@ J61: function() {
 J62: function() {
    const poly = new polyhedron();
    poly.name = "J62";
-   poly.face = [[6, 3, 0],
+   poly.faces = [[6, 3, 0],
                 [0, 3, 1],
                 [1, 5, 2],
                 [1, 2, 0],
@@ -3660,7 +3651,7 @@ J62: function() {
                 [7, 3, 6],
                 [1, 3, 7, 9, 5],
                 [2, 5, 9, 8, 4]];
-   poly.xyz = [[-0.821855, 0.223834, -0.340481],
+   poly.vertices = [[-0.821855, 0.223834, -0.340481],
                [-0.71039, -0.701977, 0.157898],
                [-0.692806, 0.20039, 0.708676],
                [-0.215696, -0.533443, -0.761235],
@@ -3675,7 +3666,7 @@ J62: function() {
 J63: function() {
    const poly = new polyhedron();
    poly.name = "J63";
-   poly.face = [[0, 4, 6],
+   poly.faces = [[0, 4, 6],
                 [4, 8, 6],
                 [6, 2, 0],
                 [0, 1, 4],
@@ -3683,7 +3674,7 @@ J63: function() {
                 [6, 8, 7, 5, 2],
                 [0, 2, 5, 3, 1],
                 [7, 8, 4, 1, 3]];
-   poly.xyz = [[-0.799898, 0.494585, -0.153719],
+   poly.vertices = [[-0.799898, 0.494585, -0.153719],
                [-0.680241, -0.086273, 0.717027],
                [-0.306176, 0.002547, -0.943688],
                [-0.112567, -0.9373, 0.465209],
@@ -3697,7 +3688,7 @@ J63: function() {
 J64: function() {
    const poly = new polyhedron();
    poly.name = "J64";
-   poly.face = [[6, 5, 8],
+   poly.faces = [[6, 5, 8],
                 [5, 4, 8],
                 [8, 7, 6],
                 [6, 2, 5],
@@ -3707,7 +3698,7 @@ J64: function() {
                 [8, 4, 1, 3, 7],
                 [6, 7, 3, 0, 2],
                 [1, 4, 5, 2, 0]];
-   poly.xyz = [[-0.777985, -0.188235, -0.285228],
+   poly.vertices = [[-0.777985, -0.188235, -0.285228],
                [-0.489362, -0.260552, 0.643961],
                [-0.32442, 0.578558, -0.683014],
                [-0.099589, -0.843165, -0.034687],
@@ -3722,7 +3713,7 @@ J64: function() {
 J65: function() {
    const poly = new polyhedron();
    poly.name = "J65";
-   poly.face = [[12, 7, 11],
+   poly.faces = [[12, 7, 11],
                 [10, 13, 11],
                 [14, 13, 9],
                 [9, 3, 6],
@@ -3736,7 +3727,7 @@ J65: function() {
                 [11, 7, 2, 0, 5, 10],
                 [13, 10, 5, 1, 3, 9],
                 [3, 1, 0, 2, 4, 6]];
-   poly.xyz = [[-0.91403, 0.409064, -0.602734],
+   poly.vertices = [[-0.91403, 0.409064, -0.602734],
                [-0.830829, 0.815648, 0.102539],
                [-0.699591, -0.379344, -0.648261],
                [-0.533188, 0.433825, 0.762285],
@@ -3756,7 +3747,7 @@ J65: function() {
 J66: function() {
    const poly = new polyhedron();
    poly.name = "J66";
-   poly.face = [[24, 16, 17],
+   poly.faces = [[24, 16, 17],
                 [26, 19, 21],
                 [27, 23, 22],
                 [25, 20, 18],
@@ -3778,7 +3769,7 @@ J66: function() {
                 [16, 12, 8, 0, 1, 9, 13, 17],
                 [19, 13, 9, 3, 5, 11, 15, 21],
                 [4, 6, 7, 5, 3, 1, 0, 2]];
-   poly.xyz = [[-0.935384, 0.507278, -0.272116],
+   poly.vertices = [[-0.935384, 0.507278, -0.272116],
                [-0.915801, 0.536228, 0.283002],
                [-0.882043, 0.099694, -0.646826],
                [-0.834764, 0.169584, 0.693348],
@@ -3811,7 +3802,7 @@ J66: function() {
 J67: function() {
    const poly = new polyhedron();
    poly.name = "J67";
-   poly.face = [[22, 25, 17],
+   poly.faces = [[22, 25, 17],
                 [15, 10, 7],
                 [19, 13, 20],
                 [28, 29, 31],
@@ -3841,7 +3832,7 @@ J67: function() {
                 [29, 26, 23, 21, 24, 27, 30, 31],
                 [25, 30, 27, 18, 11, 5, 8, 17],
                 [10, 8, 5, 2, 0, 1, 4, 7]];
-   poly.xyz = [[-0.85468, -0.304544, 0.321795],
+   poly.vertices = [[-0.85468, -0.304544, 0.321795],
                [-0.813538, 0.214997, 0.467663],
                [-0.753988, -0.584165, -0.130495],
                [-0.662946, -0.809677, 0.352981],
@@ -3878,7 +3869,7 @@ J67: function() {
 J68: function() {
    const poly = new polyhedron();
    poly.name = "J68";
-   poly.face = [[34, 30, 24],
+   poly.faces = [[34, 30, 24],
                 [45, 51, 41],
                 [36, 26, 31],
                 [53, 49, 44],
@@ -3920,7 +3911,7 @@ J68: function() {
                 [12, 10, 15, 23, 33, 40, 43, 38, 32, 22],
                 [4, 8, 18, 25, 29, 28, 23, 15, 6, 2],
                 [27, 37, 46, 48, 42, 35, 25, 18, 14, 20]];
-   poly.xyz = [[-1.053731, -0.062801, 0.140871],
+   poly.vertices = [[-1.053731, -0.062801, 0.140871],
                [-1.047729, -0.006643, -0.190675],
                [-0.967657, 0.064553, 0.440012],
                [-0.951944, 0.211579, -0.427988],
@@ -3990,7 +3981,7 @@ J68: function() {
 J69: function() {
    const poly = new polyhedron();
    poly.name = "J69";
-   poly.face = [[4, 8, 12],
+   poly.faces = [[4, 8, 12],
                 [3, 0, 1],
                 [18, 28, 15],
                 [9, 21, 16],
@@ -4042,7 +4033,7 @@ J69: function() {
                 [3, 7, 14, 20, 24, 19, 13, 6, 2, 0],
                 [36, 48, 53, 51, 41, 32, 20, 14, 17, 27],
                 [52, 42, 38, 40, 46, 57, 65, 68, 66, 62]];
-   poly.xyz = [[-0.988041, 0.082361, -0.032394],
+   poly.vertices = [[-0.988041, 0.082361, -0.032394],
                [-0.940439, 0.10562, 0.297446],
                [-0.93903, -0.112232, -0.299475],
                [-0.911497, 0.377114, 0.10495],
@@ -4117,7 +4108,7 @@ J69: function() {
 J70: function() {
    const poly = new polyhedron();
    poly.name = "J70";
-   poly.face = [[41, 46, 53],
+   poly.faces = [[41, 46, 53],
                 [26, 22, 34],
                 [33, 44, 40],
                 [14, 18, 21],
@@ -4169,7 +4160,7 @@ J70: function() {
                 [26, 32, 28, 24, 16, 9, 3, 7, 15, 22],
                 [57, 56, 51, 37, 27, 23, 24, 28, 39, 52],
                 [31, 20, 13, 10, 12, 19, 29, 36, 45, 38]];
-   poly.xyz = [[-0.989194, -0.091477, -0.102373],
+   poly.vertices = [[-0.989194, -0.091477, -0.102373],
                [-0.986156, -0.109996, 0.232129],
                [-0.908902, 0.23333, -0.08512],
                [-0.905864, 0.214811, 0.249382],
@@ -4244,7 +4235,7 @@ J70: function() {
 J71: function() {
    const poly = new polyhedron();
    poly.name = "J71";
-   poly.face = [[70, 73, 74],
+   poly.faces = [[70, 73, 74],
                 [54, 53, 63],
                 [60, 64, 68],
                 [43, 39, 51],
@@ -4306,7 +4297,7 @@ J71: function() {
                 [28, 25, 17, 8, 2, 0, 3, 10, 19, 27],
                 [43, 40, 34, 22, 11, 6, 8, 17, 29, 39],
                 [46, 36, 23, 12, 9, 14, 26, 38, 47, 50]];
-   poly.xyz = [[-0.942902, 0.07027, -0.149675],
+   poly.vertices = [[-0.942902, 0.07027, -0.149675],
                [-0.907058, 0.322313, 0.065363],
                [-0.897048, -0.257164, -0.191336],
                [-0.851819, 0.371393, -0.259585],
@@ -4386,7 +4377,7 @@ J71: function() {
 J72: function() {
    const poly = new polyhedron();
    poly.name = "J72";
-   poly.face = [[48, 45, 55],
+   poly.faces = [[48, 45, 55],
                 [35, 42, 47],
                 [23, 18, 31],
                 [20, 30, 34],
@@ -4448,7 +4439,7 @@ J72: function() {
                 [6, 8, 18, 23, 16],
                 [36, 48, 49, 39, 29],
                 [10, 12, 24, 30, 20]];
-   poly.xyz = [[-0.976612, 0.213547, -0.025026],
+   poly.vertices = [[-0.976612, 0.213547, -0.025026],
                [-0.942883, -0.134569, -0.304734],
                [-0.917763, 0.061996, 0.392261],
                [-0.863187, -0.501268, -0.060316],
@@ -4513,7 +4504,7 @@ J72: function() {
 J73: function() {
    const poly = new polyhedron();
    poly.name = "J73";
-   poly.face = [[36, 33, 44],
+   poly.faces = [[36, 33, 44],
                 [19, 28, 32],
                 [9, 10, 22],
                 [20, 34, 29],
@@ -4575,7 +4566,7 @@ J73: function() {
                 [0, 4, 10, 9, 3],
                 [24, 36, 47, 39, 25],
                 [12, 23, 35, 34, 20]];
-   poly.xyz = [[-0.984691, 0.125192, 0.121281],
+   poly.vertices = [[-0.984691, 0.125192, 0.121281],
                [-0.957572, -0.075612, -0.278094],
                [-0.942455, -0.319982, 0.096891],
                [-0.856557, 0.512005, -0.064506],
@@ -4640,7 +4631,7 @@ J73: function() {
 J74: function() {
    const poly = new polyhedron();
    poly.name = "J74";
-   poly.face = [[31, 25, 37],
+   poly.faces = [[31, 25, 37],
                 [13, 23, 24],
                 [7, 10, 17],
                 [20, 32, 29],
@@ -4702,7 +4693,7 @@ J74: function() {
                 [0, 6, 10, 7, 1],
                 [19, 31, 43, 39, 27],
                 [16, 28, 40, 32, 20]];
-   poly.xyz = [[-0.966046, -0.051368, 0.253213],
+   poly.vertices = [[-0.966046, -0.051368, 0.253213],
                [-0.95229, 0.30466, -0.018105],
                [-0.940892, -0.323, -0.101952],
                [-0.927135, 0.033028, -0.37327],
@@ -4767,7 +4758,7 @@ J74: function() {
 J75: function() {
    const poly = new polyhedron();
    poly.name = "J75";
-   poly.face = [[30, 24, 37],
+   poly.faces = [[30, 24, 37],
                 [14, 28, 26],
                 [11, 13, 22],
                 [25, 38, 31],
@@ -4829,7 +4820,7 @@ J75: function() {
                 [2, 9, 13, 11, 3],
                 [18, 30, 40, 34, 21],
                 [20, 29, 42, 38, 25]];
-   poly.xyz = [[-0.980376, -0.197048, -0.005857],
+   poly.vertices = [[-0.980376, -0.197048, -0.005857],
                [-0.946332, 0.150802, -0.285858],
                [-0.935804, 0.079716, 0.34339],
                [-0.901759, 0.427566, 0.063389],
@@ -4894,7 +4885,7 @@ J75: function() {
 J76: function() {
    const poly = new polyhedron();
    poly.name = "J76";
-   poly.face = [[26, 17, 18],
+   poly.faces = [[26, 17, 18],
                 [6, 1, 9],
                 [3, 5, 0],
                 [8, 10, 2],
@@ -4946,7 +4937,7 @@ J76: function() {
                 [31, 26, 35, 44, 41],
                 [21, 30, 25, 13, 10],
                 [41, 47, 50, 43, 33, 22, 14, 12, 20, 31]];
-   poly.xyz = [[-0.975594, -0.152802, -0.163647],
+   poly.vertices = [[-0.975594, -0.152802, -0.163647],
                [-0.930864, 0.290583, -0.105382],
                [-0.885816, -0.354103, 0.228021],
                [-0.840234, -0.110417, -0.590106],
@@ -5006,7 +4997,7 @@ J76: function() {
 J77: function() {
    const poly = new polyhedron();
    poly.name = "J77";
-   poly.face = [[27, 16, 19],
+   poly.faces = [[27, 16, 19],
                 [7, 1, 9],
                 [5, 6, 0],
                 [8, 10, 2],
@@ -5058,7 +5049,7 @@ J77: function() {
                 [32, 27, 36, 44, 42],
                 [21, 28, 25, 13, 10],
                 [42, 50, 51, 43, 33, 23, 15, 14, 22, 32]];
-   poly.xyz = [[-0.965273, -0.178368, -0.195819],
+   poly.vertices = [[-0.965273, -0.178368, -0.195819],
                [-0.921193, 0.268836, -0.202934],
                [-0.899923, -0.317663, 0.226452],
                [-0.828599, 0.405929, 0.214939],
@@ -5118,7 +5109,7 @@ J77: function() {
 J78: function() {
    const poly = new polyhedron();
    poly.name = "J78";
-   poly.face = [[29, 19, 26],
+   poly.faces = [[29, 19, 26],
                 [10, 6, 16],
                 [4, 1, 0],
                 [3, 5, 2],
@@ -5170,7 +5161,7 @@ J78: function() {
                 [31, 29, 40, 49, 42],
                 [15, 25, 23, 13, 5],
                 [42, 46, 43, 34, 24, 14, 8, 12, 21, 31]];
-   poly.xyz = [[-0.969175, 0.215371, -0.127391],
+   poly.vertices = [[-0.969175, 0.215371, -0.127391],
                [-0.952173, -0.166819, -0.363246],
                [-0.946899, -0.019645, 0.255045],
                [-0.929897, -0.401835, 0.01919],
@@ -5230,7 +5221,7 @@ J78: function() {
 J79: function() {
    const poly = new polyhedron();
    poly.name = "J79";
-   poly.face = [[7, 17, 16],
+   poly.faces = [[7, 17, 16],
                 [30, 41, 28],
                 [18, 25, 31],
                 [37, 47, 42],
@@ -5282,7 +5273,7 @@ J79: function() {
                 [0, 4, 6, 5, 1],
                 [43, 48, 54, 53, 47],
                 [1, 3, 10, 14, 22, 21, 13, 9, 2, 0]];
-   poly.xyz = [[-1.035663, 0.17951, 0.161516],
+   poly.vertices = [[-1.035663, 0.17951, 0.161516],
                [-1.027893, 0.048482, -0.268318],
                [-0.891113, 0.078842, 0.574986],
                [-0.870771, -0.264193, -0.550334],
@@ -5342,7 +5333,7 @@ J79: function() {
 J80: function() {
    const poly = new polyhedron();
    poly.name = "J80";
-   poly.face = [[12, 10, 4],
+   poly.faces = [[12, 10, 4],
                 [8, 6, 2],
                 [16, 26, 14],
                 [31, 29, 17],
@@ -5384,7 +5375,7 @@ J80: function() {
                 [38, 37, 27, 21, 29],
                 [24, 15, 7, 1, 0, 5, 13, 21, 27, 30],
                 [28, 36, 44, 49, 48, 42, 34, 25, 19, 22]];
-   poly.xyz = [[-0.981435, -0.157408, -0.109585],
+   poly.vertices = [[-0.981435, -0.157408, -0.109585],
                [-0.942153, -0.069788, 0.327838],
                [-0.91551, 0.22466, -0.333721],
                [-0.85195, 0.366431, 0.374044],
@@ -5439,7 +5430,7 @@ J80: function() {
 J81: function() {
    const poly = new polyhedron();
    poly.name = "J81";
-   poly.face = [[35, 29, 25],
+   poly.faces = [[35, 29, 25],
                 [21, 11, 15],
                 [24, 22, 14],
                 [17, 12, 8],
@@ -5481,7 +5472,7 @@ J81: function() {
                 [19, 18, 9, 4, 12],
                 [38, 43, 40, 31, 20, 10, 5, 9, 18, 28],
                 [47, 49, 48, 46, 41, 37, 32, 34, 39, 44]];
-   poly.xyz = [[-0.91554, -0.17156, 0.190699],
+   poly.vertices = [[-0.91554, -0.17156, 0.190699],
                [-0.874123, -0.21861, -0.254883],
                [-0.873513, 0.274357, 0.14752],
                [-0.832096, 0.227307, -0.298062],
@@ -5536,7 +5527,7 @@ J81: function() {
 J82: function() {
    const poly = new polyhedron();
    poly.name = "J82";
-   poly.face = [[25, 23, 15],
+   poly.faces = [[25, 23, 15],
                 [27, 16, 19],
                 [30, 28, 20],
                 [21, 13, 12],
@@ -5578,7 +5569,7 @@ J82: function() {
                 [31, 29, 18, 13, 21],
                 [44, 43, 34, 24, 14, 7, 10, 18, 29, 39],
                 [41, 46, 48, 49, 47, 45, 40, 35, 33, 36]];
-   poly.xyz = [[-0.915244, -0.149547, 0.004878],
+   poly.vertices = [[-0.915244, -0.149547, 0.004878],
                [-0.857812, 0.261033, -0.170045],
                [-0.853796, 0.017864, 0.418001],
                [-0.796364, 0.428444, 0.243078],
@@ -5633,7 +5624,7 @@ J82: function() {
 J83: function() {
    const poly = new polyhedron();
    poly.name = "J83";
-   poly.face = [[25, 27, 17],
+   poly.faces = [[25, 27, 17],
                 [20, 11, 12],
                 [5, 0, 6],
                 [26, 18, 28],
@@ -5665,7 +5656,7 @@ J83: function() {
                 [1, 7, 13, 21, 29, 31, 23, 15, 9, 3],
                 [32, 30, 22, 14, 8, 2, 4, 10, 16, 24],
                 [36, 38, 40, 42, 44, 43, 41, 39, 37, 35]];
-   poly.xyz = [[-0.932936, 0.189273, 0.192295],
+   poly.vertices = [[-0.932936, 0.189273, 0.192295],
                [-0.922398, 0.241407, -0.253129],
                [-0.911995, -0.249962, 0.280987],
                [-0.894943, -0.165606, -0.439724],
@@ -5715,7 +5706,7 @@ J83: function() {
 J84: function() {
    const poly = new polyhedron();
    poly.name = "J84";
-   poly.face = [[6, 7, 3],
+   poly.faces = [[6, 7, 3],
                 [3, 7, 5],
                 [3, 5, 1],
                 [4, 7, 6],
@@ -5727,7 +5718,7 @@ J84: function() {
                 [6, 2, 4],
                 [2, 6, 0],
                 [0, 6, 3]];
-   poly.xyz = [[-0.768016, 0.559678, 0.635844],
+   poly.vertices = [[-0.768016, 0.559678, 0.635844],
                [-0.720709, -0.093633, -0.405339],
                [-0.6358, -0.662351, 0.681929],
                [0.09848, 0.800885, -0.202562],
@@ -5740,7 +5731,7 @@ J84: function() {
 J85: function() {
    const poly = new polyhedron();
    poly.name = "J85";
-   poly.face = [[13, 9, 14],
+   poly.faces = [[13, 9, 14],
                 [9, 13, 6],
                 [9, 6, 3],
                 [11, 15, 12],
@@ -5766,7 +5757,7 @@ J85: function() {
                 [14, 10, 15],
                 [13, 11, 4, 6],
                 [2, 5, 10, 8]];
-   poly.xyz = [[-0.984789, 0.388776, -0.318546],
+   poly.vertices = [[-0.984789, 0.388776, -0.318546],
                [-0.905986, -0.50645, -0.380955],
                [-0.774402, -0.096785, 0.410496],
                [-0.648503, 0.795226, 0.411689],
@@ -5787,7 +5778,7 @@ J85: function() {
 J86: function() {
    const poly = new polyhedron();
    poly.name = "J86";
-   poly.face = [[7, 3, 2],
+   poly.faces = [[7, 3, 2],
                 [2, 1, 6],
                 [2, 3, 0],
                 [2, 0, 1],
@@ -5801,7 +5792,7 @@ J86: function() {
                 [6, 7, 2],
                 [1, 0, 4, 5],
                 [5, 4, 8, 9]];
-   poly.xyz = [[-1.10165, -0.110367, -0.010645],
+   poly.vertices = [[-1.10165, -0.110367, -0.010645],
                [-0.640942, 0.825699, 0.365159],
                [-0.414409, 0.468967, -0.660083],
                [-0.324965, -0.634882, -0.603383],
@@ -5816,7 +5807,7 @@ J86: function() {
 J87: function() {
    const poly = new polyhedron();
    poly.name = "J87";
-   poly.face = [[5, 0, 1],
+   poly.faces = [[5, 0, 1],
                 [9, 3, 8],
                 [8, 6, 10],
                 [8, 3, 2],
@@ -5833,7 +5824,7 @@ J87: function() {
                 [6, 2, 0],
                 [0, 2, 1],
                 [5, 1, 4, 7]];
-   poly.xyz = [[-0.858193, -0.792464, 0.432564],
+   poly.vertices = [[-0.858193, -0.792464, 0.432564],
                [-0.785643, 0.057917, -0.211154],
                [-0.533044, 0.147795, 0.823687],
                [-0.229952, 0.904287, 0.131849],
@@ -5849,7 +5840,7 @@ J87: function() {
 J88: function() {
    const poly = new polyhedron();
    poly.name = "J88";
-   poly.face = [[6, 7, 10],
+   poly.faces = [[6, 7, 10],
                 [3, 7, 1],
                 [3, 5, 7],
                 [10, 11, 8],
@@ -5867,7 +5858,7 @@ J88: function() {
                 [2, 0, 1],
                 [7, 5, 9, 10],
                 [4, 9, 5, 0]];
-   poly.xyz = [[-0.710639, -0.297668, -0.15267],
+   poly.vertices = [[-0.710639, -0.297668, -0.15267],
                [-0.651151, -0.105949, 0.829841],
                [-0.621335, 0.64788, 0.169179],
                [-0.614162, -1.052419, 0.500527],
@@ -5884,7 +5875,7 @@ J88: function() {
 J89: function() {
    const poly = new polyhedron();
    poly.name = "J89";
-   poly.face = [[9, 8, 13],
+   poly.faces = [[9, 8, 13],
                 [1, 8, 2],
                 [1, 7, 8],
                 [13, 11, 10],
@@ -5905,7 +5896,7 @@ J89: function() {
                 [8, 7, 12, 13],
                 [3, 6, 12, 7],
                 [5, 6, 3, 0]];
-   poly.xyz = [[-0.83117, 0.133549, -0.011648],
+   poly.vertices = [[-0.83117, 0.133549, -0.011648],
                [-0.700039, -0.806136, -0.111242],
                [-0.631074, -0.403619, 0.750934],
                [-0.576095, -0.225432, -0.857931],
@@ -5924,7 +5915,7 @@ J89: function() {
 J90: function() {
    const poly = new polyhedron();
    poly.name = "J90";
-   poly.face = [[13, 6, 7],
+   poly.faces = [[13, 6, 7],
                 [9, 15, 11],
                 [12, 13, 7],
                 [15, 14, 11],
@@ -5948,7 +5939,7 @@ J90: function() {
                 [15, 13, 12, 14],
                 [5, 2, 0, 3],
                 [3, 0, 4, 8]];
-   poly.xyz = [[-1.052782, 0.264006, 0.098264],
+   poly.vertices = [[-1.052782, 0.264006, 0.098264],
                [-0.753999, -0.411397, 0.610751],
                [-0.732127, -0.483215, -0.285043],
                [-0.599216, 0.763406, -0.495842],
@@ -5969,7 +5960,7 @@ J90: function() {
 J91: function() {
    const poly = new polyhedron();
    poly.name = "J91";
-   poly.face = [[11, 13, 12],
+   poly.faces = [[11, 13, 12],
                 [7, 11, 4],
                 [10, 7, 5],
                 [13, 10, 9],
@@ -5983,7 +5974,7 @@ J91: function() {
                 [11, 12, 8, 3, 4],
                 [5, 7, 4, 0, 1],
                 [10, 5, 1, 2, 9]];
-   poly.xyz = [[-0.932446, -0.071511, 0.062428],
+   poly.vertices = [[-0.932446, -0.071511, 0.062428],
                [-0.890073, 0.716495, 0.434115],
                [-0.483326, 0.038238, 0.802122],
                [-0.479875, -0.798287, -0.104525],
@@ -6002,7 +5993,7 @@ J91: function() {
 J92: function() {
    const poly = new polyhedron();
    poly.name = "J92";
-   poly.face = [[12, 11, 4],
+   poly.faces = [[12, 11, 4],
                 [11, 6, 4],
                 [6, 11, 15],
                 [13, 15, 17],
@@ -6022,7 +6013,7 @@ J92: function() {
                 [8, 13, 17, 14, 9],
                 [16, 10, 3, 7, 14],
                 [1, 4, 6, 5, 2, 0]];
-   poly.xyz = [[-0.748928, 0.557858, -0.030371],
+   poly.vertices = [[-0.748928, 0.557858, -0.030371],
                [-0.638635, 0.125804, -0.670329],
                [-0.593696, 0.259282, 0.67329],
                [-0.427424, 0.876636, -0.665507],
@@ -6107,7 +6098,7 @@ class polyflag {
     let ctr=0; // first number the vertices
     for (i in this.verts) {
       v = this.verts[i];
-      poly.xyz[ctr]=this.xyzs[i]; // store in array
+      poly.vertices[ctr]=this.xyzs[i]; // store in array
       this.verts[i] = ctr;
       ctr++;
     }
@@ -6116,7 +6107,7 @@ class polyflag {
     for (i in this.flags) {
       var v0;
       const f = this.flags[i];
-      poly.face[ctr] = []; // new face
+      poly.faces[ctr] = []; // new face
       // grab _any_ vertex as starting point
       for (let j in f) {
         v = f[j];
@@ -6125,11 +6116,11 @@ class polyflag {
       }  // need just one
       // build face out of all the edge relations in the flag assoc array
       v = v0; // v moves around face
-      poly.face[ctr].push(this.verts[v]); //record index
+      poly.faces[ctr].push(this.verts[v]); //record index
       v = this.flags[i][v]; // goto next vertex
       let faceCTR=0;
       while (v !== v0) { // loop until back to start
-        poly.face[ctr].push(this.verts[v]);
+        poly.faces[ctr].push(this.verts[v]);
         v = this.flags[i][v];
         faceCTR++;
         if (faceCTR>1000) { // necessary to prevent browser hangs on badly formed flagsets!
@@ -6176,17 +6167,17 @@ const kisN = function(poly, n, apexdist){
   console.log(`Taking kis of ${n===0 ? "" : n}-sided faces of ${poly.name}...`);
 
   const flag = new polyflag();
-  for (i = 0; i < poly.xyz.length; i++) {
+  for (i = 0; i < poly.vertices.length; i++) {
     // each old vertex is a new vertex
-    const p = poly.xyz[i];
+    const p = poly.vertices[i];
     flag.newV(`v${i}`, p);
   }
 
   const normals = poly.normals();
   const centers = poly.centers();
   let foundAny = false;                 // alert if don't find any
-  for (i = 0; i < poly.face.length; i++) {
-    const f = poly.face[i];
+  for (i = 0; i < poly.faces.length; i++) {
+    const f = poly.faces[i];
     let v1 = `v${f[f.length-1]}`;
     for (let v of f) {
       const v2 = `v${v}`;
@@ -6237,12 +6228,12 @@ const ambo = function(poly){
   const flag = new polyflag();
 
   // For each face f in the original poly
-  for (let i = 0; i < poly.face.length; i++) {
-    const f = poly.face[i];
+  for (let i = 0; i < poly.faces.length; i++) {
+    const f = poly.faces[i];
     let [v1, v2] = f.slice(-2);
     for (let v3 of f) {
       if (v1 < v2) { // vertices are the midpoints of all edges of original poly
-        flag.newV(midName(v1,v2), midpoint(poly.xyz[v1], poly.xyz[v2]));
+        flag.newV(midName(v1,v2), midpoint(poly.vertices[v1], poly.vertices[v2]));
       }
       // two new flags:
       // One whose face corresponds to the original f:
@@ -6274,24 +6265,24 @@ const gyro = function(poly){
 
   const flag = new polyflag();
 
-  for (i = 0; i < poly.xyz.length; i++) {
-    v = poly.xyz[i];
+  for (i = 0; i < poly.vertices.length; i++) {
+    v = poly.vertices[i];
     flag.newV(`v${i}`, unit(v));
   }  // each old vertex is a new vertex
 
   const centers = poly.centers(); // new vertices in center of each face
-  for (i = 0; i < poly.face.length; i++) {
-    f = poly.face[i];
+  for (i = 0; i < poly.faces.length; i++) {
+    f = poly.faces[i];
     flag.newV(`center${i}`, unit(centers[i]));
   }
 
-  for (i = 0; i < poly.face.length; i++) {
-    f = poly.face[i];
+  for (i = 0; i < poly.faces.length; i++) {
+    f = poly.faces[i];
     let [v1, v2] = f.slice(-2);
     for (let j = 0; j < f.length; j++) {
       v = f[j];
       const v3 = v;
-      flag.newV(v1+"~"+v2, oneThird(poly.xyz[v1],poly.xyz[v2]));  // new v in face
+      flag.newV(v1+"~"+v2, oneThird(poly.vertices[v1],poly.vertices[v2]));  // new v in face
       const fname = i+"f"+v1;
       flag.newFlag(fname, `center${i}`,      v1+"~"+v2); // five new flags
       flag.newFlag(fname, v1+"~"+v2,  v2+"~"+v1);
@@ -6320,17 +6311,17 @@ const propellor = function(poly) {
 
   const flag = new polyflag();
 
-  for (i = 0; i < poly.xyz.length; i++) {
-    v = poly.xyz[i];
+  for (i = 0; i < poly.vertices.length; i++) {
+    v = poly.vertices[i];
     flag.newV(`v${i}`, unit(v));
   }  // each old vertex is a new vertex
 
-  for (i = 0; i < poly.face.length; i++) {
-    const f = poly.face[i];
+  for (i = 0; i < poly.faces.length; i++) {
+    const f = poly.faces[i];
     let [v1, v2] = f.slice(-2);
     for (v of f) {
       const v3 = `${v}`;
-      flag.newV(v1+"~"+v2, oneThird(poly.xyz[v1], poly.xyz[v2]));  // new v in face, 1/3rd along edge
+      flag.newV(v1+"~"+v2, oneThird(poly.vertices[v1], poly.vertices[v2]));  // new v in face, 1/3rd along edge
       const fname = `${i}f${v2}`;
       flag.newFlag(`v${i}`, v1+"~"+v2,  v2+"~"+v3); // five new flags
       flag.newFlag(fname,   v1+"~"+v2,  v2+"~"+v1);
@@ -6354,12 +6345,12 @@ const reflect = function(poly) {
   let i;
   console.log(`Taking reflection of ${poly.name}...`);
   // reflect each point through origin
-  for (i = 0; i <= poly.xyz.length-1; i++) {
-     poly.xyz[i] = mult(-1, poly.xyz[i]);
+  for (i = 0; i <= poly.vertices.length-1; i++) {
+     poly.vertices[i] = mult(-1, poly.vertices[i]);
   }
   // repair clockwise-ness of faces
-  for (i = 0; i <= poly.face.length-1; i++) {
-     poly.face[i] = poly.face[i].reverse();
+  for (i = 0; i <= poly.faces.length-1; i++) {
+     poly.faces[i] = poly.faces[i].reverse();
   }
   poly.name = `r${poly.name}`;
   return poly;
@@ -6383,12 +6374,12 @@ const dual = function(poly) {
   const flag = new polyflag();
 
   const face = []; // make table of face as fn of edge
-  for (i = 0; i <= poly.xyz.length-1; i++) {
+  for (i = 0; i <= poly.vertices.length-1; i++) {
     face[i] = {};
   } // create empty associative table
 
-  for (i = 0; i < poly.face.length; i++) {
-    f = poly.face[i];
+  for (i = 0; i < poly.faces.length; i++) {
+    f = poly.faces[i];
     v1 = f[f.length-1]; //previous vertex
     for (v2 of f) {
       // THIS ASSUMES that no 2 faces that share an edge share it in the same orientation!
@@ -6399,12 +6390,12 @@ const dual = function(poly) {
   } // current becomes previous
 
   const centers = poly.centers();
-  for (i = 0; i <= poly.face.length-1; i++) {
+  for (i = 0; i <= poly.faces.length-1; i++) {
     flag.newV(`${i}`,centers[i]);
   }
 
-  for (i = 0; i < poly.face.length; i++) {
-    f = poly.face[i];
+  for (i = 0; i < poly.faces.length; i++) {
+    f = poly.faces[i];
     v1 = f[f.length-1]; //previous vertex
     for (v2 of f) {
       flag.newFlag(v1, face[v2][`v${v1}`], `${i}`);
@@ -6416,11 +6407,11 @@ const dual = function(poly) {
 
   // match F index ordering to V index ordering on dual
   const sortF = [];
-  for (f of dpoly.face) {
-    const k = intersect(poly.face[f[0]], poly.face[f[1]], poly.face[f[2]]);
+  for (f of dpoly.faces) {
+    const k = intersect(poly.faces[f[0]], poly.faces[f[1]], poly.faces[f[2]]);
     sortF[k] = f;
   }
-  dpoly.face = sortF;
+  dpoly.faces = sortF;
 
   if (poly.name[0] !== "d") {
     dpoly.name = `d${poly.name}`;
@@ -6462,18 +6453,18 @@ const chamfer = function(poly, dist) {
   const normals = poly.normals();
 
   // For each face f in the original poly
-  for (let i = 0; i < poly.face.length; i++) {
-    const f = poly.face[i];
+  for (let i = 0; i < poly.faces.length; i++) {
+    const f = poly.faces[i];
     let v1 = f[f.length-1];
     let v1new = i + "_" + v1;
 
     for (let v2 of f) {
       // TODO: figure out what distances will give us a planar hex face.
       // Move each old vertex further from the origin.
-      flag.newV(v2, mult(1.0 + dist, poly.xyz[v2]));
+      flag.newV(v2, mult(1.0 + dist, poly.vertices[v2]));
       // Add a new vertex, moved parallel to normal.
       const v2new = i + "_" + v2;
-      flag.newV(v2new, add(poly.xyz[v2], mult(dist*1.5, normals[i])));
+      flag.newV(v2new, add(poly.vertices[v2], mult(dist*1.5, normals[i])));
       // Four new flags:
       // One whose face corresponds to the original face:
       flag.newFlag(`orig${i}`, v1new, v2new);
@@ -6512,8 +6503,8 @@ const whirl = function(poly, n) {
   const flag = new polyflag();
 
   // each old vertex is a new vertex
-  for (i = 0; i < poly.xyz.length; i++) {
-    v = poly.xyz[i];
+  for (i = 0; i < poly.vertices.length; i++) {
+    v = poly.vertices[i];
     flag.newV(`v${i}`, unit(v));
   }
 
@@ -6523,14 +6514,14 @@ const whirl = function(poly, n) {
   //  # Whirl: use "center"+i+"~"+v1
   //  flag.newV "center"+i+"~"+v1, unit(centers[i])
 
-  for (i = 0; i < poly.face.length; i++) {
-    const f = poly.face[i];
+  for (i = 0; i < poly.faces.length; i++) {
+    const f = poly.faces[i];
     let [v1, v2] = f.slice(-2);
     for (let j = 0; j < f.length; j++) {
       v = f[j];
       const v3 = v;
       // New vertex along edge
-      const v1_2 = oneThird(poly.xyz[v1],poly.xyz[v2]);
+      const v1_2 = oneThird(poly.vertices[v1],poly.vertices[v2]);
       flag.newV(v1+"~"+v2, v1_2);
       // New vertices near center of face
       const cv1name = `center${i}~${v1}`;
@@ -6570,19 +6561,19 @@ const quinto = function(poly){
   const flag = new polyflag();
 
   // For each face f in the original poly
-  for (let i = 0; i < poly.face.length; i++) {
-    const f = poly.face[i];
-    centroid = calcCentroid(f.map(idx=>poly.xyz[idx]))
+  for (let i = 0; i < poly.faces.length; i++) {
+    const f = poly.faces[i];
+    centroid = calcCentroid(f.map(idx=>poly.vertices[idx]))
     // walk over face vertex-triplets
     let [v1, v2] = f.slice(-2);
     for (let v3 of f) {
       // for each face-corner, we make two new points:
-      midpt = midpoint(poly.xyz[v1], poly.xyz[v2])
+      midpt = midpoint(poly.vertices[v1], poly.vertices[v2])
       innerpt = midpoint(midpt, centroid)
       flag.newV(midName(v1,v2), midpt);
       flag.newV(`inner_${i}_` + midName(v1,v2), innerpt);
       // and add the old corner-vertex
-      flag.newV(`${v2}`, poly.xyz[v2]);
+      flag.newV(`${v2}`, poly.vertices[v2]);
     
       // pentagon for each vertex in original face
       flag.newFlag(`f${i}_${v2}`, `inner_${i}_`+midName(v1, v2), midName(v1, v2));
@@ -6616,8 +6607,8 @@ const trisub = function(poly, n) {
   if (!n) { n = 2; }
   
   // No-Op for non-triangular meshes.
-  for (let fn = 0; fn < poly.face.length; fn++) {
-    if(poly.face[fn].length != 3){
+  for (let fn = 0; fn < poly.faces.length; fn++) {
+    if(poly.faces[fn].length != 3){
       return poly;
     }
   }
@@ -6626,12 +6617,12 @@ const trisub = function(poly, n) {
   let newVs=[];
   let vmap={};
   let pos = 0;
-  for (let fn = 0; fn < poly.face.length; fn++) {
-    const f = poly.face[fn];
+  for (let fn = 0; fn < poly.faces.length; fn++) {
+    const f = poly.faces[fn];
     let [i1, i2, i3] = f.slice(-3);
-    v1 = poly.xyz[i1];
-    v2 = poly.xyz[i2];
-    v3 = poly.xyz[i3];
+    v1 = poly.vertices[i1];
+    v2 = poly.vertices[i2];
+    v3 = poly.vertices[i3];
     v21 = sub(v2, v1);
     v31 = sub(v3, v1);
     for (let i = 0; i <= n; i++) {
@@ -6664,7 +6655,7 @@ const trisub = function(poly, n) {
   }
 
   let faces = [];
-  for (fn = 0; fn < poly.face.length; fn++) {
+  for (fn = 0; fn < poly.faces.length; fn++) {
     for (let i = 0; i < n; i++) {
       for (let j = 0; j+i < n; j++) {
         faces.push([uniqmap[vmap[`v${fn}-${i}-${j}`]], 
@@ -6684,8 +6675,8 @@ const trisub = function(poly, n) {
   // Create new polygon out of faces and unique vertices.
   const newpoly = new polyhedron();
   newpoly.name = `u${n}${poly.name}`;
-  newpoly.face = faces;
-  newpoly.xyz = uniqVs; 
+  newpoly.faces = faces;
+  newpoly.vertices = uniqVs; 
 
   return newpoly;
 };
@@ -6702,27 +6693,27 @@ const insetN = function(poly, n, inset_dist, popout_dist){
   console.log(`Taking inset of ${n===0 ? "" : n}-sided faces of ${poly.name}...`);
 
   const flag = new polyflag();
-  for (i = 0; i < poly.xyz.length; i++) {
+  for (i = 0; i < poly.vertices.length; i++) {
     // each old vertex is a new vertex
-    const p = poly.xyz[i];
+    const p = poly.vertices[i];
     flag.newV(`v${i}`, p);
   }
 
   const normals = poly.normals();
   const centers = poly.centers();
-  for (i = 0; i < poly.face.length; i++) { //new inset vertex for every vert in face
-    f = poly.face[i];
+  for (i = 0; i < poly.faces.length; i++) { //new inset vertex for every vert in face
+    f = poly.faces[i];
     if ((f.length === n) || (n === 0)) {
       for (v of f) {
-        flag.newV(`f${i}v${v}`, add(tween(poly.xyz[v],centers[i],inset_dist), 
+        flag.newV(`f${i}v${v}`, add(tween(poly.vertices[v],centers[i],inset_dist), 
                                     mult(popout_dist,normals[i])));
       }
     }
   }
 
   let foundAny = false;    // alert if don't find any
-  for (i = 0; i < poly.face.length; i++) {
-    f = poly.face[i];
+  for (i = 0; i < poly.faces.length; i++) {
+    f = poly.faces[i];
     let v1 = `v${f[f.length-1]}`;
     for (v of f) {
       const v2 = `v${v}`;
@@ -6760,27 +6751,27 @@ const extrudeN = function(poly, n){
   console.log(`Taking extrusion of ${n===0 ? "" : n}-sided faces of ${poly.name}...`);
 
   const flag = new polyflag();
-  for (i = 0; i < poly.xyz.length; i++) {
+  for (i = 0; i < poly.vertices.length; i++) {
     // each old vertex is a new vertex
-    const p = poly.xyz[i];
+    const p = poly.vertices[i];
     flag.newV(`v${i}`, p);
   }
 
   const normals = poly.normals();
   const centers = poly.centers();
-  for (i = 0; i < poly.face.length; i++) { //new inset vertex for every vert in face
-    f = poly.face[i];
+  for (i = 0; i < poly.faces.length; i++) { //new inset vertex for every vert in face
+    f = poly.faces[i];
     if ((f.length === n) || (n === 0)) {
       for (v of f) {
-        //flag.newV "f"+i+"v"+v, add(midpoint(poly.xyz[v],centers[i]),mult(-0.2,normals[i]))
-        flag.newV(`f${i}v${v}`, add(poly.xyz[v], mult(0.3,normals[i])));
+        //flag.newV "f"+i+"v"+v, add(midpoint(poly.vertices[v],centers[i]),mult(-0.2,normals[i]))
+        flag.newV(`f${i}v${v}`, add(poly.vertices[v], mult(0.3,normals[i])));
       }
     }
   }
 
   let foundAny = false;                 // alert if don't find any
-  for (i = 0; i < poly.face.length; i++) {
-    f = poly.face[i];
+  for (i = 0; i < poly.faces.length; i++) {
+    f = poly.faces[i];
     let v1 = `v${f[f.length-1]}`;
     for (v of f) {
       const v2 = `v${v}`;
@@ -6825,26 +6816,26 @@ const hollow = function(poly, n, inset_dist, thickness){
   const centers = poly.centers();
 
   const flag = new polyflag();
-  for (i = 0; i < poly.xyz.length; i++) {
+  for (i = 0; i < poly.vertices.length; i++) {
     // each old vertex is a new vertex
-    const p = poly.xyz[i];
+    const p = poly.vertices[i];
     flag.newV(`v${i}`, p);
     flag.newV(`downv${i}`,  add(p,mult(-1*thickness,dualnormals[i])));
   }
   // new inset vertex for every vert in face
-  for (i = 0; i < poly.face.length; i++) {
+  for (i = 0; i < poly.faces.length; i++) {
     //if f.length is n or n is 0
-    f = poly.face[i];
+    f = poly.faces[i];
     for (v of f) {
-      flag.newV(`fin${i}v${v}`, tween(poly.xyz[v],centers[i],inset_dist));
-      flag.newV(`findown${i}v${v}`, add(tween(poly.xyz[v],centers[i],inset_dist), 
+      flag.newV(`fin${i}v${v}`, tween(poly.vertices[v],centers[i],inset_dist));
+      flag.newV(`findown${i}v${v}`, add(tween(poly.vertices[v],centers[i],inset_dist), 
                                         mult(-1*thickness,normals[i])));
     }
   }
 
   //foundAny = false    # alert if we don't find any N-ary faces
-  for (i = 0; i < poly.face.length; i++) {
-    f = poly.face[i];
+  for (i = 0; i < poly.faces.length; i++) {
+    f = poly.faces[i];
     let v1 = `v${f[f.length-1]}`;
     for (v of f) {
       const v2 = `v${v}`;
@@ -6895,21 +6886,21 @@ const stellaN = function(poly){
   const centers = poly.centers();  // calculate face centers
 
   const flag = new polyflag();
-  for (i = 0; i < poly.xyz.length; i++) {
-    const p = poly.xyz[i];
+  for (i = 0; i < poly.vertices.length; i++) {
+    const p = poly.vertices[i];
     flag.newV(`v${i}`, p);
   }      // each old vertex is a new vertex
 
   // iterate over triplets of faces v1,v2,v3
-  for (i = 0; i < poly.face.length; i++) {
-    const f = poly.face[i];
+  for (i = 0; i < poly.faces.length; i++) {
+    const f = poly.faces[i];
     let v1 = `v${f[f.length-2]}`;
     let v2 = `v${f[f.length-1]}`;
-    let vert1 = poly.xyz[f[f.length-2]];
-    let vert2 = poly.xyz[f[f.length-1]];
+    let vert1 = poly.vertices[f[f.length-2]];
+    let vert2 = poly.vertices[f[f.length-1]];
     for (let v of f) {
       const v3 = `v${v}`;
-      const vert3 = poly.xyz[v];
+      const vert3 = poly.vertices[v];
       const v12=v1+"~"+v2; // names for "oriented" midpoints
       const v21=v2+"~"+v1;
       const v23=v2+"~"+v3;
@@ -7034,9 +7025,9 @@ const canonicalize = function(poly, Niter) {
     Niter = 1;
   }
   console.log(`Canonicalizing ${poly.name}...`);
-  const faces = poly.face;
+  const faces = poly.faces;
   const edges = poly.edges();
-  let newVs = poly.xyz;
+  let newVs = poly.vertices;
   let maxChange = 1.0; // convergence tracker
   for (let i = 0; i <= Niter; i++) {
     const oldVs = copyVecArray(newVs); //copy vertices
@@ -7055,7 +7046,7 @@ const canonicalize = function(poly, Niter) {
   // more experience will tell what to do
   //newVs = rescale(newVs)
   console.log(`[canonicalization done, last |deltaV|=${maxChange}]`);
-  const newpoly = new polyhedron(newVs, poly.face, poly.name);
+  const newpoly = new polyhedron(newVs, poly.faces, poly.name);
   console.log("canonicalize" , newpoly);
   return newpoly;
 };
@@ -7076,16 +7067,16 @@ const reciprocalC = function(poly) {
 // make array of vertices reciprocal to given planes
 const reciprocalN = function(poly) {
   const ans = [];
-  for (let f of poly.face) { //for each face
+  for (let f of poly.faces) { //for each face
     let centroid    = [0,0,0]; // running sum of vertex coords
     let normalV     = [0,0,0]; // running sum of normal vectors
     let avgEdgeDist =    0.0;  // running sum for avg edge distance
 
     let [v1, v2] = f.slice(-2);
     for (let v3 of f) {
-      centroid     = add(centroid, poly.xyz[v3]);
-      normalV      = add(normalV, orthogonal(poly.xyz[v1], poly.xyz[v2], poly.xyz[v3]));
-      avgEdgeDist += edgeDist(poly.xyz[v1], poly.xyz[v2]);
+      centroid     = add(centroid, poly.vertices[v3]);
+      normalV      = add(normalV, orthogonal(poly.vertices[v1], poly.vertices[v2], poly.vertices[v3]));
+      avgEdgeDist += edgeDist(poly.vertices[v1], poly.vertices[v2]);
       [v1, v2] = [v2, v3];
     } // shift over one
 
@@ -7106,11 +7097,11 @@ const canonicalXYZ = function(poly, nIterations) {
 
   // iteratively reciprocate face normals
   for (let count = 0, end = nIterations; count < end; count++) {
-    dpoly.xyz = reciprocalN(poly);
-    poly.xyz  = reciprocalN(dpoly);
+    dpoly.vertices = reciprocalN(poly);
+    poly.vertices  = reciprocalN(dpoly);
   }
 
-  return new polyhedron(poly.xyz, poly.face, poly.name);
+  return new polyhedron(poly.vertices, poly.faces, poly.name);
 };
 
 
@@ -7122,11 +7113,11 @@ const adjustXYZ = function(poly, nIterations) {
 
   for (let count = 0, end = nIterations; count < end; count++) {
     // reciprocate face centers
-    dpoly.xyz = reciprocalC(poly);
-    poly.xyz  = reciprocalC(dpoly);
+    dpoly.vertices = reciprocalC(poly);
+    poly.vertices  = reciprocalC(dpoly);
   }
 
-  return new polyhedron(poly.xyz, poly.face, poly.name);
+  return new polyhedron(poly.vertices, poly.faces, poly.name);
 };
 
 
@@ -7349,23 +7340,23 @@ const triangulate = function(poly, colors){
   console.log(`Triangulating faces of ${poly.name}...`);
 
   const newpoly = new polyhedron();
-  newpoly.xyz = clone(poly.xyz);
-  newpoly.face_class = [ ];
+  newpoly.vertices = clone(poly.vertices);
+  newpoly.face_classes = [ ];
   // iterate over triplets of faces v1,v2,v3
-  for (let i = 0; i < poly.face.length; i++) {
-    const f = poly.face[i];
+  for (let i = 0; i < poly.faces.length; i++) {
+    const f = poly.faces[i];
     if (f.length > 3) {
-      const TwoDface = project2dface(f.map((v) => poly.xyz[v]));
+      const TwoDface = project2dface(f.map((v) => poly.vertices[v]));
       const diags = getDiagonals(TwoDface);
       const tris  = diagsToTris(f,diags);
       for (let j = 0; j < tris.length; j++) {
         const tri = tris[j];
-        newpoly.face.push([ f[tri[0]], f[tri[1]], f[tri[2]] ]);
-        if (colors) { newpoly.face_class.push(poly.face_class[i]); }
+        newpoly.faces.push([ f[tri[0]], f[tri[1]], f[tri[2]] ]);
+        if (colors) { newpoly.face_classes.push(poly.face_classes[i]); }
       }
     } else {
-      newpoly.face.push([ f[0], f[1], f[2] ]);
-      if (colors) { newpoly.face_class.push(poly.face_class[i]); }
+      newpoly.faces.push([ f[0], f[1], f[2] ]);
+      if (colors) { newpoly.face_classes.push(poly.face_classes[i]); }
     }
   }
   newpoly.name = poly.name; // don't change the name for export
@@ -7389,7 +7380,7 @@ const triangulate = function(poly, colors){
 // report on face topology
 const topolog = function(poly) {
   let str = "";
-  for (let f of poly.face) {
+  for (let f of poly.faces) {
     str += `${f.length}: `
     for (let v of f) {
       str += `${v}->`;
@@ -7538,8 +7529,8 @@ const newgeneratePoly = function(notation) {
   }
 
   // Recenter polyhedra at origin (rarely needed)
-  poly.xyz = recenter(poly.xyz, poly.edges());
-  poly.xyz = rescale(poly.xyz);
+  poly.vertices = recenter(poly.vertices, poly.edges());
+  poly.vertices = rescale(poly.vertices);
 
   // Color the faces of the polyhedra for display
   poly = paintPolyhedron(poly);
@@ -7682,30 +7673,30 @@ const drawpoly = function(poly, tvec) {
 
 
   // rotate poly in 3d
-  const oldxyz = _.map(poly.xyz, x=> x);
-  poly.xyz = _.map(poly.xyz, x=> mv3(globRotM,x));
+  const oldxyz = _.map(poly.vertices, x=> x);
+  poly.vertices = _.map(poly.vertices, x=> mv3(globRotM,x));
 
   // z sort faces
   sortfaces(poly);
 
-  for (let fno = 0; fno < poly.face.length; fno++) {
-    var face = poly.face[fno];
+  for (let fno = 0; fno < poly.faces.length; fno++) {
+    var face = poly.faces[fno];
     ctx.beginPath();
     // move to first vertex of face
     const v0 = face[face.length-1];
-    let [x,y] = perspT(add(tvec,poly.xyz[v0]), persp_z_max,persp_z_min,persp_ratio,perspective_scale);
+    let [x,y] = perspT(add(tvec,poly.vertices[v0]), persp_z_max,persp_z_min,persp_ratio,perspective_scale);
     ctx.moveTo(x+_2d_x_offset, y+_2d_y_offset);
     // loop around face, defining polygon
     for (v of face) {
-      [x,y] = perspT(add(tvec,poly.xyz[v]),persp_z_max,persp_z_min,persp_ratio,perspective_scale);
+      [x,y] = perspT(add(tvec,poly.vertices[v]),persp_z_max,persp_z_min,persp_ratio,perspective_scale);
       ctx.lineTo(x+_2d_x_offset, y+_2d_y_offset);
     }
 
     // use pre-computed colors
-    let clr = palette(poly.face_class[fno]);
+    let clr = palette(poly.face_classes[fno]);
 
     // shade based on simple cosine illumination factor
-    const face_verts = face.map((v)=>poly.xyz[v])
+    const face_verts = face.map((v)=>poly.vertices[v])
     //TODO: these magic illumination parameters should be global constants or parameters
     const illum = dot(normal(face_verts), unit([1, -1, 0]));
     clr = mult((((illum / 2.0) + 0.5) * 0.7) + 0.3, clr);
@@ -7733,7 +7724,7 @@ const drawpoly = function(poly, tvec) {
   }
 
   // reset coords, for setting absolute rotation, as poly is passed by ref
-  poly.xyz = oldxyz;
+  poly.vertices = oldxyz;
 };
 
 

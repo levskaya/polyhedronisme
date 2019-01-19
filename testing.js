@@ -16,7 +16,7 @@
 // report on face topology
 const topolog = function(poly) {
   let str = "";
-  for (let f of poly.face) {
+  for (let f of poly.faces) {
     str += `${f.length}: `
     for (let v of f) {
       str += `${v}->`;

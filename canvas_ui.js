@@ -133,30 +133,30 @@ const drawpoly = function(poly, tvec) {
 
 
   // rotate poly in 3d
-  const oldxyz = _.map(poly.xyz, x=> x);
-  poly.xyz = _.map(poly.xyz, x=> mv3(globRotM,x));
+  const oldxyz = _.map(poly.vertices, x=> x);
+  poly.vertices = _.map(poly.vertices, x=> mv3(globRotM,x));
 
   // z sort faces
   sortfaces(poly);
 
-  for (let fno = 0; fno < poly.face.length; fno++) {
-    var face = poly.face[fno];
+  for (let fno = 0; fno < poly.faces.length; fno++) {
+    var face = poly.faces[fno];
     ctx.beginPath();
     // move to first vertex of face
     const v0 = face[face.length-1];
-    let [x,y] = perspT(add(tvec,poly.xyz[v0]), persp_z_max,persp_z_min,persp_ratio,perspective_scale);
+    let [x,y] = perspT(add(tvec,poly.vertices[v0]), persp_z_max,persp_z_min,persp_ratio,perspective_scale);
     ctx.moveTo(x+_2d_x_offset, y+_2d_y_offset);
     // loop around face, defining polygon
     for (v of face) {
-      [x,y] = perspT(add(tvec,poly.xyz[v]),persp_z_max,persp_z_min,persp_ratio,perspective_scale);
+      [x,y] = perspT(add(tvec,poly.vertices[v]),persp_z_max,persp_z_min,persp_ratio,perspective_scale);
       ctx.lineTo(x+_2d_x_offset, y+_2d_y_offset);
     }
 
     // use pre-computed colors
-    let clr = palette(poly.face_class[fno]);
+    let clr = palette(poly.face_classes[fno]);
 
     // shade based on simple cosine illumination factor
-    const face_verts = face.map((v)=>poly.xyz[v])
+    const face_verts = face.map((v)=>poly.vertices[v])
     //TODO: these magic illumination parameters should be global constants or parameters
     const illum = dot(normal(face_verts), unit([1, -1, 0]));
     clr = mult((((illum / 2.0) + 0.5) * 0.7) + 0.3, clr);
@@ -184,7 +184,7 @@ const drawpoly = function(poly, tvec) {
   }
 
   // reset coords, for setting absolute rotation, as poly is passed by ref
-  poly.xyz = oldxyz;
+  poly.vertices = oldxyz;
 };
 
 

@@ -1,7 +1,7 @@
 // Polyhédronisme
 //===================================================================================================
 //
-// A toy for constructing and manipulating polyhedra and other meshes
+// A toy for constructing and manipulating polyhedra.
 //
 // Copyright 2019, Anselm Levskaya
 // Released under the MIT License
@@ -18,17 +18,17 @@ function __range__(left, right, inclusive) {
 }
 
 // Polyhedra Functions
-//===================================================================================================
+//=================================================================================================
 //
-// Topology stored as set of "faces."  Each face is list of n vertex indices
-// corresponding to one n-sided face.  Vertices listed clockwise as seen from outside.
+// Topology stored as set of faces.  Each face is list of n vertex indices
+// corresponding to one oriented, n-sided face.  Vertices listed clockwise as seen from outside.
 
 // Generate an array of edges [v1,v2] for the face.
 const faceToEdges = function(face) {
   const edges = [];
   let [v1] = face.slice(-1);
   for (let v2 of face) {
-    edges.push([v1,v2]);
+    edges.push([v1, v2]);
     v1 = v2;
   }
   return edges;
@@ -36,19 +36,19 @@ const faceToEdges = function(face) {
 
 const vertColors = function(poly) {
   const vertcolors=[];
-  for (let i = 0; i < poly.face.length; i++) {
-    const f = poly.face[i];
+  for (let i = 0; i < poly.faces.length; i++) {
+    const f = poly.faces[i];
     for (let v of f) {
-      vertcolors[v] = poly.face_class[i];
+      vertcolors[v] = poly.face_classes[i];
     }
   }
   return vertcolors;
 };
 
 // Polyhedra Coloring Functions
-//===================================================================================================
-
-const rwb_palette  = ["#ff7777","#dddddd","#889999","#fff0e5","#aa3333","#ff0000","#ffffff","#aaaaaa"];
+//=================================================================================================
+const rwb_palette = ["#ff7777", "#dddddd", "#889999", "#fff0e5",
+                     "#aa3333", "#ff0000", "#ffffff", "#aaaaaa"];
 
 function hsl2rgb(h, s, l) {
   let r, g, b;
@@ -115,7 +115,7 @@ const palette = function(n) {
 const paintPolyhedron = function(poly) {
   // Color the faces of the polyhedra for display
   let v;
-  poly.face_class = [];
+  poly.face_classes = [];
   const colormemory={};
 
   // memoized color assignment to faces of similar areas
@@ -130,21 +130,21 @@ const paintPolyhedron = function(poly) {
     }
   };
 
-  for (var f of poly.face) {
+  for (var f of poly.faces) {
     var clr, face_verts;
     if (COLOR_METHOD === "area") {
       // color by face planar area assuming flatness
-      face_verts = f.map(v=>poly.xyz[v])
+      face_verts = f.map(v=>poly.vertices[v])
       clr = colorassign(sigfigs(planararea(face_verts), COLOR_SENSITIVITY), colormemory);
     } else if (COLOR_METHOD === "signature") {
       // color by congruence signature
-      face_verts = f.map(v=>poly.xyz[v])
+      face_verts = f.map(v=>poly.vertices[v])
       clr = colorassign(faceSignature(face_verts, COLOR_SENSITIVITY), colormemory);
     } else {
       // color by face-sidedness
       clr = f.length - 3;
     }
-    poly.face_class.push(clr);
+    poly.face_classes.push(clr);
   }
   console.log(_.toArray(colormemory).length+" face classes");
   return poly;
@@ -154,7 +154,7 @@ const paintPolyhedron = function(poly) {
 // -------------------------------------------------------------------------
 const sortfaces = function(poly) {
   //smallestZ = (x) -> _.sortBy(x,(a,b)->a[2]-b[2])[0]
-  //closests = (smallestZ(poly.xyz[v] for v in f) for f in poly.face)
+  //closests = (smallestZ(poly.vertices[v] for v in f) for f in poly.faces)
   let idx;
   const centroids  = poly.centers();
   const normals    = poly.normals();
@@ -169,101 +169,63 @@ const sortfaces = function(poly) {
   // sort by centroid z-depth: not correct but more stable heuristic w. weird non-planar "polygons"
   const zcentroidsort = (a, b)=> a[0][2]-b[0][2];
 
-  const zsortIndex = _.zip(centroids, normals, __range__(0, poly.face.length, false))
+  const zsortIndex = _.zip(centroids, normals, __range__(0, poly.faces.length, false))
     //.sort(planesort)
     .sort(zcentroidsort)
     .map(x=> x[2]);
 
   // sort all face-associated properties
-  poly.face = zsortIndex.map(idx=>poly.face[idx]);
-  poly.face_class = zsortIndex.map(idx=>poly.face_class[idx]);
+  poly.faces = zsortIndex.map(idx=>poly.faces[idx]);
+  poly.face_classes = zsortIndex.map(idx=>poly.face_classes[idx]);
 };
 
 
 class polyhedron {
   // constructor of initially null polyhedron
   constructor(verts, faces, name) {
-    // array of faces.  face.length = # faces
-    this.face = faces || new Array();
-    // array of vertex coords.  xyz.length = # of vertices
-    this.xyz  = verts || new Array();
+    // array of faces.  faces.length = # faces
+    this.faces = faces || new Array();
+    // array of vertex coords.  vertices.length = # of vertices
+    this.vertices  = verts || new Array();
     this.name = name  || "null polyhedron";
   }
 
   data() {   // informative string
-    const nEdges = (this.face.length + this.xyz.length) - 2; // E = V + F - 2
-    return `${this.face.length} faces, ${nEdges} edges, ${this.xyz.length} vertices`;
+    const nEdges = (this.faces.length + this.vertices.length) - 2; // E = V + F - 2
+    return `${this.faces.length} faces, ${nEdges} edges, ${this.vertices.length} vertices`;
   }
-
-  moreData() {
-    return `min. edge length ${this.minEdgeLength().toPrecision(2)}; min. face radius ${this.minFaceRadius().toPrecision(2)}`;
-  }
-    
+  
+  // return a non-redundant list of the polyhedron's edges
   edges() {
-    let e;
-    const finalset={};
-    const uniqedges=[];
-    const alledges = _.map(this.face, faceToEdges);
+    let e, a, b;
+    const finalset = {};
+    const uniqedges = [];
+    const alledges = _.map(this.faces, faceToEdges);
     for (let edgeset of alledges) {
       for (e of edgeset) {
-        var a, b;
         if (e[0] < e[1]) {
           [a, b] = e;
         } else {
           [b, a] = e;
         }
-        finalset[a+'~'+b] = e;
+        finalset[a + '~' + b] = e;
       }
     }
     for (let hash in finalset) {
       e = finalset[hash];
       uniqedges.push(e);
     }
-
-    //return edges
     return uniqedges;
-  }
-
-  minEdgeLength() {
-    let min2 = Number.MAX_VALUE;
-    // Compute minimum edge length
-    for (let e of this.edges()) {
-      // square of edge length
-      const d2 = mag2(sub(this.xyz[e[0]], this.xyz[e[1]]));
-      if (d2 < min2) {
-        min2 = d2;
-      }
-    }
-    // This is normalized if rescaling has happened.
-    return sqrt(min2); 
-  }
-    
-  minFaceRadius() {
-    let min2 = Number.MAX_VALUE;
-    const nFaces = this.face.length;
-    const centers = this.centers();
-    for (let f = 0, end = nFaces; f < end; f++) {
-      const c = centers[f];
-      for (let e of faceToEdges(this.face[f])) {
-        // Check distance from center to each edge.
-        const de2 = linePointDist2(this.xyz[e[0]], this.xyz[e[1]], c);
-        if (de2 < min2) {
-          min2 = de2;
-        }
-      }
-    }
-
-    return sqrt(min2);
   }
       
   centers() {
     // get array of face centers
     const centers_array = [];
-    for (let f of this.face) {
+    for (let f of this.faces) {
       let fcenter = [0, 0, 0];
       // average vertex coords
       for (let v of f) {
-        fcenter = add(fcenter, this.xyz[v]);
+        fcenter = add(fcenter, this.vertices[v]);
       }
       centers_array.push(mult(1.0 / f.length, fcenter));
     }
@@ -274,10 +236,46 @@ class polyhedron {
   normals() {
     // get array of face normals
     const normals_array = [];
-    for (let f of this.face) {
-      normals_array.push(normal(f.map((v) => this.xyz[v])));
+    for (let f of this.faces) {
+      normals_array.push(normal(f.map((v) => this.vertices[v])));
     }
     return normals_array;
+  }
+
+  moreData() {
+    return `min. edge length ${this.minEdgeLength().toPrecision(2)}; ` +
+           `min. face radius ${this.minFaceRadius().toPrecision(2)}`;
+  }
+
+  minEdgeLength() {
+    let min2 = Number.MAX_VALUE;
+    // Compute minimum edge length
+    for (let e of this.edges()) {
+      // square of edge length
+      const d2 = mag2(sub(this.vertices[e[0]], this.vertices[e[1]]));
+      if (d2 < min2) {
+        min2 = d2;
+      }
+    }
+    // This is normalized if rescaling has happened.
+    return sqrt(min2); 
+  }
+    
+  minFaceRadius() {
+    let min2 = Number.MAX_VALUE;
+    const nFaces = this.faces.length;
+    const centers = this.centers();
+    for (let f = 0, end = nFaces; f < end; f++) {
+      const c = centers[f];
+      for (let e of faceToEdges(this.faces[f])) {
+        // Check distance from center to each edge.
+        const de2 = linePointDist2(this.vertices[e[0]], this.vertices[e[1]], c);
+        if (de2 < min2) {
+          min2 = de2;
+        }
+      }
+    }
+    return sqrt(min2);
   }
 
   // Export / Formatting Routines --------------------------------------------------
@@ -289,38 +287,30 @@ class polyhedron {
     let objstr="#Produced by polyHédronisme http://levskaya.github.com/polyhedronisme\n";
     objstr+=`group ${this.name}\n`;
     objstr+="#vertices\n";
-    for (v of this.xyz) {
+    for (v of this.vertices) {
       objstr += `v ${v[0]} ${v[1]} ${v[2]}\n`;
     }
-
     objstr += "#normal vector defs \n";
-    for (f of this.face) {
-      // const norm = normal((() => {
-      //   const result = [];
-      //   for (v of f) {           result.push(this.xyz[v]);
-      //   }
-      //   return result;
-      // })());
-      const norm = normal(f.map(v=>this.xyz[v]))
+    for (f of this.faces) {
+      const norm = normal(f.map(v=>this.vertices[v]))
       objstr += `vn ${norm[0]} ${norm[1]} ${norm[2]}\n`;
     }
-
     objstr += "#face defs \n";
-    for (let i = 0; i < this.face.length; i++) {
-      f = this.face[i];
+    for (let i = 0; i < this.faces.length; i++) {
+      f = this.faces[i];
       objstr += "f ";
       for (v of f) {
         objstr += `${v+1}//${i+1} `;
       }
       objstr += "\n";
     }
-
     return objstr;
   }
 
   toX3D() {
     let v;
-    const SCALE_FACTOR = .01; //ShapeWays uses 1unit = 1meter, so reduce to 1cm scale
+    // ShapeWays uses 1unit = 1meter, so reduce to 3cm scale
+    const SCALE_FACTOR = .03;
     // opening cruft
     let x3dstr=`\
 <?xml version="1.0" encoding ="UTF-8"?>
@@ -335,7 +325,7 @@ class polyhedron {
 <IndexedFaceSet normalPerVertex="false" coordIndex="\
 `;
     // face indices
-    for (let f of this.face) {
+    for (let f of this.faces) {
       for (v of f) {
         x3dstr+=`${v} `;
       }
@@ -353,7 +343,7 @@ class polyhedron {
 
     // re-scaled xyz coordinates
     x3dstr+='<Coordinate point="';
-    for (v of this.xyz) {
+    for (v of this.vertices) {
       x3dstr+=`${v[0]*SCALE_FACTOR} ${v[1]*SCALE_FACTOR} ${v[2]*SCALE_FACTOR} `;
     }
     x3dstr+='"/>\n';
@@ -370,7 +360,8 @@ class polyhedron {
 
   toVRML() {
     let v;
-    const SCALE_FACTOR = .01; //ShapeWays uses 1unit = 1meter, so reduce to 1cm scale
+    // ShapeWays uses 1unit = 1meter, so reduce to 3cm scale
+    const SCALE_FACTOR = .03;
     // opening cruft
     let x3dstr=`\
 #VRML V2.0 utf8
@@ -395,7 +386,7 @@ Transform {
           [\
 `;
     // re-scaled xyz coordinates
-    for (v of this.xyz) {
+    for (v of this.vertices) {
       x3dstr+=`${v[0]*SCALE_FACTOR} ${v[1]*SCALE_FACTOR} ${v[2]*SCALE_FACTOR},`;
     }
     x3dstr=x3dstr.slice(0, +-2 + 1 || undefined);
@@ -408,7 +399,7 @@ color Color
   [\
 `;
     // per-face Color
-    for (let cl of this.face_class) {
+    for (let cl of this.face_classes) {
       const clr=palette(cl);
       x3dstr+=`${clr[0]} ${clr[1]} ${clr[2]} ,`;
     }
@@ -421,7 +412,7 @@ coordIndex
 [\
 `;
     // face indices
-    for (let f of this.face) {
+    for (let f of this.faces) {
       for (v of f) {
         x3dstr+=`${v}, `;
       }
@@ -456,24 +447,24 @@ coordIndex
 const tetrahedron = function() {
   const poly = new polyhedron();
   poly.name = "T";
-  poly.face = [ [0,1,2], [0,2,3], [0,3,1], [1,3,2] ];
-  poly.xyz  = [ [1.0,1.0,1.0], [1.0,-1.0,-1.0], [-1.0,1.0,-1.0], [-1.0,-1.0,1.0] ];
+  poly.faces = [ [0,1,2], [0,2,3], [0,3,1], [1,3,2] ];
+  poly.vertices  = [ [1.0,1.0,1.0], [1.0,-1.0,-1.0], [-1.0,1.0,-1.0], [-1.0,-1.0,1.0] ];
   return poly;
 };
 
 const octahedron = function() {
   const poly = new polyhedron();
   poly.name = "O";
-  poly.face = [ [0,1,2], [0,2,3], [0,3,4], [0,4,1], [1,4,5], [1,5,2], [2,5,3], [3,5,4] ];
-  poly.xyz  = [ [0,0,1.414], [1.414,0,0], [0,1.414,0], [-1.414,0,0], [0,-1.414,0], [0,0,-1.414] ];
+  poly.faces = [ [0,1,2], [0,2,3], [0,3,4], [0,4,1], [1,4,5], [1,5,2], [2,5,3], [3,5,4] ];
+  poly.vertices  = [ [0,0,1.414], [1.414,0,0], [0,1.414,0], [-1.414,0,0], [0,-1.414,0], [0,0,-1.414] ];
   return poly;
 };
 
 const cube = function() {
   const poly = new polyhedron();
   poly.name = "C";
-  poly.face = [ [3,0,1,2], [3,4,5,0], [0,5,6,1], [1,6,7,2], [2,7,4,3], [5,4,7,6] ];
-  poly.xyz  = [ [0.707,0.707,0.707], [-0.707,0.707,0.707], [-0.707,-0.707,0.707], [0.707,-0.707,0.707],
+  poly.faces = [ [3,0,1,2], [3,4,5,0], [0,5,6,1], [1,6,7,2], [2,7,4,3], [5,4,7,6] ];
+  poly.vertices  = [ [0.707,0.707,0.707], [-0.707,0.707,0.707], [-0.707,-0.707,0.707], [0.707,-0.707,0.707],
                 [0.707,-0.707,-0.707], [0.707,0.707,-0.707], [-0.707,0.707,-0.707], [-0.707,-0.707,-0.707] ];
   return poly;
 };
@@ -481,13 +472,13 @@ const cube = function() {
 const icosahedron = function() {
   const poly = new polyhedron();
   poly.name = "I";
-  poly.face = [ [0,1,2], [0,2,3], [0,3,4], [0,4,5],
+  poly.faces = [ [0,1,2], [0,2,3], [0,3,4], [0,4,5],
     [0,5,1], [1,5,7], [1,7,6], [1,6,2],
     [2,6,8], [2,8,3], [3,8,9], [3,9,4],
     [4,9,10], [4,10,5], [5,10,7], [6,7,11],
     [6,11,8], [7,10,11], [8,11,9], [9,11,10] ];
 
-  poly.xyz = [ [0,0,1.176], [1.051,0,0.526],
+  poly.vertices = [ [0,0,1.176], [1.051,0,0.526],
     [0.324,1.0,0.525], [-0.851,0.618,0.526],
     [-0.851,-0.618,0.526], [0.325,-1.0,0.526],
     [0.851,0.618,-0.526], [0.851,-0.618,-0.526],
@@ -499,11 +490,11 @@ const icosahedron = function() {
 const dodecahedron = function() {
    const poly = new polyhedron();
    poly.name = "D";
-   poly.face = [ [0,1,4,7,2], [0,2,6,9,3], [0,3,8,5,1],
+   poly.faces = [ [0,1,4,7,2], [0,2,6,9,3], [0,3,8,5,1],
       [1,5,11,10,4], [2,7,13,12,6], [3,9,15,14,8],
       [4,10,16,13,7], [5,8,14,17,11], [6,12,18,15,9],
       [10,11,17,19,16], [12,13,16,19,18], [14,15,18,19,17] ];
-   poly.xyz = [ [0,0,1.07047], [0.713644,0,0.797878],
+   poly.vertices = [ [0,0,1.07047], [0.713644,0,0.797878],
       [-0.356822,0.618,0.797878], [-0.356822,-0.618,0.797878],
       [0.797878,0.618034,0.356822], [0.797878,-0.618,0.356822],
       [-0.934172,0.381966,0.356822], [0.136294,1.0,0.356822],
@@ -524,16 +515,16 @@ const prism = function(n) {
   poly.name = `P${n}`;
 
   for (i = 0; i < n; i++) { // vertex #'s 0 to n-1 around one face
-    poly.xyz.push([-cos(i*theta), -sin(i*theta),  -h]);
+    poly.vertices.push([-cos(i*theta), -sin(i*theta),  -h]);
   }
   for (i = 0; i < n; i++) { // vertex #'s n to 2n-1 around other
-    poly.xyz.push([-cos(i*theta), -sin(i*theta), h]);
+    poly.vertices.push([-cos(i*theta), -sin(i*theta), h]);
   }
 
-  poly.face.push(__range__(n-1, 0, true));  //top
-  poly.face.push(__range__(n, 2*n, false)); //bottom
+  poly.faces.push(__range__(n-1, 0, true));  //top
+  poly.faces.push(__range__(n, 2*n, false)); //bottom
   for (i = 0; i < n; i++) { //n square sides
-    poly.face.push([i, (i+1)%n, ((i+1)%n)+n, i+n]);
+    poly.faces.push([i, (i+1)%n, ((i+1)%n)+n, i+n]);
   }
 
   poly = adjustXYZ(poly,1);
@@ -553,17 +544,17 @@ const antiprism = function(n) {
   poly.name = `A${n}`;
 
   for (i = 0; i < n; i++) { // vertex #'s 0...n-1 around one face
-    poly.xyz.push([r * cos(i*theta), r * sin(i*theta), h]);
+    poly.vertices.push([r * cos(i*theta), r * sin(i*theta), h]);
   }
   for (i = 0; i < n; i++) { // vertex #'s n...2n-1 around other
-    poly.xyz.push([r * cos((i+0.5)*theta), r * sin((i+0.5)*theta), -h]);
+    poly.vertices.push([r * cos((i+0.5)*theta), r * sin((i+0.5)*theta), -h]);
   }
 
-  poly.face.push(__range__(n-1, 0, true));   //top
-  poly.face.push(__range__(n, (2*n)-1, true)); //bottom
+  poly.faces.push(__range__(n-1, 0, true));   //top
+  poly.faces.push(__range__(n, (2*n)-1, true)); //bottom
   for (i = 0; i <= n-1; i++) { //2n triangular sides
-    poly.face.push([i, (i+1)%n, i+n]);
-    poly.face.push([i, i+n, ((((n+i)-1)%n)+n)]);
+    poly.faces.push([i, (i+1)%n, i+n]);
+    poly.faces.push([i, i+n, ((((n+i)-1)%n)+n)]);
   }
 
   poly = adjustXYZ(poly,1);
@@ -578,13 +569,13 @@ const pyramid = function(n) {
   poly.name = `Y${n}`;
 
   for (i = 0; i < n; i++) { // vertex #'s 0...n-1 around one face
-    poly.xyz.push([-cos(i*theta), -sin(i*theta), -0.2]);
+    poly.vertices.push([-cos(i*theta), -sin(i*theta), -0.2]);
   }
-  poly.xyz.push([0,0, height]); // apex
+  poly.vertices.push([0,0, height]); // apex
 
-  poly.face.push(__range__(n-1, 0, true)); // base
+  poly.faces.push(__range__(n-1, 0, true)); // base
   for (i = 0; i < n; i++) { // n triangular sides
-    poly.face.push([i, (i+1)%n, n]);
+    poly.faces.push([i, (i+1)%n, n]);
   }
 
   poly = canonicalXYZ(poly, 3);

@@ -93,9 +93,9 @@ const canonicalize = function(poly, Niter) {
     Niter = 1;
   }
   console.log(`Canonicalizing ${poly.name}...`);
-  const faces = poly.face;
+  const faces = poly.faces;
   const edges = poly.edges();
-  let newVs = poly.xyz;
+  let newVs = poly.vertices;
   let maxChange = 1.0; // convergence tracker
   for (let i = 0; i <= Niter; i++) {
     const oldVs = copyVecArray(newVs); //copy vertices
@@ -114,7 +114,7 @@ const canonicalize = function(poly, Niter) {
   // more experience will tell what to do
   //newVs = rescale(newVs)
   console.log(`[canonicalization done, last |deltaV|=${maxChange}]`);
-  const newpoly = new polyhedron(newVs, poly.face, poly.name);
+  const newpoly = new polyhedron(newVs, poly.faces, poly.name);
   console.log("canonicalize" , newpoly);
   return newpoly;
 };
@@ -135,16 +135,16 @@ const reciprocalC = function(poly) {
 // make array of vertices reciprocal to given planes
 const reciprocalN = function(poly) {
   const ans = [];
-  for (let f of poly.face) { //for each face
+  for (let f of poly.faces) { //for each face
     let centroid    = [0,0,0]; // running sum of vertex coords
     let normalV     = [0,0,0]; // running sum of normal vectors
     let avgEdgeDist =    0.0;  // running sum for avg edge distance
 
     let [v1, v2] = f.slice(-2);
     for (let v3 of f) {
-      centroid     = add(centroid, poly.xyz[v3]);
-      normalV      = add(normalV, orthogonal(poly.xyz[v1], poly.xyz[v2], poly.xyz[v3]));
-      avgEdgeDist += edgeDist(poly.xyz[v1], poly.xyz[v2]);
+      centroid     = add(centroid, poly.vertices[v3]);
+      normalV      = add(normalV, orthogonal(poly.vertices[v1], poly.vertices[v2], poly.vertices[v3]));
+      avgEdgeDist += edgeDist(poly.vertices[v1], poly.vertices[v2]);
       [v1, v2] = [v2, v3];
     } // shift over one
 
@@ -165,11 +165,11 @@ const canonicalXYZ = function(poly, nIterations) {
 
   // iteratively reciprocate face normals
   for (let count = 0, end = nIterations; count < end; count++) {
-    dpoly.xyz = reciprocalN(poly);
-    poly.xyz  = reciprocalN(dpoly);
+    dpoly.vertices = reciprocalN(poly);
+    poly.vertices  = reciprocalN(dpoly);
   }
 
-  return new polyhedron(poly.xyz, poly.face, poly.name);
+  return new polyhedron(poly.vertices, poly.faces, poly.name);
 };
 
 
@@ -181,11 +181,11 @@ const adjustXYZ = function(poly, nIterations) {
 
   for (let count = 0, end = nIterations; count < end; count++) {
     // reciprocate face centers
-    dpoly.xyz = reciprocalC(poly);
-    poly.xyz  = reciprocalC(dpoly);
+    dpoly.vertices = reciprocalC(poly);
+    poly.vertices  = reciprocalC(dpoly);
   }
 
-  return new polyhedron(poly.xyz, poly.face, poly.name);
+  return new polyhedron(poly.vertices, poly.faces, poly.name);
 };
 
 

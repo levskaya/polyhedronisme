@@ -123,8 +123,8 @@ const newgeneratePoly = function(notation) {
   }
 
   // Recenter polyhedra at origin (rarely needed)
-  poly.xyz = recenter(poly.xyz, poly.edges());
-  poly.xyz = rescale(poly.xyz);
+  poly.vertices = recenter(poly.vertices, poly.edges());
+  poly.vertices = rescale(poly.vertices);
 
   // Color the faces of the polyhedra for display
   poly = paintPolyhedron(poly);

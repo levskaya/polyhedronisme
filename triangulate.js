@@ -217,23 +217,23 @@ const triangulate = function(poly, colors){
   console.log(`Triangulating faces of ${poly.name}...`);
 
   const newpoly = new polyhedron();
-  newpoly.xyz = clone(poly.xyz);
-  newpoly.face_class = [ ];
+  newpoly.vertices = clone(poly.vertices);
+  newpoly.face_classes = [ ];
   // iterate over triplets of faces v1,v2,v3
-  for (let i = 0; i < poly.face.length; i++) {
-    const f = poly.face[i];
+  for (let i = 0; i < poly.faces.length; i++) {
+    const f = poly.faces[i];
     if (f.length > 3) {
-      const TwoDface = project2dface(f.map((v) => poly.xyz[v]));
+      const TwoDface = project2dface(f.map((v) => poly.vertices[v]));
       const diags = getDiagonals(TwoDface);
       const tris  = diagsToTris(f,diags);
       for (let j = 0; j < tris.length; j++) {
         const tri = tris[j];
-        newpoly.face.push([ f[tri[0]], f[tri[1]], f[tri[2]] ]);
-        if (colors) { newpoly.face_class.push(poly.face_class[i]); }
+        newpoly.faces.push([ f[tri[0]], f[tri[1]], f[tri[2]] ]);
+        if (colors) { newpoly.face_classes.push(poly.face_classes[i]); }
       }
     } else {
-      newpoly.face.push([ f[0], f[1], f[2] ]);
-      if (colors) { newpoly.face_class.push(poly.face_class[i]); }
+      newpoly.faces.push([ f[0], f[1], f[2] ]);
+      if (colors) { newpoly.face_classes.push(poly.face_classes[i]); }
     }
   }
   newpoly.name = poly.name; // don't change the name for export
