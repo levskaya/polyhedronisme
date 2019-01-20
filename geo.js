@@ -156,21 +156,21 @@ const intersect = function(set1, set2, set3) {
 };
 
 // calculate centroid of array of vertices
-const calcCentroid = function(xyzs) {
+const calcCentroid = function(vertices) {
   // running sum of vertex coords
   let centroidV = [0,0,0];
-  for (let v of xyzs) {
+  for (let v of vertices) {
     centroidV = add(centroidV, v);
   }
-  return mult(1 / xyzs.length, centroidV );
+  return mult(1 / vertices.length, centroidV );
 };
 
 // calculate average normal vector for array of vertices
-const normal = function(xyzs) {
+const normal = function(vertices) {
   // running sum of normal vectors
   let normalV = [0,0,0]; 
-  let [v1, v2] = xyzs.slice(-2);
-  for (let v3 of xyzs) {
+  let [v1, v2] = vertices.slice(-2);
+  for (let v3 of vertices) {
     normalV = add(normalV, orthogonal(v1, v2, v3));
     [v1, v2] = [v2, v3];
   } // shift over one
@@ -179,24 +179,24 @@ const normal = function(xyzs) {
 
 // calculates area planar face by summing over subtriangle areas
 // this assumes planarity.
-const planararea = function(xyzs) {
+const planararea = function(vertices) {
   let area = 0.0;
   let vsum = [0.,0.,0.];
-  let [v1, v2] = xyzs.slice(-2);
-  for (let v3 of xyzs) {
+  let [v1, v2] = vertices.slice(-2);
+  for (let v3 of vertices) {
     vsum = add(vsum, cross(v1, v2));
     [v1, v2] = [v2, v3];
   }
-  area = abs(dot(normal(xyzs), vsum) / 2.0);
+  area = abs(dot(normal(vertices), vsum) / 2.0);
   return area;
 };
 
 // congruence signature for assigning same colors to congruent faces
-const faceSignature = function(xyzs, sensitivity) {
+const faceSignature = function(vertices, sensitivity) {
   let x;
   const cross_array = [];
-  let [v1, v2] = xyzs.slice(-2);
-  for (let v3 of xyzs) {
+  let [v1, v2] = vertices.slice(-2);
+  for (let v3 of vertices) {
     // accumulate inner angles
     cross_array.push(mag( cross(sub(v1, v2), sub(v3, v2)) ));
     [v1, v2] = [v2, v3];

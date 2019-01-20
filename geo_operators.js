@@ -29,11 +29,11 @@
 // based geometrical regularizer should be used for fancier/weirder polyhedra.
 
 // adjusts vertices on edges such that each edge is tangent to an origin sphere
-const tangentify = function(xyzs, edges) {
+const tangentify = function(vertices, edges) {
   // hack to improve convergence
   const STABILITY_FACTOR = 0.1; 
   // copy vertices
-  const newVs = copyVecArray(xyzs);
+  const newVs = copyVecArray(vertices);
   for (let e of edges) {
     // the point closest to origin
     const t = tangentPoint( newVs[e[0]], newVs[e[1]] );
@@ -46,9 +46,9 @@ const tangentify = function(xyzs, edges) {
 };
 
 // recenters entire polyhedron such that center of mass is at origin
-const recenter = function(xyzs, edges) {
+const recenter = function(vertices, edges) {
   //centers of edges
-  const edgecenters = edges.map(([a, b])=>tangentPoint(xyzs[a], xyzs[b]));
+  const edgecenters = edges.map(([a, b])=>tangentPoint(vertices[a], vertices[b]));
   let polycenter = [0, 0, 0];
   // sum centers to find center of gravity
   for (let v of edgecenters) { 
@@ -56,24 +56,24 @@ const recenter = function(xyzs, edges) {
   }
   polycenter = mult(1/edges.length, polycenter);
   // subtract off any deviation from center
-  return _.map(xyzs, x=>sub(x, polycenter));
+  return _.map(vertices, x=>sub(x, polycenter));
 };
 
 // rescales maximum radius of polyhedron to 1
-const rescale = function(xyzs) {
+const rescale = function(vertices) {
   const polycenter = [0, 0, 0];
-  const maxExtent = _.max(_.map(xyzs, x=>mag(x)));
+  const maxExtent = _.max(_.map(vertices, x=>mag(x)));
   const s = 1 / maxExtent;
-  return _.map(xyzs, x=>[s*x[0], s*x[1], s*x[2]]);
+  return _.map(vertices, x=>[s*x[0], s*x[1], s*x[2]]);
 };
 
 // adjusts vertices in each face to improve its planarity
-const planarize = function(xyzs, faces) {
+const planarize = function(vertices, faces) {
   let v;
   const STABILITY_FACTOR = 0.1; // Hack to improve convergence
-  const newVs = copyVecArray(xyzs); // copy vertices
+  const newVs = copyVecArray(vertices); // copy vertices
   for (var f of faces) {
-    const coords = f.map(v=>xyzs[v])
+    const coords = f.map(v=>vertices[v])
     let n = normal(coords); // find avg of normals for each vertex triplet
     const c = calcCentroid(coords); // find planar centroid
     if (dot(n, c) < 0) { // correct sign if needed
@@ -81,7 +81,7 @@ const planarize = function(xyzs, faces) {
     }
     for (v of f) {  // project (vertex - centroid) onto normal, subtract off this component
       newVs[v] = add(newVs[v], 
-                     mult(dot(mult(STABILITY_FACTOR, n), sub(c, xyzs[v])), n));
+                     mult(dot(mult(STABILITY_FACTOR, n), sub(c, vertices[v])), n));
     }
   }
   return newVs;

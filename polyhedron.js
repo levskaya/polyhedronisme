@@ -37,8 +37,8 @@ const faceToEdges = function(face) {
 const vertColors = function(poly) {
   const vertcolors=[];
   for (let i = 0; i < poly.faces.length; i++) {
-    const f = poly.faces[i];
-    for (let v of f) {
+    const face = poly.faces[i];
+    for (let v of face) {
       vertcolors[v] = poly.face_classes[i];
     }
   }
@@ -49,7 +49,13 @@ const vertColors = function(poly) {
 //=================================================================================================
 const rwb_palette = ["#ff7777", "#dddddd", "#889999", "#fff0e5",
                      "#aa3333", "#ff0000", "#ffffff", "#aaaaaa"];
-
+let PALETTE = rwb_palette;  // GLOBAL
+const palette = function(n) {
+  const k = n % PALETTE.length;
+  return hextofloats(PALETTE[k])
+};
+                     
+// converts [h,s,l] float args to [r,g,b] list
 function hsl2rgb(h, s, l) {
   let r, g, b;
   if (s == 0) {
@@ -86,6 +92,7 @@ const hextofloats = function(hexstr){
   return rgb;
 };
 
+// converts [r,g,b] floats to #xxxxxx form
 const floatstohex = function(rgb){
   let r_hex = Number(parseInt(255 * rgb[0], 10)).toString(16);
   let g_hex = Number(parseInt(255 * rgb[1], 10)).toString(16);
@@ -106,15 +113,9 @@ const rndcolors = function(){
   return newpalette;
 }
 
-let PALETTE = rwb_palette; //GLOBAL
-const palette = function(n) {
-  const k = n % PALETTE.length;
-  return hextofloats(PALETTE[k])
-};
 
+// Color the faces of the polyhedra for display
 const paintPolyhedron = function(poly) {
-  // Color the faces of the polyhedra for display
-  let v;
   poly.face_classes = [];
   const colormemory={};
 
@@ -162,12 +163,12 @@ const sortfaces = function(poly) {
 
   // sort by binary-space partition: are you on same side as view-origin or not?
   // !!! there is something wrong with this. even triangulated surfaces have artifacts.
-  const planesort = (a,b)=>
+  const planesort = (a,b) =>
     //console.log dot(sub(ray_origin,a[0]),a[1]), dot(sub(b[0],a[0]),a[1])
     -dot(sub(ray_origin,a[0]),a[1])*dot(sub(b[0],a[0]),a[1]);
 
   // sort by centroid z-depth: not correct but more stable heuristic w. weird non-planar "polygons"
-  const zcentroidsort = (a, b)=> a[0][2]-b[0][2];
+  const zcentroidsort = (a, b) => a[0][2]-b[0][2];
 
   const zsortIndex = _.zip(centroids, normals, __range__(0, poly.faces.length, false))
     //.sort(planesort)
@@ -189,57 +190,53 @@ class polyhedron {
     this.vertices  = verts || new Array();
     this.name = name  || "null polyhedron";
   }
-
-  data() {   // informative string
-    const nEdges = (this.faces.length + this.vertices.length) - 2; // E = V + F - 2
-    return `${this.faces.length} faces, ${nEdges} edges, ${this.vertices.length} vertices`;
-  }
   
   // return a non-redundant list of the polyhedron's edges
   edges() {
     let e, a, b;
-    const finalset = {};
-    const uniqedges = [];
-    const alledges = _.map(this.faces, faceToEdges);
-    for (let edgeset of alledges) {
-      for (e of edgeset) {
+    const uniqEdges = {};
+    const faceEdges = this.faces.map(faceToEdges);
+    for (let edgeSet of faceEdges) {
+      for (e of edgeSet) {
         if (e[0] < e[1]) {
           [a, b] = e;
         } else {
           [b, a] = e;
         }
-        finalset[a + '~' + b] = e;
+        uniqEdges[`${a}~${b}`] = e;
       }
     }
-    for (let hash in finalset) {
-      e = finalset[hash];
-      uniqedges.push(e);
-    }
-    return uniqedges;
+    return _.values(uniqEdges);
   }
       
+  // get array of face centers
   centers() {
-    // get array of face centers
-    const centers_array = [];
-    for (let f of this.faces) {
+    const centersArray = [];
+    for (let face of this.faces) {
       let fcenter = [0, 0, 0];
       // average vertex coords
-      for (let v of f) {
-        fcenter = add(fcenter, this.vertices[v]);
+      for (let vidx of face) {
+        fcenter = add(fcenter, this.vertices[vidx]);
       }
-      centers_array.push(mult(1.0 / f.length, fcenter));
+      centersArray.push(mult(1.0 / face.length, fcenter));
     }
     // return face-ordered array of centroids
-    return centers_array;
+    return centersArray;
   }
 
+  // get array of face normals
   normals() {
-    // get array of face normals
-    const normals_array = [];
-    for (let f of this.faces) {
-      normals_array.push(normal(f.map((v) => this.vertices[v])));
+    const normalsArray = [];
+    for (let face of this.faces) {
+      normalsArray.push(normal(face.map(vidx => this.vertices[vidx])));
     }
-    return normals_array;
+    return normalsArray;
+  }
+
+  // informative string
+  data() {
+    const nEdges = (this.faces.length + this.vertices.length) - 2; // E = V + F - 2
+    return `${this.faces.length} faces, ${nEdges} edges, ${this.vertices.length} vertices`;
   }
 
   moreData() {
@@ -581,3 +578,55 @@ const pyramid = function(n) {
   poly = canonicalXYZ(poly, 3);
   return poly;
 };
+
+const cupola = function(n, alpha, height) {
+  let i;
+  if (n===undefined) { n = 3; }
+  if (alpha===undefined) { alpha = 0.0; }
+
+  const theta = (2*PI)/n; // pie angle
+  let poly = new polyhedron();
+  poly.name = `U${n}`;
+
+  if (n < 2) {
+    return poly;
+  }
+
+  let s = 1.0;
+  // alternative face/height scaling 
+  //let rb = s / 2 / sin(PI / 2 / n - alpha);
+  let rb = s / 2 / sin(PI / 2 / n);
+  let rt = s / 2 / sin(PI / n);
+  if (height===undefined) { 
+    height = (rb - rt);
+    // set correct height for regularity for n=3,4,5
+    if (2 <= n && n <= 5) {
+      height = s * sqrt(1 - 1 / 4 / sin(PI/n) / sin(PI/n));
+    }
+  }
+  // init 3N vertices
+  for (i = 0; i < 3*n; i++) {
+    poly.vertices.push([0,0,0]);
+  }
+  // fill vertices
+  for (i = 0; i < n; i++) {
+    poly.vertices[2*i] = [rb * cos(PI*(2*i)/n + PI/2/n+alpha), 
+                          rb * sin(PI*(2*i)/n + PI/2/n+alpha),
+                          0.0];
+    poly.vertices[2*i+1] = [rb * cos(PI*(2*i+1)/n + PI/2/n-alpha), 
+                            rb * sin(PI*(2*i+1)/n + PI/2/n-alpha), 
+                            0.0];
+    poly.vertices[2*n+i] = [rt * cos(2*PI*i/n), 
+                            rt * sin(2*PI*i/n), 
+                            height];
+  }
+  
+  poly.faces.push(__range__(2*n-1, 0, true)); // base
+  poly.faces.push(__range__(2*n, 3*n-1, true)); // top
+  for (i = 0; i < n; i++) { // n triangular sides and n square sides
+    poly.faces.push([(2*i+1)%(2*n), (2*i+2)%(2*n), 2*n+(i+1)%n]);
+    poly.faces.push([2*i, (2*i+1)%(2*n), 2*n+(i+1)%n, 2*n+i]);
+  }
+
+  return poly;  
+}

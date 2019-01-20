@@ -22,6 +22,7 @@ const persp_ratio = 0.8;
 const _2d_x_offset = CANVAS_WIDTH/2;
 const _2d_y_offset = CANVAS_HEIGHT/2;
 
+//let PALETTE;
 const BG_CLEAR = true; // clear background or colored?
 const BG_COLOR = "rgba(255,255,255,1.0)"; // background color
 let COLOR_METHOD = "signature"; // "area", "edges"
@@ -41,7 +42,7 @@ let LastSphVec = [1, 0, 0];
 const DEFAULT_RECIPES = [
   "C2dakD", "oC20kkkT", "kn4C40A0dA4", "opD",
   "lT", "lK5oC", "knD", "dn6x4K5bT", "oox4P7",
-  "qqJ37", "aobD"];
+  "qqJ37", "aobD", "qaxI"];
 
 // File-saving objects used to export txt/canvas-png
 const saveText = function(text, filename) {

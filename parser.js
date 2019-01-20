@@ -55,6 +55,7 @@ const basemap = {
   "A": antiprism, //takes integer arg
   "Y": pyramid,   //takes integer arg
   "J": johnson,   //takes integer arg
+  "U": cupola,    //takes integer arg
 };
 
 const opmap = {
@@ -78,7 +79,7 @@ const opmap = {
   "q": quinto,
   };
 
-//list of basic equivalences, easier to replace before parsing
+// list of basic equivalences, easier to replace before parsing
 const specreplacements = [
   [/e/g, "aa"],   // e --> aa   (abbr. for explode)
   [/b/g, "ta"],   // b --> ta   (abbr. for bevel)
