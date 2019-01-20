@@ -584,7 +584,6 @@ const cupola = function(n, alpha, height) {
   if (n===undefined) { n = 3; }
   if (alpha===undefined) { alpha = 0.0; }
 
-  const theta = (2*PI)/n; // pie angle
   let poly = new polyhedron();
   poly.name = `U${n}`;
 
@@ -626,6 +625,54 @@ const cupola = function(n, alpha, height) {
   for (i = 0; i < n; i++) { // n triangular sides and n square sides
     poly.faces.push([(2*i+1)%(2*n), (2*i+2)%(2*n), 2*n+(i+1)%n]);
     poly.faces.push([2*i, (2*i+1)%(2*n), 2*n+(i+1)%n, 2*n+i]);
+  }
+
+  return poly;  
+}
+
+const anticupola = function(n, alpha, height) {
+  let i;
+  if (n===undefined) { n = 3; }
+  if (alpha===undefined) { alpha = 0.0; }
+
+  let poly = new polyhedron();
+  poly.name = `U${n}`;
+
+  if (n < 3) {
+    return poly;
+  }
+
+  let s = 1.0;
+  // alternative face/height scaling 
+  //let rb = s / 2 / sin(PI / 2 / n - alpha);
+  let rb = s / 2 / sin(PI / 2 / n);
+  let rt = s / 2 / sin(PI / n);
+  if (height===undefined) { 
+    height = (rb - rt);
+  }
+  // init 3N vertices
+  for (i = 0; i < 3*n; i++) {
+    poly.vertices.push([0,0,0]);
+  }
+  // fill vertices
+  for (i = 0; i < n; i++) {
+    poly.vertices[2*i] = [rb * cos(PI*(2*i)/n + alpha), 
+                          rb * sin(PI*(2*i)/n + alpha),
+                          0.0];
+    poly.vertices[2*i+1] = [rb * cos(PI*(2*i+1)/n - alpha), 
+                            rb * sin(PI*(2*i+1)/n - alpha), 
+                            0.0];
+    poly.vertices[2*n+i] = [rt * cos(2*PI*i/n), 
+                            rt * sin(2*PI*i/n), 
+                            height];
+  }
+  
+  poly.faces.push(__range__(2*n-1, 0, true)); // base
+  poly.faces.push(__range__(2*n, 3*n-1, true)); // top
+  for (i = 0; i < n; i++) { // n triangular sides and n square sides
+    poly.faces.push([(2*i)%(2*n), (2*i+1)%(2*n), 2*n+(i)%n]);
+    poly.faces.push([2*n+(i+1)%n, (2*i+1)%(2*n), (2*i+2)%(2*n)]);
+    poly.faces.push([2*n+(i+1)%n, 2*n+(i)%n, (2*i+1)%(2*n)]);
   }
 
   return poly;  

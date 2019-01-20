@@ -30,7 +30,7 @@ const topolog = function(poly) {
 const testrig = function() {
   const seeds=["T","O","C","I","D","P3","P4","A4","A5","Y3","Y4"];
   const ops = ["k","a","g","p","d","r","e","b","o","m","t","j",
-               "s","p","c","w","l","n","x","z","h"];
+               "s","p","c","w","l","n","x","Z","H"];
   console.log("===== Test Basic Ops =====");
   for (let op of ops) {
     console.log(`Operator ${op}`);

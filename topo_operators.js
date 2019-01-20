@@ -122,7 +122,7 @@ const midName = (v1, v2) => (v1<v2 ? v1+"_"+v2 : v2+"_"+v1)
 const kisN = function(poly, n, apexdist){
   let i;
   if (!n) { n = 0; }
-  if (!apexdist) { apexdist = 0.1; }
+  if (apexdist===undefined) { apexdist = 0.1; }
   console.log(`Taking kis of ${n===0 ? "" : n}-sided faces of ${poly.name}...`);
 
   const flag = new polyflag();
@@ -609,15 +609,23 @@ const extrudeN = function(poly, n){
   return newpoly;
 }
 
-// hollow / skeletonize
+// loft
 // ------------------------------------------------------------------------------------------
-const hollow = function(poly, n, inset_dist, thickness){
+const loft = function(poly, n, alpha){
+  const newpoly = insetN(poly, n, alpha, 0.0);
+  newpoly.name = `l${n === 0 ? "" : n}${poly.name}`;
+  return newpoly;
+}
+
+
+// Hollow (skeletonize)
+// ------------------------------------------------------------------------------------------
+const hollow = function(poly, inset_dist, thickness){
   let f, i, v;
-  if (!n) { n = 0; }
   if (inset_dist === undefined) { inset_dist = 0.5; }
   if (thickness === undefined) { thickness = 0.2; }
 
-  console.log(`Skeletonizing ${n===0 ? "" : n}-sided faces of ${poly.name}...`);
+  console.log(`Hollowing ${poly.name}...`);
 
   const dualnormals = dual(poly).normals();
   const normals = poly.normals();
@@ -632,7 +640,6 @@ const hollow = function(poly, n, inset_dist, thickness){
   }
   // new inset vertex for every vert in face
   for (i = 0; i < poly.faces.length; i++) {
-    //if f.length is n or n is 0
     f = poly.faces[i];
     for (v of f) {
       flag.newV(`fin${i}v${v}`, tween(poly.vertices[v],centers[i],inset_dist));
@@ -641,14 +648,11 @@ const hollow = function(poly, n, inset_dist, thickness){
     }
   }
 
-  //foundAny = false    # alert if we don't find any N-ary faces
   for (i = 0; i < poly.faces.length; i++) {
     f = poly.faces[i];
     let v1 = `v${f[f.length-1]}`;
     for (v of f) {
       const v2 = `v${v}`;
-      //if f.length is n or n is 0
-      const foundAny = true;
       let fname = i + v1;
       flag.newFlag(fname,      v1,       v2);
       flag.newFlag(fname,      v2,       `fin${i}${v2}`);
@@ -667,29 +671,20 @@ const hollow = function(poly, n, inset_dist, thickness){
       flag.newFlag(fname,  `findown${i}${v1}`, `findown${i}${v2}`);
       flag.newFlag(fname,  `findown${i}${v2}`, `down${v2}`);
 
-      //new inset, extruded face
-      //flag.newFlag "ex"+i, "fin"+i+v1,  "fin"+i+v2
-      //else
-      //  flag.newFlag i, v1, v2  # same old flag, if non-n
-      v1 = v2;
+      v1 = v2; // current becomes previous
     }
-  }  // current becomes previous
-
-  //if not foundAny
-  //  console.log "No #{n}-fold components were found."
+  }
 
   const newpoly = flag.topoly();
-  //newpoly.name = "h" + (if n is 0 then "" else n) + poly.name
-  newpoly.name = `h${poly.name}`;
+  newpoly.name = `H${poly.name}`;
   return newpoly;
 };
 
 
-// StellaN
+// Perspectiva 1
 // ------------------------------------------------------------------------------------------
 // an operation reverse-engineered from Perspectiva Corporum Regularium
-// apparently in conflict with another more common meaning of "stellation"... fix?
-const stellaN = function(poly){
+const perspectiva1 = function(poly){
   let i;
   console.log(`Taking stella of ${poly.name}...`);
 
@@ -738,7 +733,7 @@ const stellaN = function(poly){
   }
 
   const newpoly = flag.topoly();
-  newpoly.name = `l${poly.name}`;
+  newpoly.name = `P${poly.name}`;
   return newpoly;
 };
 

@@ -82,6 +82,7 @@ Each recipe looks like: </p>
     <li>A<i>N</i> - N-sided anti-prism</li>
     <li>Y<i>N</i> - N-sided pyramid</li>
     <li>U<i>N</i> - 2N-sided cupola (N&ge;3, regular for 3,4,5)</li>
+    <li>V<i>N</i> - 2N-sided anticupola (N&ge;3)</li>
     <li>J<i>N</i> - Nth Johnson Solid (1 to 92)</li>
   </ul>
 
@@ -89,10 +90,10 @@ Each recipe looks like: </p>
     <a href="https://en.wikipedia.org/wiki/Conway_polyhedron_notation">polyhedron-building operators</a>:</p>
 
 <ul>
-  <li><b>k<i>N</i></b> - <a href="https://en.wikipedia.org/wiki/Kleetope">kis</a> on N-sided faces (if no N, then general kis)</li>
-  <li><b>a</b> - ambo</li>
-  <li><b>g</b> - gyro</li>
   <li><b>d</b> - dual</li>
+  <li><b>a</b> - ambo</li>
+  <li><b>k<i>N</i></b> - <a href="https://en.wikipedia.org/wiki/Kleetope">kis</a> on N-sided faces (if no N, then general kis)</li>
+  <li><b>g</b> - gyro</li>
   <li><b>r</b> - reflect</li>
   <li><b>e</b> - explode (a.k.a. <a href="https://en.wikipedia.org/wiki/Expansion_%28geometry%29">expand</a>, equiv. to <i>aa</i>) </li>
   <li><b>b</b> - bevel (equiv. to <i>ta</i>) </li>
@@ -105,21 +106,28 @@ Each recipe looks like: </p>
   <li><b>c</b> - chamfer</li>
   <li><b>w</b> - whirl</li>
   <li><b>q</b> - quinto</li>
+  <li><b>l</b> - loft</li>
   <!--
   <li><b>h</b> - half (caution: requires even-sided faces, and can produce digons)</li>
+  <li><b>n</b> - needle</li>
+  <li><b>z</b> - zip</li>
   -->
 </ul>
 
 <p>Also, some newer, experimental operators:</p>
 
 <ul>
-  <li><b>l</b> - ste<b>l</b>lation</li>
+  <li><b>P</b> - from <i><b>P</b>erspectiva Corporum Regularium</i></li>
   <li><b>n<i>N</i></b> - i<b>n</b>setN </li>
   <li><b>x<i>N</i></b> - e<b>x</b>trudeN </li>
-  <li><b>z</b> - triangulate</li>
-  <li><b>h</b> - hollow/skeletonize, useful for 3D printing, makes a
-  hollow-faced shell version of the polyhedron, only apply it once in
-  a recipe!</li>
+  <li><b>Z</b> - triangulate</li>
+  <li><b>H</b>(<i>inset</i>,<i>depth</i>) - hollow - useful for 3D printing, makes a
+    hollow-faced shell version of the polyhedron,this applies the
+    hollowing operator on all faces, insetting by <i>inset</i> (scaled from 0 to 1), and 
+    with a shell thickness of <i>depth</i>
+  </li>
+  <!--<li><b>H</b> - hollow/skeletonize,  only apply it once in
+  a recipe!</li>-->
   <li><b>u<i>N</i></b> - limited version of the Goldberg-Coxeter u_n operator 
   (for triangular meshes only)</li>
 </ul>
@@ -135,31 +143,24 @@ Each recipe looks like: </p>
   on <i>n</i>-sided faces, setting the pyramidal height out or in along the normal by <i>depth</i>
   (can be negative)
   </li>
-  <li><b>h</b>(<i>0</i>,<i>inset</i>,<i>depth</i>) - this applies the
-  hollowing/skeletonizing operator on all faces, insetting by
-  <i>inset</i> (scaled from 0 to 1), and with a shell thickness of <i>depth</i>
-  </li>
 </ul>
   
-<p>Note that for most of the above operations, while the <i>topology</i> of the result is uniquely specified,
-  a great variety of <i>geometry</i> is possible. For maximum flexibility, the above operators do not enforce convexity
-  of the polyhedron, or planarity of the faces,
-  at each step. If these properties are desired in the final result, the following geometric "refinement" operators 
-  can be used. These operators are for
-  canonicalizing the polyhedral shape, and are mainly intended for making
+<p>Note that for most of the above operations, while the <i>topology</i> of the result 
+  is uniquely specified, a great variety of <i>geometry</i> is possible. For maximum 
+  flexibility, the above operators do not enforce convexity of the polyhedron, or 
+  planarity of the faces, at each step. If these properties are desired in the final 
+  result, the following geometric "refinement" operators can be used. These operators 
+  are for canonicalizing the polyhedral shape, and are mainly intended for making
   the more traditional, convex polyhedra more symmetric:</p>
+
 <ul>
-  <li><b>K<i>N</i></b> - quic<b>K</b> and dirty canonicalization, it can blow
-  up, iteratively refines shape N times.</li>
-  <li><b>C<i>N</i></b> - proper <b>C</b>anonicalization, intensive, slow convergence, iteratively refines shape N times.
-     Flattens faces.
-     A typical N is 200 or 300.</li>
   <li><b>A<i>N</i></b> - convex spherical <b>A</b>djustment. Iterates N times. May give more pleasing symmetry,
-  but can be unstable for certain shapes.</li>
+    but can be unstable for certain shapes. Usually an N of 20-40 is enough.</li>
+  <li><b>C<i>N</i></b> - proper <b>C</b>anonicalization, iteratively refines shape N times. 
+    Flattens faces. A typical N is 200 or 300.</li>
 </ul>
 
-<p>These can blow up the geometry of the weirder polyhedra, which can
-be interesting too!</p>
+<p>Remember that these can blow up the geometry of nonconvex polyhedra.</p>
 
 <b> 3D Printing </b>
 <p>You can export these shapes in forms appropriate for 3D printing by
@@ -172,6 +173,7 @@ the exported geometry to a non-tiny size.</p>
 <li><a href="http://en.wikipedia.org/wiki/Conway_polyhedron_notation">
   Wikipedia on Conway Polyhedral Notation</a></li>
 <li><a href="http://www.georgehart.com/">George W. Hart's Polyhedral Site</a></li>
+<li><a href="http://www.antiprism.com/index.html">Antiprism Polyhedral Modelling Software</a></li>
 <li><a href="https://polyhedra.tessera.li/">Interactive Polyhedra Viewer</a></li>
 <li><a href="http://dmccooey.com/polyhedra/index.html">Visual Polyhedra</a></li>
 <li><a href="http://github.com/levskaya/polyhedronisme">Source and more information at Github</a></li>

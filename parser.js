@@ -56,28 +56,30 @@ const basemap = {
   "Y": pyramid,   //takes integer arg
   "J": johnson,   //takes integer arg
   "U": cupola,    //takes integer arg
+  "V": anticupola,    //takes integer arg
 };
 
 const opmap = {
   "d": dual,
-  "k": kisN,
   "a": ambo,
+  "k": kisN,
   "g": gyro,
   "p": propellor,
   "r": reflect,
-  "h": hollow,
   "c": chamfer,
   "w": whirl,
   "n": insetN,
   "x": extrudeN,
-  "l": stellaN,
-  "z": triangulate,
-  "K": canonicalXYZ,
+  "l": loft,
+  "P": perspectiva1,
+  "q": quinto,
+  "u": trisub,
+  "H": hollow,
+  "Z": triangulate,
   "C": canonicalize,
   "A": adjustXYZ,
-  "u": trisub,
-  "q": quinto,
-  };
+};
+//unclaimed: yihfzv
 
 // list of basic equivalences, easier to replace before parsing
 const specreplacements = [
