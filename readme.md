@@ -14,7 +14,7 @@ geometrical operators that derive more complex shapes from this base
 set.
 
 This project was also inspired by the renaissance tome
-[Perspectiva Corporum Regularium][4] featuring engravings by Jost
+[Perspectiva Corporum Regularium][4] featuring [engravings][perspectiva] by Jost
 Amman after designs and drawings by Wenzel Jamnitzer.
 
 This still uses an HTML5 canvas renderer, as it was written long ago 
@@ -33,3 +33,4 @@ Text CC-BY, Code MIT License
 [5]: http://pegjs.majda.cz/
 [6]: https://github.com/evanw/csg.js
 [eli]: https://github.com/eligrey
+[perspectiva]: https://books.google.com/books?id=su-C9hQrR_IC&dq=Perspectiva%20Corporum%20Regularium&pg=PP5#v=onepage&q=Perspectiva%20Corporum%20Regularium&f=false

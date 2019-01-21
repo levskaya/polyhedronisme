@@ -24,8 +24,9 @@ const log10 = x=> log(x)/LN10;
 
 //returns string w. nsigs digits ignoring magnitude
 const sigfigs = function(N, nsigs){
-  const normed = pow(10, log10(N) - floor(log10(N)));
-  return `${round(normed * pow(10, (nsigs-1)))}`;
+  const mantissa = N / pow(10, floor(log10(N)));
+  const truncated_mantissa = round(mantissa * pow(10, (nsigs-1)));
+  return `${truncated_mantissa}`;
 };
 
 // general recursive deep-copy function
@@ -222,7 +223,7 @@ const project2dface = function(verts){
   tmpverts = _.map(tmpverts, x=>x-v0);
 
   const n = normal(verts);
-  const c = unit(calcCentroid(verts));
+  const c = unit(calcCentroid(verts)); //XXX: correct?
   const p = cross(n,c);
 
   return tmpverts.map((v) => [dot(n, v), dot(p, v)]);
@@ -605,8 +606,8 @@ class polyhedron {
   }
 
   moreData() {
-    return `min. edge length ${this.minEdgeLength().toPrecision(2)}; ` +
-           `min. face radius ${this.minFaceRadius().toPrecision(2)}`;
+    return `min edge length ${this.minEdgeLength().toPrecision(2)}<br>` +
+           `min face radius ${this.minFaceRadius().toPrecision(2)}`;
   }
 
   minEdgeLength() {
@@ -7778,8 +7779,8 @@ const drawShape = function() {
 const updateStats = function() {
   for (let i = 0; i < globPolys.length; i++) {
     const p = globPolys[i];
-    $("#basicstats").text(p.data());
-    $("#morestats").text(p.moreData());
+    $("#basicstats").html(p.data());
+    $("#morestats").html(p.moreData());
   }
 }
 

@@ -240,8 +240,8 @@ class polyhedron {
   }
 
   moreData() {
-    return `min. edge length ${this.minEdgeLength().toPrecision(2)}; ` +
-           `min. face radius ${this.minFaceRadius().toPrecision(2)}`;
+    return `min edge length ${this.minEdgeLength().toPrecision(2)}<br>` +
+           `min face radius ${this.minFaceRadius().toPrecision(2)}`;
   }
 
   minEdgeLength() {

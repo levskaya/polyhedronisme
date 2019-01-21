@@ -201,8 +201,8 @@ const drawShape = function() {
 const updateStats = function() {
   for (let i = 0; i < globPolys.length; i++) {
     const p = globPolys[i];
-    $("#basicstats").text(p.data());
-    $("#morestats").text(p.moreData());
+    $("#basicstats").html(p.data());
+    $("#morestats").html(p.moreData());
   }
 }
 
