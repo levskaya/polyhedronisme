@@ -78,7 +78,7 @@ let LastSphVec = [1, 0, 0];
 // random grabbag of polyhedra
 const DEFAULT_RECIPES = [
   'C2dakD', 'oC20kkkT', 'kn4C40A0dA4', 'opD',
-  'lT', 'lK5oC', 'knD', 'dn6x4K5bT', 'oox4P7',
+  'lT', 'qA40lA40oC', 'knD', 'dn6x4bT', 'oox4P7',
   'qqJ37', 'aobD', 'qaxI'];
 
 // File-saving objects used to export txt/canvas-png

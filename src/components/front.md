@@ -22,7 +22,7 @@ and __op__ is one of these [polyhedron-building operators][1]
 
 &nbsp;| &nbsp;
 -------|--------------------------
-  __d__ | dual
+  __d__ | [dual][11]
   __a__ | ambo
   __k__<i>N</i> | [kis][2] on N-sided faces (if no N, then general kis)
   __g__ | gyro
@@ -50,12 +50,11 @@ Also, some newer, experimental operators:
 &nbsp;| &nbsp;
 :-----|:-------------------------
 __P__ | from _Perspectiva Corporum Regularium_
-__n__<i>N</i> | i__n__setN 
-__x__<i>N</i> | e__x__trudeN 
+__n__<i>N</i> | insetN 
+__x__<i>N</i> | extrudeN 
 __Z__ | triangulate
 __H__(_inset_, _depth_) | hollow - useful for 3D printing, makes a hollow-faced shell version of the polyhedron,this applies the hollowing operator on all faces, insetting by _inset_ (scaled from 0 to 1), and  with a shell thickness of _depth_
-__u__<i>N</i> | limited version of the Goldberg-Coxeter u_n operator 
-(for triangular meshes only)
+__u__<i>N</i> | limited version of the Goldberg-Coxeter u_n operator (for triangular meshes only)
 
 
  There are more complicated, parameterized forms for __k__ and __n__: 
@@ -111,3 +110,4 @@ the exported geometry to a different size.
 [8]:http://dmccooey.com/polyhedra/index.html
 [9]:http://www.antiprism.com/index.html
 [10]:https://www.software3d.com/Stella.php
+[11]:https://en.wikipedia.org/wiki/Dual_polyhedron

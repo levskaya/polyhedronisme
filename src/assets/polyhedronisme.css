@@ -30,6 +30,11 @@ div.container {
     margin-right: auto;
 }
 
+.container table {
+    margin-left: 2em;
+    margin-right: 2em;
+}
+
 #poly {
     margin-left: auto;
     margin-right: auto;
