@@ -68,12 +68,13 @@ const opmap = {
   "r": reflect,
   "c": chamfer,
   "w": whirl,
-  "n": insetN,
+  "n": insetN, //-->needle
   "x": extrudeN,
   "l": loft,
   "P": perspectiva1,
   "q": quinto,
   "u": trisub,
+  //z --> zip
   "H": hollow,
   "Z": triangulate,
   "C": canonicalize,
