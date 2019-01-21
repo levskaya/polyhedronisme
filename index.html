@@ -4,9 +4,70 @@
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width,initial-scale=1.0">
     <title>polyhedronisme</title>
+    <!-- polyfills -->
+    <script type="text/javascript" src="static/peg-0.6.2.js"></script>
+    <script type="text/javascript" src="static/jquery-1.7.min.js"></script>
+    <script type="text/javascript" src="static/jquery.mousewheel.js"></script>
+    <!--<script type="text/javascript" src="static/Blob.js"></script>
+    <script type="text/javascript" src="static/canvas-toBlob.js"></script>
+    <script type="text/javascript" src="static/FileSaver.js"></script>-->
   </head>
   <body>
     <div id="app"></div>
-    <!-- built files will be auto injected -->
+
+    <div class="container">
+      <h2 style="text-align:center;">
+        <span class="fadey">poly</span>H&eacute;d<span class="fadey">r</span>onisme<span style="font-size:10px;">v0.2.1</span>
+      </h2>
+
+      <div class="canvaswrapper clearfix">
+        <!-- <div class="leftside" width="10" height="500"></div> -->
+        <canvas id="poly" width="700" height="500"></canvas>
+        <!-- <div class="rightside" width="10" height="500"></div> -->
+      </div>
+      
+      <div class="controlswrapper">
+        <img id="strokeonly"  src="static/strokeonly.png"  style="vertical-align:middle;" title="Edges only (wireframe)">
+        <img id="fillonly"  src="static/fillonly.png"  style="vertical-align:middle;" title="Faces only">
+        <img id="fillandstroke"  src="static/fillandstroke.png" style="vertical-align:middle;" title="Edges and faces">
+        <span style="width:100px;">&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;</span>
+      
+        <img id="frontrot" src="static/frontrot.png" style="vertical-align:middle;position:relative;top:-1px;" title="Front rotation">
+        <img id="siderot"  src="static/siderot.png"  style="vertical-align:middle;" title="Side rotation">
+        <img id="toprot"   src="static/toprot.png"   style="vertical-align:middle;" title="Top rotation">
+        <span style="width:100px;">&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;</span>
+      
+        <span id="pngsavebutton" style="font-size:12px;cursor:pointer;" title="Export as PNG image">PNG</span>
+        <span id="objsavebutton" style="font-size:12px;cursor:pointer;" title="Export as OBJ geometry">OBJ</span>
+        <span id="x3dsavebutton" style="font-size:12px;cursor:pointer;" title="Export as VRML2 model">VRML2</span>
+      
+      <p class="centered"><i>rotate by dragging on polyhedron, rescale by scrolling over canvas</i><br>
+      </div>
+      
+      <div class="specwrapper">
+        <label style="width: 10em">recipe  <input id="spec"></input></label>
+        <a id="link" href="#" title="Copy this URL to share"><img src="static/link.png"></a>
+        <br>
+        <label>palette <input id="palette"></input></label>
+        <span id="rndcolors" class="textbutton" title="Randomize Colors">RANDOM</span>
+        <br>
+      </div>
+            
+      <div class="statswrapper">
+        <label>stats</label>
+        <div id="statsinner">
+          <div id="basicstats"></div><br>
+          <div id="morestats"></div>
+        </div>
+      </div>
+
+      <div id="docs"></div>
+
+      <div class="footer">
+        Text &amp; Figures CC-BY | Code MIT License | <a href="http://anselmlevskaya.com">Anselm Levskaya</a> 2019
+      </div>
+      
+    </div>
+  
   </body>
 </html>

@@ -21,8 +21,9 @@ module.exports = {
   ],
   // add your custom rules here
   rules: {
-    // semicolons
+    // semicolons OK
     "semi": 'off',
+    "no-multiple-empty-lines": ["error", { "max": 2, "maxEOF": 1 }],
     // allow async-await
     'generator-star-spacing': 'off',
     // allow debugger during development

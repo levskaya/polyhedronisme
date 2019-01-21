@@ -1,5 +1,5 @@
 // Polyhédronisme
-//===================================================================================================
+// ================================================================================================
 //
 // A toy for constructing and manipulating polyhedra and other meshes
 //
@@ -10,10 +10,19 @@
 // Copyright 2019, Anselm Levskaya
 // Released under the MIT License
 
+/* eslint-disable camelcase */
+/* eslint-disable standard/array-bracket-even-spacing */
+/* eslint-disable no-multi-spaces */
 
-//===================================================================================================
+import { _ } from 'underscore';
+import { add, sub, mult, dot, mag, unit, normal, orthogonal, edgeDist,
+  copyVecArray, tangentPoint, calcCentroid, reciprocal, sqrt } from './geo.js';
+import { dual } from './topo_operators.js';
+import { Polyhedron } from './polyhedron.js';
+
+// ================================================================================================
 // Canonicalization Algorithms
-//===================================================================================================
+// ================================================================================================
 
 // Slow Canonicalization Algorithm
 // ----------------------------------------------------------------
@@ -29,16 +38,16 @@
 // based geometrical regularizer should be used for fancier/weirder polyhedra.
 
 // adjusts vertices on edges such that each edge is tangent to an origin sphere
-const tangentify = function(vertices, edges) {
+export const tangentify = function (vertices, edges) {
   // hack to improve convergence
-  const STABILITY_FACTOR = 0.1; 
+  const STABILITY_FACTOR = 0.1;
   // copy vertices
   const newVs = copyVecArray(vertices);
   for (let e of edges) {
     // the point closest to origin
-    const t = tangentPoint( newVs[e[0]], newVs[e[1]] );
+    const t = tangentPoint(newVs[e[0]], newVs[e[1]]);
     // adjustment from sphere
-    const c = mult(((STABILITY_FACTOR*1)/2)*(1-sqrt(dot(t,t))), t);
+    const c = mult(((STABILITY_FACTOR * 1) / 2) * (1 - sqrt(dot(t, t))), t);
     newVs[e[0]] = add(newVs[e[0]], c);
     newVs[e[1]] = add(newVs[e[1]], c);
   }
@@ -46,50 +55,51 @@ const tangentify = function(vertices, edges) {
 };
 
 // recenters entire polyhedron such that center of mass is at origin
-const recenter = function(vertices, edges) {
-  //centers of edges
-  const edgecenters = edges.map(([a, b])=>tangentPoint(vertices[a], vertices[b]));
+export const recenter = function (vertices, edges) {
+  // centers of edges
+  const edgecenters = edges.map(([a, b]) => tangentPoint(vertices[a], vertices[b]));
   let polycenter = [0, 0, 0];
   // sum centers to find center of gravity
-  for (let v of edgecenters) { 
+  for (let v of edgecenters) {
     polycenter = add(polycenter, v);
   }
-  polycenter = mult(1/edges.length, polycenter);
+  polycenter = mult(1 / edges.length, polycenter);
   // subtract off any deviation from center
-  return _.map(vertices, x=>sub(x, polycenter));
+  return _.map(vertices, x => sub(x, polycenter));
 };
 
 // rescales maximum radius of polyhedron to 1
-const rescale = function(vertices) {
-  const polycenter = [0, 0, 0];
-  const maxExtent = _.max(_.map(vertices, x=>mag(x)));
+export const rescale = function (vertices) {
+  // const polycenter = [0, 0, 0];
+  const maxExtent = _.max(_.map(vertices, x => mag(x)));
   const s = 1 / maxExtent;
-  return _.map(vertices, x=>[s*x[0], s*x[1], s*x[2]]);
+  return _.map(vertices, x => [s * x[0], s * x[1], s * x[2]]);
 };
 
 // adjusts vertices in each face to improve its planarity
-const planarize = function(vertices, faces) {
+export const planarize = function (vertices, faces) {
   let v;
   const STABILITY_FACTOR = 0.1; // Hack to improve convergence
   const newVs = copyVecArray(vertices); // copy vertices
   for (var f of faces) {
-    const coords = f.map(v=>vertices[v])
+    const coords = f.map(v => vertices[v])
     let n = normal(coords); // find avg of normals for each vertex triplet
     const c = calcCentroid(coords); // find planar centroid
     if (dot(n, c) < 0) { // correct sign if needed
       n = mult(-1.0, n);
     }
     for (v of f) {  // project (vertex - centroid) onto normal, subtract off this component
-      newVs[v] = add(newVs[v], 
-                     mult(dot(mult(STABILITY_FACTOR, n), sub(c, vertices[v])), n));
+      newVs[v] =
+      add(newVs[v],
+        mult(dot(mult(STABILITY_FACTOR, n), sub(c, vertices[v])), n));
     }
   }
   return newVs;
 };
 
 // combines above three constraint adjustments in iterative cycle
-const canonicalize = function(poly, Niter) {
-  if (!Niter) { 
+export const canonicalize = function (poly, Niter) {
+  if (!Niter) {
     Niter = 1;
   }
   console.log(`Canonicalizing ${poly.name}...`);
@@ -98,13 +108,11 @@ const canonicalize = function(poly, Niter) {
   let newVs = poly.vertices;
   let maxChange = 1.0; // convergence tracker
   for (let i = 0; i <= Niter; i++) {
-    const oldVs = copyVecArray(newVs); //copy vertices
+    const oldVs = copyVecArray(newVs); // copy vertices
     newVs = tangentify(newVs, edges);
     newVs = recenter(newVs, edges);
     newVs = planarize(newVs, faces);
-    maxChange = _.max(_.map(_.zip(newVs, oldVs), 
-                            ([x, y])=>mag(sub(x, y))
-                            ));
+    maxChange = _.max(_.map(_.zip(newVs, oldVs), ([x, y]) => mag(sub(x, y))));
     if (maxChange < 1e-8) {
       break;
     }
@@ -112,10 +120,10 @@ const canonicalize = function(poly, Niter) {
   // one should now rescale, but not rescaling here makes for very interesting numerical
   // instabilities that make interesting mutants on multiple applications...
   // more experience will tell what to do
-  //newVs = rescale(newVs)
+  // newVs = rescale(newVs)
   console.log(`[canonicalization done, last |deltaV|=${maxChange}]`);
-  const newpoly = new polyhedron(newVs, poly.faces, poly.name);
-  console.log("canonicalize" , newpoly);
+  const newpoly = new Polyhedron(newVs, poly.faces, poly.name);
+  console.log('canonicalize', newpoly);
   return newpoly;
 };
 
@@ -124,20 +132,20 @@ const canonicalize = function(poly, Niter) {
 // Using center of gravity of vertices for each face to planarize faces
 
 // get the spherical reciprocals of face centers
-const reciprocalC = function(poly) {
+export const reciprocalC = function (poly) {
   const centers = poly.centers();
   for (let c of centers) {
-    c = mult(1.0/dot(c,c), c);
+    c = mult(1.0 / dot(c, c), c);
   }
   return centers;
 };
 
 // make array of vertices reciprocal to given planes
-const reciprocalN = function(poly) {
+export const reciprocalN = function (poly) {
   const ans = [];
-  for (let f of poly.faces) { //for each face
-    let centroid    = [0,0,0]; // running sum of vertex coords
-    let normalV     = [0,0,0]; // running sum of normal vectors
+  for (let f of poly.faces) { // for each face
+    let centroid    = [0, 0, 0]; // running sum of vertex coords
+    let normalV     = [0, 0, 0]; // running sum of normal vectors
     let avgEdgeDist =    0.0;  // running sum for avg edge distance
 
     let [v1, v2] = f.slice(-2);
@@ -148,7 +156,7 @@ const reciprocalN = function(poly) {
       [v1, v2] = [v2, v3];
     } // shift over one
 
-    centroid    = mult(1.0/f.length, centroid);
+    centroid    = mult(1.0 / f.length, centroid);
     normalV     = unit(normalV);
     avgEdgeDist = avgEdgeDist / f.length;
     const tmp   = reciprocal(mult(dot(centroid, normalV), normalV)); // based on face
@@ -158,7 +166,7 @@ const reciprocalN = function(poly) {
   return ans;
 };
 
-const canonicalXYZ = function(poly, nIterations) {
+export const canonicalXYZ = function (poly, nIterations) {
   if (!nIterations) { nIterations = 1; }
   const dpoly = dual(poly);
   console.log(`Pseudo-canonicalizing ${poly.name}...`);
@@ -169,12 +177,11 @@ const canonicalXYZ = function(poly, nIterations) {
     poly.vertices  = reciprocalN(dpoly);
   }
 
-  return new polyhedron(poly.vertices, poly.faces, poly.name);
+  return new Polyhedron(poly.vertices, poly.faces, poly.name);
 };
 
-
 // quick planarization
-const adjustXYZ = function(poly, nIterations) {
+export const adjustXYZ = function (poly, nIterations) {
   if (!nIterations) { nIterations = 1; }
   const dpoly = dual(poly); // v's of dual are in order of arg's f's
   console.log(`Planarizing ${poly.name}...`);
@@ -185,7 +192,5 @@ const adjustXYZ = function(poly, nIterations) {
     poly.vertices  = reciprocalC(dpoly);
   }
 
-  return new polyhedron(poly.vertices, poly.faces, poly.name);
+  return new Polyhedron(poly.vertices, poly.faces, poly.name);
 };
-
-

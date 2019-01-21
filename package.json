@@ -11,6 +11,13 @@
     "build": "node build/build.js"
   },
   "dependencies": {
+    "blobjs": "^1.1.1",
+    "canvas-toBlob": "^1.0.0",
+    "expose-loader": "^0.7.5",
+    "file-saver": "^2.0.0",
+    "markdown-it-imsize": "^2.0.1",
+    "pegjs": "^0.10.0",
+    "underscore": "^1.9.1",
     "vue": "^2.5.2",
     "vue-markdown-loader": "^2.4.1",
     "vue-router": "^3.0.1"
