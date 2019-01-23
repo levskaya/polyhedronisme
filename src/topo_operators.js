@@ -14,9 +14,8 @@
 /* eslint-disable standard/array-bracket-even-spacing */
 /* eslint-disable no-multi-spaces */
 
-// import { _ } from 'underscore';
-import { add, sub, mult, mag, unit, calcCentroid, midpoint, oneThird, intersect, tween } from './geo.js';
-import { Polyhedron } from './polyhedron.js';
+import { add, sub, mult, mag, unit, calcCentroid, midpoint, oneThird, intersect, tween } from './geo';
+import { Polyhedron } from './polyhedron';
 
 // ===================================================================================================
 // Polyhedron Flagset Construct
@@ -44,7 +43,7 @@ export class Polyflag {
   // Add a new named vertex.
   newV (vertName, coordinates) {
     if (this.vertidxs[vertName] === undefined) {
-      this.vertidxs[vertName] = 0;
+      this.vertidxs[vertName] = 0;  // this index is set later
       this.vertices[vertName] = coordinates;
     }
   }
@@ -56,22 +55,70 @@ export class Polyflag {
     this.flags[faceName][vertName1] = vertName2;
   }
 
+  check () {
+    let bad = false;
+    // check all vertices are used and have balanced degrees
+    let degrees = {};
+    for (let V in this.vertidxs) {
+      degrees[V] = [0, 0];
+    }
+    for (let facename in this.flags) {
+      const face = this.flags[facename];
+      for (let fromV in face) {
+        let toV = face[fromV];
+        degrees[fromV][0] += 1;
+        degrees[toV][1] += 1;
+      }
+    }
+    for (let V in degrees) {
+      if (degrees[V][0] === 0 && degrees[V][1] === 0) {
+        console.log(`vertex named ${V} not used!`);
+        bad = true;
+      } else if (degrees[V][0] !== degrees[V][1]) {
+        console.log(`vertex named ${V} unbalanced! ${degrees[V]}`);
+        bad = true;
+      }
+    }
+    // check vertex balance within each face in polyflag
+    for (let facename in this.flags) {
+      let degrees = {};
+      for (let V in this.vertidxs) {
+        degrees[V] = [0, 0];
+      }
+      const face = this.flags[facename];
+      for (let fromV in face) {
+        let toV = face[fromV];
+        degrees[fromV][0] += 1;
+        degrees[toV][1] += 1;
+      }
+      for (let V in degrees) {
+        if (degrees[V][0] !== degrees[V][1]) {
+          console.log(`face ${facename} vertex named ${V} unbalanced! ${degrees[V]}`);
+          console.log(face);
+          bad = true;
+        }
+      }
+    }
+
+    if (bad) {
+      throw new Error('Malformed polyflag!');
+    }
+  }
+
   topoly () {
-    let i, v;
+    let v;
     const poly = new Polyhedron();
 
     let ctr = 0; // first number the vertices
-    for (i in this.vertidxs) {
-      v = this.vertidxs[i];
-      poly.vertices[ctr] = this.vertices[i]; // store in array
-      this.vertidxs[i] = ctr;
-      ctr++;
+    for (let vname in this.vertidxs) {
+      poly.vertices[ctr] = this.vertices[vname];
+      this.vertidxs[vname] = ctr++;
     }
 
     ctr = 0;
-    for (i in this.flags) {
+    for (let fname in this.flags) {
       var v0;
-      const face = this.flags[i];
+      const face = this.flags[fname];
       poly.faces[ctr] = []; // new face
       // grab _any_ vertex as starting point
       for (let j in face) {
@@ -81,16 +128,15 @@ export class Polyflag {
       // build face out of all the edge relations in the flag assoc array
       v = v0; // v moves around face
       poly.faces[ctr].push(this.vertidxs[v]); // record index
-      v = this.flags[i][v]; // goto next vertex
+      v = this.flags[fname][v]; // goto next vertex
       let faceCTR = 0;
       while (v !== v0) { // loop until back to start
         poly.faces[ctr].push(this.vertidxs[v]);
-        v = this.flags[i][v];
+        v = this.flags[fname][v];
         faceCTR++;
         // necessary during development to prevent browser hangs on badly formed flagsets
         if (faceCTR > MAX_FACE_SIDEDNESS) {
-          console.log('Bad flag spec, have a neverending face:', i, this.flags[i]);
-          break;
+          throw new Error(`Bad flag spec, have a neverending face: ${fname} ${this.flags[fname]}`);
         }
       }
       ctr++;
@@ -100,17 +146,20 @@ export class Polyflag {
   }
 }
 
+
 // ===================================================================================================
 // Polyhedron Operators
 // ===================================================================================================
+
 // for each vertex of new polyhedron:
 //     call newV(Vname, xyz) with a symbolic name and coordinates
 // for each flag of new polyhedron:
 //     call newFlag(Fname, Vname1, Vname2) with a symbolic name for the new face
-//     and the symbolic name for two vertices forming an oriented edge
+//     and the symbolic names for the two vertices forming an oriented edge
 // ORIENTATION -must- be dealt with properly to make a manifold (correct) mesh.
 // Specifically, no edge v1->v2 can ever be crossed in the -same direction- by
-// two different faces
+// two different faces - convention is to define each face with a clockwise set of
+// vertices.
 //
 // call topoly() to assemble flags into polyhedron structure by following the orbits
 // of the vertex mapping stored in the flagset for each new face
@@ -118,9 +167,10 @@ export class Polyflag {
 // set name as appropriate
 
 // helper func to insure unique names of midpoints
-export const midName = (v1, v2) => (v1 < v2 ? v1 + '_' + v2 : v2 + '_' + v1)
+export const midName = (v1, v2) => (v1 < v2 ? `${v1}_${v2}` : `${v2}_${v1}`)
 
-// Kis(N)
+
+// Kis
 // ------------------------------------------------------------------------------------------
 // Kis (abbreviated from triakis) transforms an N-sided face into an N-pyramid rooted at the
 // same base vertices.
@@ -150,14 +200,14 @@ export const kisN = function (poly, n, apexdist) {
       if ((f.length === n) || (n === 0)) {
         foundAny = true;
         const apex = `apex${i}`;
-        const fname = `${i}${v1}`;
+        const fname = `${i}_${v1}`;
         // new vertices in centers of n-sided face
         flag.newV(apex, add(centers[i], mult(apexdist, normals[i])));
         flag.newFlag(fname,   v1,   v2); // the old edge of original face
         flag.newFlag(fname,   v2, apex); // up to apex of pyramid
         flag.newFlag(fname, apex,   v1); // and back down again
       } else {
-        flag.newFlag(`${i}`, v1, v2);  // same old flag, if non-n
+        flag.newFlag(`f${i}`, v1, v2);  // same old flag, if non-n
       }
       // current becomes previous
       v1 = v2;
@@ -172,6 +222,7 @@ export const kisN = function (poly, n, apexdist) {
   newpoly.name = `k${n === 0 ? '' : n}${poly.name}`;
   return newpoly;
 };
+
 
 // Ambo
 // ------------------------------------------------------------------------------------------
@@ -205,6 +256,7 @@ export const ambo = function (poly) {
   newpoly.name = `a${poly.name}`;
   return newpoly;
 };
+
 
 // Gyro
 // ----------------------------------------------------------------------------------------------
@@ -253,6 +305,7 @@ export const gyro = function (poly) {
   return newpoly;
 };
 
+
 // Propellor
 // ------------------------------------------------------------------------------------------
 // builds a new 'skew face' by making new points along edges, 1/3rd the distance from v1->v2,
@@ -292,6 +345,7 @@ export const propellor = function (poly) {
   return newpoly;
 };
 
+
 // Reflection
 // ------------------------------------------------------------------------------------------
 // geometric reflection through origin
@@ -309,6 +363,7 @@ export const reflect = function (poly) {
   poly.name = `r${poly.name}`;
   return poly;
 };
+
 
 // Dual
 // ------------------------------------------------------------------------------------------------
@@ -375,6 +430,7 @@ export const dual = function (poly) {
   return dpoly;
 };
 
+
 // Chamfer
 // ----------------------------------------------------------------------------------------
 // A truncation along a polyhedron's edges.
@@ -390,7 +446,8 @@ export const dual = function (poly) {
 //
 // Q: what is the dual operation of chamfering? I.e.
 // if cX = dxdX, and xX = dcdX, what operation is x?
-
+// A: subdivision
+//
 // We could "almost" do this in terms of already-implemented operations:
 // cC = t4daC = t4jC, cO = t3daO, cD = t5daD, cI = t3daI
 // But it doesn't work for cases like T.
@@ -434,6 +491,7 @@ export const chamfer = function (poly, dist) {
   newpoly.name = `c${poly.name}`;
   return newpoly;
 };
+
 
 // Whirl
 // ----------------------------------------------------------------------------------------------
@@ -498,6 +556,7 @@ export const whirl = function (poly, n) {
   return newpoly;
 };
 
+
 // Quinto
 // ----------------------------------------------------------------------------------------------
 // This creates a pentagon for every point in the original face, as well as one new inset face.
@@ -540,7 +599,7 @@ export const quinto = function (poly) {
   return newpoly;
 };
 
-// inset / extrude / "Loft" operator
+// "Loft" operator / inset / extrude
 // ------------------------------------------------------------------------------------------
 export const insetN = function (poly, n, inset_dist, popout_dist) {
   let f, i, v;
@@ -618,6 +677,200 @@ export const loft = function (poly, n, alpha) {
   return newpoly;
 }
 
+
+// Lace
+// ----------------------------------------------------------------------------------------------
+export const lace = function (poly) {
+  console.log(`Taking lace of ${poly.name}...`);
+  const flag = new Polyflag();
+
+  // For each face f in the original poly
+  for (let i = 0; i < poly.faces.length; i++) {
+    const f = poly.faces[i];
+    let centroid = calcCentroid(f.map(idx => poly.vertices[idx]))
+    // walk over face vertex-triplets
+    let [v1, v2] = f.slice(-2);
+    for (let v3 of f) {
+      // for each face-corner, we make one new point:
+      let midpt = midpoint(poly.vertices[v1], poly.vertices[v2]);
+      let innerpt = midpoint(midpt, centroid);
+      flag.newV(`inner_${i}_` + midName(v1, v2), innerpt);
+      // and add the old corner-vertex
+      flag.newV(`v${v2}`, poly.vertices[v2]);
+
+      // triangle at vertex for each vertex in original face
+      flag.newFlag(`f${i}_${v2}`, `inner_${i}_` + midName(v1, v2), `v${v2}`);
+      flag.newFlag(`f${i}_${v2}`, `v${v2}`, `inner_${i}_` + midName(v2, v3));
+      flag.newFlag(`f${i}_${v2}`, `inner_${i}_` + midName(v2, v3), `inner_${i}_` + midName(v1, v2));
+
+      flag.newFlag(`f${i}_` + midName(v1, v2), `inner_${i}_` + midName(v1, v2), `v${v1}`);
+      flag.newFlag(`f${i}_` + midName(v1, v2), `v${v1}`, `v${v2}`);
+      flag.newFlag(`f${i}_` + midName(v1, v2), `v${v2}`, `inner_${i}_` + midName(v1, v2));
+
+      // inner rotated face of same vertex-number as original
+      flag.newFlag(`f_in_${i}`, `inner_${i}_` + midName(v1, v2), `inner_${i}_` + midName(v2, v3));
+
+      // shift over one
+      [v1, v2] = [v2, v3];
+    }
+  }
+
+  // flag.check();
+  const newpoly = flag.topoly();
+  newpoly.name = `L${poly.name}`;
+  return newpoly;
+};
+
+
+// Join - Lace
+// ----------------------------------------------------------------------------------------------
+export const joinlace = function (poly) {
+  console.log(`Taking joinlace of ${poly.name}...`);
+  const flag = new Polyflag();
+
+  // For each face f in the original poly
+  for (let i = 0; i < poly.faces.length; i++) {
+    const f = poly.faces[i];
+    let centroid = calcCentroid(f.map(idx => poly.vertices[idx]))
+    // walk over face vertex-triplets
+    let [v1, v2] = f.slice(-2);
+    for (let v3 of f) {
+      // for each face-corner, we make one new point:
+      let midpt = midpoint(poly.vertices[v1], poly.vertices[v2]);
+      let innerpt = midpoint(midpt, centroid);
+      flag.newV(`inner_${i}_` + midName(v1, v2), innerpt);
+      // and add the old corner-vertex
+      flag.newV(`v${v2}`, poly.vertices[v2]);
+
+      // triangle at vertex for each vertex in original face
+      flag.newFlag(`f${i}_${v2}`, `inner_${i}_` + midName(v1, v2), `v${v2}`);
+      flag.newFlag(`f${i}_${v2}`, `v${v2}`, `inner_${i}_` + midName(v2, v3));
+      flag.newFlag(`f${i}_${v2}`, `inner_${i}_` + midName(v2, v3), `inner_${i}_` + midName(v1, v2));
+
+      flag.newFlag(`fj` + midName(v1, v2), `inner_${i}_` + midName(v1, v2), `v${v1}`);
+      // flag.newFlag(`f` + midName(v1, v2), `v${v1}`, `v${v2}`);
+      flag.newFlag(`fj` + midName(v1, v2), `v${v2}`, `inner_${i}_` + midName(v1, v2));
+
+      // inner rotated face of same vertex-number as original
+      flag.newFlag(`f_in_${i}`, `inner_${i}_` + midName(v1, v2), `inner_${i}_` + midName(v2, v3));
+
+      // shift over one
+      [v1, v2] = [v2, v3];
+    }
+  }
+
+  // flag.check();
+  const newpoly = flag.topoly();
+  newpoly.name = `I${poly.name}`;
+  return newpoly;
+};
+
+
+// Stake
+// ----------------------------------------------------------------------------------------------
+export const stake = function (poly) {
+  console.log(`Taking stake of ${poly.name}...`);
+  const flag = new Polyflag();
+
+  // For each face f in the original poly
+  for (let i = 0; i < poly.faces.length; i++) {
+    const f = poly.faces[i];
+    let centroid = calcCentroid(f.map(idx => poly.vertices[idx]))
+    // face centroid is a new point
+    flag.newV(`center${i}`, centroid);
+    // walk over face vertex-triplets
+    let [v1, v2] = f.slice(-2);
+    for (let v3 of f) {
+      // for each face-corner, we make one new point:
+      let midpt = midpoint(poly.vertices[v1], poly.vertices[v2]);
+      let innerpt = midpoint(midpt, centroid);
+      flag.newV(`inner_${i}_` + midName(v1, v2), innerpt);
+      // and add the old corner-vertex
+      flag.newV(`v${v2}`, poly.vertices[v2]);
+
+      flag.newFlag(`f${i}_${v2}`, `inner_${i}_` + midName(v1, v2), `v${v2}`);
+      flag.newFlag(`f${i}_${v2}`, `v${v2}`, `inner_${i}_` + midName(v2, v3));
+      flag.newFlag(`f${i}_${v2}`, `inner_${i}_` + midName(v2, v3), `center${i}`);
+      flag.newFlag(`f${i}_${v2}`, `center${i}`, `inner_${i}_` + midName(v1, v2));
+
+      flag.newFlag(`f${i}_` + midName(v1, v2), `inner_${i}_` + midName(v1, v2), `v${v1}`);
+      flag.newFlag(`f${i}_` + midName(v1, v2), `v${v1}`, `v${v2}`);
+      flag.newFlag(`f${i}_` + midName(v1, v2), `v${v2}`, `inner_${i}_` + midName(v1, v2));
+
+      // shift over one
+      [v1, v2] = [v2, v3];
+    }
+  }
+
+  // flag.check();
+  const newpoly = flag.topoly();
+  newpoly.name = `K${poly.name}`;
+  return newpoly;
+};
+
+
+// Perspectiva 1
+// ------------------------------------------------------------------------------------------
+// an operation reverse-engineered from Perspectiva Corporum Regularium
+export const perspectiva1 = function (poly) {
+  let i;
+  console.log(`Taking stella of ${poly.name}...`);
+
+  const centers = poly.centers();  // calculate face centers
+
+  const flag = new Polyflag();
+  for (i = 0; i < poly.vertices.length; i++) {
+    const p = poly.vertices[i];
+    // each old vertex is a new vertex
+    flag.newV(`v${i}`, p);
+  }
+
+  // iterate over triplets of faces v1,v2,v3
+  for (i = 0; i < poly.faces.length; i++) {
+    const f = poly.faces[i];
+    let v1 = `v${f[f.length - 2]}`;
+    let v2 = `v${f[f.length - 1]}`;
+    let vert1 = poly.vertices[f[f.length - 2]];
+    let vert2 = poly.vertices[f[f.length - 1]];
+    for (let v of f) {
+      const v3 = `v${v}`;
+      const vert3 = poly.vertices[v];
+      const v12 = v1 + '~' + v2; // names for "oriented" midpoints
+      const v21 = v2 + '~' + v1;
+      const v23 = v2 + '~' + v3;
+
+      // on each Nface, N new points inset from edge midpoints towards center = "stellated" points
+      flag.newV(v12, midpoint(midpoint(vert1, vert2), centers[i]));
+
+      // inset Nface made of new, stellated points
+      flag.newFlag(`in${i}`,     v12, v23);
+
+      // new tri face constituting the remainder of the stellated Nface
+      flag.newFlag(`f${i}${v2}`, v23, v12);
+      flag.newFlag(`f${i}${v2}`, v12,  v2);
+      flag.newFlag(`f${i}${v2}`,  v2, v23);
+
+      // one of the two new triangles replacing old edge between v1->v2
+      flag.newFlag(`f${v12}`,     v1, v21);
+      flag.newFlag(`f${v12}`,    v21, v12);
+      flag.newFlag(`f${v12}`,    v12,  v1);
+
+      [v1, v2] = [v2, v3];  // current becomes previous
+      [vert1, vert2] = [vert2, vert3];
+    }
+  }
+
+  const newpoly = flag.topoly();
+  newpoly.name = `P${poly.name}`;
+  return newpoly;
+};
+
+
+// Triangulate - general polygon triangularization algorithm - defined in separate file
+// ------------------------------------------------------------------------------------------
+export { triangulate } from './triangulate';
+
+
 // Hollow (skeletonize)
 // ------------------------------------------------------------------------------------------
 export const hollow = function (poly, inset_dist, thickness) {
@@ -681,61 +934,6 @@ export const hollow = function (poly, inset_dist, thickness) {
   return newpoly;
 };
 
-// Perspectiva 1
-// ------------------------------------------------------------------------------------------
-// an operation reverse-engineered from Perspectiva Corporum Regularium
-export const perspectiva1 = function (poly) {
-  let i;
-  console.log(`Taking stella of ${poly.name}...`);
-
-  const centers = poly.centers();  // calculate face centers
-
-  const flag = new Polyflag();
-  for (i = 0; i < poly.vertices.length; i++) {
-    const p = poly.vertices[i];
-    // each old vertex is a new vertex
-    flag.newV(`v${i}`, p);
-  }
-
-  // iterate over triplets of faces v1,v2,v3
-  for (i = 0; i < poly.faces.length; i++) {
-    const f = poly.faces[i];
-    let v1 = `v${f[f.length - 2]}`;
-    let v2 = `v${f[f.length - 1]}`;
-    let vert1 = poly.vertices[f[f.length - 2]];
-    let vert2 = poly.vertices[f[f.length - 1]];
-    for (let v of f) {
-      const v3 = `v${v}`;
-      const vert3 = poly.vertices[v];
-      const v12 = v1 + '~' + v2; // names for "oriented" midpoints
-      const v21 = v2 + '~' + v1;
-      const v23 = v2 + '~' + v3;
-
-      // on each Nface, N new points inset from edge midpoints towards center = "stellated" points
-      flag.newV(v12, midpoint(midpoint(vert1, vert2), centers[i]));
-
-      // inset Nface made of new, stellated points
-      flag.newFlag(`in${i}`,     v12, v23);
-
-      // new tri face constituting the remainder of the stellated Nface
-      flag.newFlag(`f${i}${v2}`, v23, v12);
-      flag.newFlag(`f${i}${v2}`, v12,  v2);
-      flag.newFlag(`f${i}${v2}`,  v2, v23);
-
-      // one of the two new triangles replacing old edge between v1->v2
-      flag.newFlag(`f${v12}`,     v1, v21);
-      flag.newFlag(`f${v12}`,    v21, v12);
-      flag.newFlag(`f${v12}`,    v12,  v1);
-
-      [v1, v2] = [v2, v3];  // current becomes previous
-      [vert1, vert2] = [vert2, vert3];
-    }
-  }
-
-  const newpoly = flag.topoly();
-  newpoly.name = `P${poly.name}`;
-  return newpoly;
-};
 
 // ===================================================================================================
 // Goldberg-Coxeter Operators  (in progress...)
@@ -826,5 +1024,101 @@ export const trisub = function (poly, n) {
   return newpoly;
 };
 
-// Triangulate - defined in separate file
-export { triangulate } from './triangulate';
+// Quad subdivision -- not good enough, only works on cube, as faces aren't necessarily planar.
+// export const quadsub = function (poly, n) {
+//   console.log(`Taking quadsub of ${poly.name}...`);
+//   if (!n) { n = 2; }
+
+//   // No-Op for non-quad meshes.
+//   for (let fn = 0; fn < poly.faces.length; fn++) {
+//     if (poly.faces[fn].length !== 4) {
+//       return poly;
+//     }
+//   }
+
+//   // Calculate redundant set of new vertices for subdivided mesh.
+//   let newVs = [];
+//   let vmap = {};
+//   let pos = 0;
+//   for (let fn = 0; fn < poly.faces.length; fn++) {
+//     const f = poly.faces[fn];
+//     let [i1, i2, i3, i4] = f.slice(-4);
+//     const v1 = poly.vertices[i1];
+//     const v2 = poly.vertices[i2];
+//     const v3 = poly.vertices[i3];
+//     const v4 = poly.vertices[i4];
+//     const v21 = sub(v2, v1);
+//     const v32 = sub(v3, v2);
+//     const v41 = sub(v4, v1);
+//     const v34 = sub(v3, v4);
+//     // lock edges
+//     for (let i = 0; i <= n; i++) {
+//       vmap[`v${fn}-${i}-${0}`] = pos++;
+//       newVs.push(add(mult(i / n, v21), v1));
+//       vmap[`v${fn}-${i}-${n}`] = pos++;
+//       newVs.push(add(mult(i / n, v34), v4));
+//       vmap[`v${fn}-${0}-${i}`] = pos++;
+//       newVs.push(add(mult(i / n, v41), v1));
+//       vmap[`v${fn}-${n}-${i}`] = pos++;
+//       newVs.push(add(mult(i / n, v32), v2));
+//     }
+//     for (let i = 1; i < n; i++) {
+//       for (let j = 1; j < n; j++) {
+//         let a1 = (pow(i / n, 2) + pow(j / n, 2));
+//         let a2 = (pow((n - i) / n, 2) + pow((j / n), 2));
+//         let a3 = (pow((n - i) / n, 2) + pow(((n - j) / n), 2));
+//         let a4 = (pow(i / n, 2) + pow(((n - j) / n), 2));
+//         let asum = a1 + a2 + a3 + a4;
+//         a1 /= asum;
+//         a2 /= asum;
+//         a3 /= asum;
+//         a4 /= asum;
+//         let v = add(add(mult(a1, v1), mult(a2, v2)), add(mult(a3, v3), mult(a4, v4)));
+//         // let v = add(add(v1, mult(i * 1.0 / n, v21)), mult(j * 1.0 / n, v41));
+//         vmap[`v${fn}-${i}-${j}`] = pos++;
+//         newVs.push(v);
+//       }
+//     }
+//   }
+
+//   // The above vertices are redundant along original edges,
+//   // we need to build an index map into a uniqueified list of them.
+//   // We identify vertices that are closer than a certain epsilon distance.
+//   const EPSILON_CLOSE = 1.0e-8;
+//   let uniqVs = [];
+//   let newpos = 0;
+//   let uniqmap = {};
+//   for (const [i, v] of newVs.entries()) {
+//     if (i in uniqmap) { continue; } // already mapped
+//     uniqmap[i] = newpos;
+//     uniqVs.push(v);
+//     for (let j = i + 1; j < newVs.length; j++) {
+//       let w = newVs[j];
+//       if (mag(sub(v, w)) < EPSILON_CLOSE) {
+//         uniqmap[j] = newpos;
+//       }
+//     }
+//     newpos++;
+//   }
+
+//   let faces = [];
+//   for (let fn = 0; fn < poly.faces.length; fn++) {
+//     for (let i = 0; i < n; i++) {
+//       for (let j = 0; j < n; j++) {
+//         faces.push([
+//           uniqmap[vmap[`v${fn}-${i}-${j}`]],
+//           uniqmap[vmap[`v${fn}-${i + 1}-${j}`]],
+//           uniqmap[vmap[`v${fn}-${i + 1}-${j + 1}`]],
+//           uniqmap[vmap[`v${fn}-${i}-${j + 1}`]]])
+//       }
+//     }
+//   }
+
+//   // Create new polygon out of faces and unique vertices.
+//   const newpoly = new Polyhedron();
+//   newpoly.name = `O${n}${poly.name}`;
+//   newpoly.faces = faces;
+//   newpoly.vertices = uniqVs;
+
+//   return newpoly;
+// };

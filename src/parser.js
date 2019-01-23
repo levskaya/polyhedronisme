@@ -53,6 +53,7 @@ int   = digits:[0-9-]+   { return parseInt(digits.join(""), 10);  }
 float = digits:[0-9.-]+  { return parseFloat(digits.join(""), 10); }\
 `;
 
+// old library - PEG object loaded statically as global
 const op_parser = PEG.buildParser(PEG_parser_spec);
 // const op_parser = PEG.generate(PEG_parser_spec);
 
@@ -72,7 +73,8 @@ const basemap = {
   'Y': polyhedron.pyramid,    // takes integer arg
   'J': polyhedron.johnson,    // takes integer arg
   'U': polyhedron.cupola,     // takes integer arg
-  'V': polyhedron.anticupola  // takes integer arg
+  'V': polyhedron.anticupola,  // takes integer arg
+  'Q': polyhedron.Qgrid  // takes integer arg
 };
 
 const opmap = {
@@ -90,8 +92,13 @@ const opmap = {
   'P': topo.perspectiva1,
   'q': topo.quinto,
   'u': topo.trisub,
+  // 'O': topo.quadsub,
   // z --> topo.zip
+  'L': topo.lace,
+  'I': topo.joinlace, // change symbol...
+  'K': topo.stake,
   'H': topo.hollow,
+  // join kis-kis ?
   'Z': topo.triangulate,
   'C': geo.canonicalize,
   'A': geo.adjustXYZ
@@ -110,10 +117,10 @@ const specreplacements = [
   [/dd/g, ''],    // dd --> null  (order 2)
   [/ad/g, 'a'],   // ad --> a   (a_ = ad_)
   [/gd/g, 'g'],   // gd --> g   (g_ = gd_)
-  [/aO/g, 'aC'],  // aO --> aC  (for uniqueness)
-  [/aI/g, 'aD'],  // aI --> aD  (for uniqueness)
-  [/gO/g, 'gC'],  // gO --> gC  (for uniqueness)
-  [/gI/g, 'gD']];  // gI --> gD  (for uniqueness)
+  [/aO$/g, 'aC'],  // aO --> aC  (for uniqueness)
+  [/aI$/g, 'aD'],  // aI --> aD  (for uniqueness)
+  [/gO$/g, 'gC'],  // gO --> gC  (for uniqueness)
+  [/gI$/g, 'gD']];  // gI --> gD  (for uniqueness)
 
 const getOps = function (notation) {
   let expanded = notation;
@@ -127,8 +134,6 @@ const getOps = function (notation) {
 
 // create polyhedron from notation
 export const newgeneratePoly = function (notation) {
-  // poly = new Polyhedron()
-
   const ops_spec = getOps(notation);
   const oplist = op_parser.parse(ops_spec).reverse();
 

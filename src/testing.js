@@ -10,7 +10,7 @@
 // Copyright 2019, Anselm Levskaya
 // Released under the MIT License
 
-import { newgeneratePoly } from './parser';
+// import { newgeneratePoly } from './parser';
 
 // Testing Functions
 // ===================================================================================================
@@ -29,6 +29,7 @@ export const topolog = function (poly) {
 };
 
 // test basic cross of all ops against all seeds
+/*
 export const testrig = function () {
   const seeds = ['T', 'O', 'C', 'I', 'D', 'P3', 'P4', 'A4', 'A5', 'Y3', 'Y4'];
   const ops = ['k', 'a', 'g', 'p', 'd', 'r', 'e', 'b', 'o', 'm', 't', 'j',
@@ -42,3 +43,4 @@ export const testrig = function () {
   }
   console.log('===== Done Testing Basic Ops =====');
 };
+*/

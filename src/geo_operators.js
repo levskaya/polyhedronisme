@@ -16,9 +16,9 @@
 
 import { _ } from 'underscore';
 import { add, sub, mult, dot, mag, unit, normal, orthogonal, edgeDist,
-  copyVecArray, tangentPoint, calcCentroid, reciprocal, sqrt } from './geo.js';
-import { dual } from './topo_operators.js';
-import { Polyhedron } from './polyhedron.js';
+  copyVecArray, tangentPoint, calcCentroid, reciprocal, sqrt } from './geo';
+import { dual } from './topo_operators';
+import { Polyhedron } from './polyhedron';
 
 // ================================================================================================
 // Canonicalization Algorithms
@@ -90,18 +90,18 @@ export const planarize = function (vertices, faces) {
     }
     for (v of f) {  // project (vertex - centroid) onto normal, subtract off this component
       newVs[v] =
-      add(newVs[v],
-        mult(dot(mult(STABILITY_FACTOR, n), sub(c, vertices[v])), n));
+      sub(newVs[v],
+        mult(dot(mult(STABILITY_FACTOR, n), sub(vertices[v], c)), n));
     }
   }
   return newVs;
 };
 
 // combines above three constraint adjustments in iterative cycle
-export const canonicalize = function (poly, Niter) {
-  if (!Niter) {
-    Niter = 1;
-  }
+export const canonicalize = function (poly, Niter, keepflat) {
+  if (Niter === undefined) { Niter = 1; }
+  if (keepflat === undefined) { keepflat = 0; }
+
   console.log(`Canonicalizing ${poly.name}...`);
   const faces = poly.faces;
   const edges = poly.edges();
@@ -109,7 +109,9 @@ export const canonicalize = function (poly, Niter) {
   let maxChange = 1.0; // convergence tracker
   for (let i = 0; i <= Niter; i++) {
     const oldVs = copyVecArray(newVs); // copy vertices
-    newVs = tangentify(newVs, edges);
+    if (keepflat === 0) {
+      newVs = tangentify(newVs, edges);
+    }
     newVs = recenter(newVs, edges);
     newVs = planarize(newVs, faces);
     maxChange = _.max(_.map(_.zip(newVs, oldVs), ([x, y]) => mag(sub(x, y))));
@@ -119,8 +121,7 @@ export const canonicalize = function (poly, Niter) {
   }
   // one should now rescale, but not rescaling here makes for very interesting numerical
   // instabilities that make interesting mutants on multiple applications...
-  // more experience will tell what to do
-  // newVs = rescale(newVs)
+  newVs = rescale(newVs)
   console.log(`[canonicalization done, last |deltaV|=${maxChange}]`);
   const newpoly = new Polyhedron(newVs, poly.faces, poly.name);
   console.log('canonicalize', newpoly);

@@ -686,3 +686,24 @@ export const anticupola = function (n, alpha, height) {
 
 // Johnson solids geometry in separate file
 export { johnson } from './johnson_solids';
+
+
+export const Qgrid = function (n) {
+  let i, j;
+  let poly = new Polyhedron();
+  poly.name = `Q${n}`;
+
+  for (i = 0; i < n; i++) { // vertex #'s 0...n-1 around one face
+    for (j = 0; j < n; j++) { // vertex #'s 0...n-1 around one face
+      poly.vertices.push([n / 2 - i, n / 2 - j, 0 ]);
+    }
+  }
+
+  for (i = 0; i < n - 1; i++) { // vertex #'s 0...n-1 around one face
+    for (j = 0; j < n - 1; j++) { // vertex #'s 0...n-1 around one face
+      poly.faces.push([i * n + j, i * n + j + 1, (i + 1) * n + j + 1, (i + 1) * n + j]);
+    }
+  }
+  // poly = canonicalXYZ(poly, 3);
+  return poly;
+};

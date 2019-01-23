@@ -24,7 +24,7 @@ import { add, clone, eye3, mv3, mm3, getVec2VecRotM, perspT, invperspT,
 import { rwb_palette, sortfaces, palette, rndcolors } from './polyhedron';
 import { newgeneratePoly } from './parser';
 import { triangulate } from './topo_operators';
-import * as testing from './testing'
+// import * as testing from './testing'
 
 // docs
 import frontText from './components/front.md'
@@ -33,7 +33,7 @@ import frontText from './components/front.md'
 require('./assets/polyhedronisme.css');
 
 // debug
-window.testrig = testing.testrig;
+// window.testrig = testing.testrig;
 Vue.config.productionTip = false;
 
 // eslint-disable-next-line no-new
@@ -78,7 +78,7 @@ let LastSphVec = [1, 0, 0];
 // random grabbag of polyhedra
 const DEFAULT_RECIPES = [
   'C2dakD', 'oC20kkkT', 'kn4C40A0dA4', 'opD',
-  'lT', 'qA40lA40oC', 'knD', 'dn6x4bT', 'oox4P7',
+  'PT', 'qA40PA40oC', 'knD', 'dn6x4bT', 'oox4P7',
   'qqJ37', 'aobD', 'qaxI'];
 
 // File-saving objects used to export txt/canvas-png

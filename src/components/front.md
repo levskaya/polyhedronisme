@@ -6,16 +6,16 @@ where [__base__] is one of
 
 &nbsp;| &nbsp;
 -------|--------------------------
-__T__ | tetrahedron
-__C__ | cube
-__O__ | octahedron
-__I__ | icosahedron
-__D__ | dodecahedron
-__P__<i>N</i> | N-sided prism
-__A__<i>N</i> | N-sided anti-prism
-__Y__<i>N</i> | N-sided pyramid
-__U__<i>N</i> | 2N-sided cupola (N&ge;3, regular for 3,4,5)
-__V__<i>N</i> | 2N-sided anticupola (N&ge;3)
+__T__ | Tetrahedron
+__C__ | Cube
+__O__ | Octahedron
+__I__ | Icosahedron
+__D__ | Dodecahedron
+__Y__<i>N</i> | N-sided Pyramid
+__P__<i>N</i> | N-sided Prism
+__A__<i>N</i> | N-sided Anti-prism
+__U__<i>N</i> | 2N-sided Cupola (N&ge;3, regular for 3,4,5)
+__V__<i>N</i> | 2N-sided Anticupola (N&ge;3)
 __J__<i>N</i> | Nth Johnson Solid (1 to 92)
   
 and __op__ is one of these [polyhedron-building operators][1]
@@ -73,27 +73,27 @@ __C__<i>N</i> | proper <b>C</b>anonicalization, iteratively refines shape N time
 
 _Remember that these can blow up the geometry of nonconvex polyhedra._
 
-## 3D Printing
+### 3D Printing
 
 You can export these shapes in forms appropriate for 3D printing by
 shapeways. Export in VRML2 format to preserve face colors if you want
 to use their colored fused-sand process.  You'll may want to rescale 
 the exported geometry to a different size.
 
-## More Information
+### More Information
 
  - [Wikipedia on Conway Polyhedral Notation][1]
  - [George W. Hart's Polyhedral Site][4]
  - [Source code at Github][5]
 
-## Related Sites
+### Related Sites
 
 - [Interactive Polyhedra Viewer][6] by [@tesseralis][7]
 - [David McCooey's Visual Polyhedra][8]
 - [Antiprism Polyhedral Modelling Software][9] - can do much more than conway operators!
 - [Stella Polyhedral Modelling Software][10]
 
-## Thanks
+### Thanks
 
   George Hart - for his original pages, artworks and software characterizing higher polyhedra.
   Lars Huttar - for adding several new operators, and helping improve this site.
