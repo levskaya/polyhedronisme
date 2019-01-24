@@ -86,7 +86,10 @@ module.exports = {
           ]
         }
       },
-
+      {
+        test: /\.pegjs$/,
+        loader: 'pegjs-loader'
+      },
     ]
   },
   node: {

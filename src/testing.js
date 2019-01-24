@@ -10,7 +10,7 @@
 // Copyright 2019, Anselm Levskaya
 // Released under the MIT License
 
-// import { newgeneratePoly } from './parser';
+// import { generatePoly } from './parser';
 
 // Testing Functions
 // ===================================================================================================
@@ -38,7 +38,7 @@ export const testrig = function () {
   for (let op of ops) {
     console.log(`Operator ${op}`);
     for (let seed of seeds) {
-      console.log(op + seed + ':', newgeneratePoly(op + seed));
+      console.log(op + seed + ':', generatePoly(op + seed));
     }
   }
   console.log('===== Done Testing Basic Ops =====');

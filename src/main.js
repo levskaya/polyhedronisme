@@ -22,7 +22,7 @@ import 'canvas-toBlob';
 import { add, clone, eye3, mv3, mm3, getVec2VecRotM, perspT, invperspT,
   vec_rotm, rotm, mult, dot, unit, normal, round, randomchoice, PI } from './geo';
 import { rwb_palette, sortfaces, palette, rndcolors } from './polyhedron';
-import { newgeneratePoly } from './parser';
+import { generatePoly } from './parser';
 import { triangulate } from './topo_operators';
 // import * as testing from './testing'
 
@@ -264,7 +264,7 @@ $(function () { // wait for page to load
   $('#palette').val(PALETTE.reduce((x, y) => x + ' ' + y));
 
   // construct the polyhedra from spec
-  globPolys = _.map(specs, x => newgeneratePoly(x));
+  globPolys = _.map(specs, x => generatePoly(x));
   updateStats();
 
   // draw it
@@ -277,7 +277,7 @@ $(function () { // wait for page to load
   $('#spec').change(function (e) {
     // only allow one recipe for now
     let specs = $('#spec').val().split(/\s+/g).slice(0, 2);
-    globPolys = _.map(specs, x => newgeneratePoly(x));
+    globPolys = _.map(specs, x => generatePoly(x));
     updateStats();
     // animateShape()
     setlink();

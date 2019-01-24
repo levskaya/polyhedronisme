@@ -6,63 +6,20 @@
 // Copyright 2019, Anselm Levskaya
 // Released under the MIT License
 
-/* eslint-disable camelcase */
+/* eslint-disable-camelcase */
 /* eslint-disable standard/array-bracket-even-spacing */
 /* eslint-disable no-multi-spaces */
 
 import * as polyhedron from './polyhedron';
 import * as topo from './topo_operators';
 import * as geo from './geo_operators';
-
-
-// old PEG uses "eval" which can't be used in strict-mode, so have to load it in index.html as a static
-// import { PEG } from './libs/peg-0.6.2.js';
-// require('./libs/peg-0.6.2.js');
+// Load peg.js parser for operator-chain-on-base-polyhedra recipes
+var opParser = require('./original.pegjs');
 
 // Parser Routines
 // ===================================================================================================
-// fairly straightforward Parser Expression Grammar spec for simple
-// operator-chain-on-base-polyhedra recipes
-const PEG_parser_spec = `\
-/* series of opspecs */
-start  = opspec+
 
-/* opspec one of:
- A  - single letter
- A3 - single letter and float
- B(5,4.3,3) - function call format w. float args
-*/
-opspec =
-   let:opcode args:opargs {return {"op":let,"args":args};}
-/ let:opcode float:float     {return {"op":let,"args":[float]};}
-/ let:opcode                     {return {"op":let,"args":[]};}
-
-/*
-parentheses surrounding comma-delimited list of floats i.e.
-( 1 , 3.2, 4 ) or (1) or (2,3)
-*/
-opargs = "("
-           num:( float:float ","? {return float} )+
-         ")" {return num;}
-
-/* just a letter */
-opcode = op:[a-zA-Z] {return op;}
-
-/* standard numerical types */
-int   = digits:[0-9-]+   { return parseInt(digits.join(""), 10);  }
-float = digits:[0-9.-]+  { return parseFloat(digits.join(""), 10); }\
-`;
-
-// old library - PEG object loaded statically as global
-const op_parser = PEG.buildParser(PEG_parser_spec);
-// const op_parser = PEG.generate(PEG_parser_spec);
-
-// applies func fn to array args i.e. f, [1,2,3] -> f(1,2,3)
-const dispatch = function (fn, args) {
-  return fn.apply(this, args || []);
-};
-
-const basemap = {
+const primitiveMap = {
   'T': polyhedron.tetrahedron,
   'O': polyhedron.octahedron,
   'C': polyhedron.cube,
@@ -77,7 +34,7 @@ const basemap = {
   'Q': polyhedron.Qgrid  // takes integer arg
 };
 
-const opmap = {
+const opMap = {
   'd': topo.dual,
   'a': topo.ambo,
   'k': topo.kisN,
@@ -105,8 +62,8 @@ const opmap = {
 };
 // unclaimed: yihfzv
 
-// list of basic equivalences, easier to replace before parsing
-const specreplacements = [
+// List of basic equivalences, easier to replace before parsing.
+const specReplacements = [
   [/e/g, 'aa'],   // e --> aa   (abbr. for explode)
   [/b/g, 'ta'],   // b --> ta   (abbr. for bevel)
   [/o/g, 'jj'],   // o --> jj   (abbr. for ortho)
@@ -122,39 +79,44 @@ const specreplacements = [
   [/gO$/g, 'gC'],  // gO --> gC  (for uniqueness)
   [/gI$/g, 'gD']];  // gI --> gD  (for uniqueness)
 
-const getOps = function (notation) {
+// Execute rewrite rules.
+const transformPass = function (notation) {
   let expanded = notation;
-  for (let [orig, equiv] of specreplacements) {
+  for (let [orig, equiv] of specReplacements) {
     expanded = expanded.replace(orig, equiv);
   }
   console.log(`${notation} executed as ${expanded}`);
   return expanded;
 };
 
+// Applies func fn to array args i.e. f, [1,2,3] -> f(1,2,3)
+const dispatch = function (fn, args) {
+  return fn.apply(this, args || []);
+};
 
-// create polyhedron from notation
-export const newgeneratePoly = function (notation) {
-  const ops_spec = getOps(notation);
-  const oplist = op_parser.parse(ops_spec).reverse();
+// Create polyhedron from notation.
+export const generatePoly = function (spec) {
+  const transformedSpec = transformPass(spec);
+  const opList = opParser.parse(transformedSpec).reverse();
 
-  let op = oplist.shift();
-  const basefunc = basemap[op['op']];
-  const baseargs = op['args'];
-  let poly = dispatch(basefunc, baseargs);
+  let op = opList.shift();
+  const baseFunc = primitiveMap[op['op']];
+  const baseArgs = op['args'];
+  let poly = dispatch(baseFunc, baseArgs);
 
-  for (op of oplist) {
-    const opfunc = opmap[op['op']];
-    const opargs = [poly].concat(op['args']);
-    poly = dispatch(opfunc, opargs);
+  for (op of opList) {
+    const opFunc = opMap[op['op']];
+    const opArgs = [poly].concat(op['args']);
+    poly = dispatch(opFunc, opArgs);
   }
 
-  // Recenter polyhedra at origin (rarely needed)
+  // Recenter polyhedra at origin and rescale.
   poly.vertices = geo.recenter(poly.vertices, poly.edges());
   poly.vertices = geo.rescale(poly.vertices);
 
-  // Color the faces of the polyhedra for display
+  // Color the faces of the polyhedra for display.
   poly = polyhedron.paintPolyhedron(poly);
 
-  // return the poly object
+  // Return the poly object.
   return poly;
 };
