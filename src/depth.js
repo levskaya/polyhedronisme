@@ -14,7 +14,7 @@
 import { _ } from 'underscore';
 
 import { abs, add, sub, mult, mag2, linePointDist2, normal, __range__, 
-  calcCentroid, calcCentroid2d, round, pointInPolygon,
+  calcCentroid, calcCentroid2d, round, pointInPolygon, dot2d,
   random, sigfigs, planararea, faceSignature, sqrt, sin, planararea2d,
   cos, PI, pow, unit, mag, dot, sign, tween, tween2d, perspT, magic_depth, cross2d } from './geo';
 
@@ -98,21 +98,10 @@ const get_2d_vertices = function (tvec) {
   return mapfn;
 }
 
-// const project_screen_ray_onto_plane = function (origin, sigma, z0, v2d, bc, bn) {
-//   // const v = [v2d[0], v2d[1], sigma];
-//   const numerator = sigma * dot(bc, bn) - z0 * cross2d(v2d, [bn[0], bn[1]])
-//   const denom = dot(bn, [v2d[0], v2d[1], sigma])
-//   // const o_v = sub(v, origin);
-//   // const numerator = dot(sub(bc, origin), bn);
-//   // const denom = dot(unit(o_v), bn);
-//   const len_o_v_to_b_plane = abs(denom) < 1e-6 ? 1e6 : numerator / denom;
-//   //return len_o_v_to_b_plane;
-//   return []
-// }   
 
 const project_screen_ray_onto_plane = function (origin, sigma, z0, v2d, bc, bn) {
   // const numerator = sigma * dot(bc, bn) - (z0 + 3) * cross2d(v2d, [bn[0], bn[1]]) - sigma*bn[2]*3;
-  const numerator = sigma * dot(bc, bn) - z0 * cross2d(v2d, [bn[0], bn[1]]);
+  const numerator = sigma * dot(bc, bn) - z0 * dot2d(v2d, [bn[0], bn[1]]);
   const denom = dot(bn, [v2d[0], v2d[1], sigma])
   const z = abs(denom) < 1e-6 ? 1e6 : numerator / denom;
   return [(z + z0) / sigma * v2d[0], (z + z0) / sigma * v2d[1], z]
@@ -125,7 +114,13 @@ export const P_obscures_Q = function (P, Q) {
   const z0 = ((persp_z_max * persp_ratio) - persp_z_min) / (1 - persp_ratio);
   const [ Pc, Pn, Pvs, Pes, Pvs2d, Pes2d, Pm, Pi ] = P;
   const [ Qc, Qn, Qvs, Qes, Qvs2d, Qes2d, Qm, Qi ] = Q;
+  const [[Pxmin, Pxmax], [Pymin, Pymax]] = Pes2d;
+  const [[Qxmin, Qxmax], [Qymin, Qymax]] = Qes2d;
 
+  if (Qxmax < Pxmin || Pxmax < Qxmin || Qymax < Pymin || Pymax < Qymin) {
+    // projected 2d extents don't overlap
+    return 0;
+  }
   const isect = simple_intersect(Pvs2d, Qvs2d);
   if (isect.length === 0) { // No intersection.
     return 0
@@ -133,14 +128,14 @@ export const P_obscures_Q = function (P, Q) {
   window._traces.push(isect);
   const c2d = calcCentroid2d(isect);
   const A2d = planararea2d(isect);
-  const Pdepth = project_screen_ray_onto_plane(origin, sigma, z0, c2d, Pc, Pn)[0];
-  const Qdepth = project_screen_ray_onto_plane(origin, sigma, z0, c2d, Qc, Qn)[0];
+  const Pdepth = mag2(sub(project_screen_ray_onto_plane(origin, sigma, z0, c2d, Pc, Pn), origin));
+  const Qdepth = mag2(sub(project_screen_ray_onto_plane(origin, sigma, z0, c2d, Qc, Qn), origin));
   //console.log('Pi, depth', Pi, Pdepth, 'Qi, depth', Qi, Qdepth, 'A2d', A2d);
   if (A2d < 0.01) {  // if intersection is tiny, ignore...
     return 0;
   }
   // remember that deeper points are more negative, so Pz > Qz if P obscures Q.
-  return (Pdepth > Qdepth) ? 1 : -1;
+  return (Pdepth > Qdepth) ? -1 : 1;
 };
 // ------------------------------------------------------------------------------------------------------------
 
@@ -195,11 +190,11 @@ export const hardsortfaces = function (poly, tvec) {
   for (let i = 0; i < sortdata.length; i++) {
     for (let j = i + 1; j < sortdata.length; j++) {
       let res = P_obscures_Q(sortdata[i], sortdata[j]);
-      if (res === -1) {
+      if (res === 1) {
         rstr += `${i}~|${j} `;
         visgraph[j].push(i);
         invgraph[i].push(j);
-      } else if (res === 1) {
+      } else if (res === -1) {
         rstr += `${j}~|${i} `;
         visgraph[i].push(j);
         invgraph[j].push(i);

@@ -210,7 +210,7 @@ export const drawpoly = function (poly, tvec) {
     }
 
     ctx.save();
-    
+    /*
     ctx.fillStyle = 'red';
     for (let i = 0; i < window._pts.length; i++) {
       let [ x, y ] = window._pts[i][0];
@@ -237,7 +237,7 @@ export const drawpoly = function (poly, tvec) {
       ctx.fill();
     // let d = Math.round(window._pts[i][3]*1000)/1000;
     // ctx.fillText(`${window._pts[i][1]},${window._pts[i][2]}:${d}`, x + _2d_x_offset + 5, y + _2d_y_offset);
-    }
+    } */
     
     // console.log('rayorigin z', ((persp_z_max * persp_ratio) - persp_z_min) / (1 - persp_ratio));
     // const magicz = ((persp_ratio) / (1 - persp_ratio)) * (perspective_scale - persp_z_max + persp_z_min / persp_ratio);
