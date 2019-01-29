@@ -16,6 +16,7 @@
     "expose-loader": "^0.7.5",
     "file-saver": "^2.0.0",
     "markdown-it-imsize": "^2.0.1",
+    "polygon-clipping": "^0.11.1",
     "underscore": "^1.9.1",
     "vue": "^2.5.2",
     "vue-markdown-loader": "^2.4.1",

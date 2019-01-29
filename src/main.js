@@ -23,6 +23,7 @@ import { generatePoly } from './parser';
 import { triangulate } from './topo_operators';
 import { toOBJ, toVRML } from './exporters';
 // import * as testing from './testing'
+import { hardsortfaces } from './depth';
 
 // docs
 import frontText from './components/front.md'
@@ -43,14 +44,14 @@ new Vue({
 
 // GLOBALS
 // ===================================================================================================
-let ctx = {}; // for global access to canvas context
-let globPolys = {}; // constructed polyhedras
+export let ctx = {}; // for global access to canvas context
+export let globPolys = {}; // constructed polyhedras
 
 const CANVAS_WIDTH = 720; // canvas dims
 const CANVAS_HEIGHT = 500; // canvas dims
 let globRotM = clone(eye3);
 let globLastRotM = clone(eye3);
-export let perspective_scale = 800;
+export let perspective_scale = 1200;
 export const persp_z_max = 5;
 export const persp_z_min = 0;
 export const persp_ratio = 0.8;
@@ -151,7 +152,7 @@ const clear = function () {
 
 // main drawing routine for polyhedra
 // ===================================================================================================
-const drawpoly = function (poly, tvec) {
+export const drawpoly = function (poly, tvec) {
   let v;
   if (!tvec) { tvec = [0, 0, 3]; }
 
@@ -159,57 +160,99 @@ const drawpoly = function (poly, tvec) {
   const oldxyz = _.map(poly.vertices, x => x);
   poly.vertices = _.map(poly.vertices, x => mv3(globRotM, x));
 
-  // z sort faces
-  sortfaces(poly);
+  try {
+    // z sort faces
+    // sortfaces(poly);
+    hardsortfaces(poly, tvec);
 
-  for (let fno = 0; fno < poly.faces.length; fno++) {
-    var face = poly.faces[fno];
-    ctx.beginPath();
-    // move to first vertex of face
-    const v0 = face[face.length - 1];
-    let [x, y] = perspT(add(tvec, poly.vertices[v0]), persp_z_max, persp_z_min, persp_ratio, perspective_scale);
-    ctx.moveTo(x + _2d_x_offset, y + _2d_y_offset);
-    // loop around face, defining polygon
-    for (v of face) {
-      [x, y] = perspT(add(tvec, poly.vertices[v]), persp_z_max, persp_z_min, persp_ratio, perspective_scale);
-      ctx.lineTo(x + _2d_x_offset, y + _2d_y_offset);
+    for (let fno = 0; fno < poly.faces.length; fno++) {
+      var face = poly.faces[fno];
+      ctx.beginPath();
+      // move to first vertex of face
+      const v0 = face[face.length - 1];
+      let [x, y] = perspT(add(tvec, poly.vertices[v0]), persp_z_max, persp_z_min, persp_ratio, perspective_scale);
+      ctx.moveTo(x + _2d_x_offset, y + _2d_y_offset);
+      // loop around face, defining polygon
+      for (v of face) {
+        [x, y] = perspT(add(tvec, poly.vertices[v]), persp_z_max, persp_z_min, persp_ratio, perspective_scale);
+        ctx.lineTo(x + _2d_x_offset, y + _2d_y_offset);
+      }
+
+      // use pre-computed colors
+      let clr = palette(poly.face_classes[fno]);
+
+      // shade based on simple cosine illumination factor
+      const face_verts = face.map((v) => poly.vertices[v])
+      // TODO: these magic illumination parameters should be global constants or parameters
+      const illum = dot(normal(face_verts), unit([1, -1, 0]));
+      clr = mult((((illum / 2.0) + 0.5) * 0.7) + 0.3, clr);
+
+      if ((PaintMode === 'fill') || (PaintMode === 'fillstroke')) {
+        ctx.fillStyle =
+        `rgba(${round(clr[0] * 255)}, ${round(clr[1] * 255)}, ${round(clr[2] * 255)}, ${1.0})`;
+        ctx.fill();
+        // make cartoon stroke (=black) / realistic stroke an option (=below)
+        ctx.strokeStyle =
+        `rgba(${round(clr[0] * 255)}, ${round(clr[1] * 255)}, ${round(clr[2] * 255)}, ${1.0})`;
+        ctx.stroke();
+      }
+      if (PaintMode === 'fillstroke') {
+        ctx.fillStyle =
+        `rgba(${round(clr[0] * 255)}, ${round(clr[1] * 255)}, ${round(clr[2] * 255)}, ${1.0})`;
+        ctx.fill();
+        ctx.strokeStyle = 'rgba(0,0,0,0.3)'; // light lines, less cartoony, more render-y
+        ctx.stroke();
+      }
+      if (PaintMode === 'stroke') {
+        ctx.strokeStyle = 'rgba(0,0,0,0.8)';
+        ctx.stroke();
+      }
     }
 
-    // use pre-computed colors
-    let clr = palette(poly.face_classes[fno]);
-
-    // shade based on simple cosine illumination factor
-    const face_verts = face.map((v) => poly.vertices[v])
-    // TODO: these magic illumination parameters should be global constants or parameters
-    const illum = dot(normal(face_verts), unit([1, -1, 0]));
-    clr = mult((((illum / 2.0) + 0.5) * 0.7) + 0.3, clr);
-
-    if ((PaintMode === 'fill') || (PaintMode === 'fillstroke')) {
-      ctx.fillStyle =
-        `rgba(${round(clr[0] * 255)}, ${round(clr[1] * 255)}, ${round(clr[2] * 255)}, ${1.0})`;
+    ctx.save();
+    
+    ctx.fillStyle = 'red';
+    for (let i = 0; i < window._pts.length; i++) {
+      let [ x, y ] = window._pts[i][0];
+      ctx.beginPath();
+      ctx.arc(x + _2d_x_offset, y + _2d_y_offset, 3, 0, Math.PI * 2);
       ctx.fill();
-      // make cartoon stroke (=black) / realistic stroke an option (=below)
-      ctx.strokeStyle =
-        `rgba(${round(clr[0] * 255)}, ${round(clr[1] * 255)}, ${round(clr[2] * 255)}, ${1.0})`;
-      ctx.stroke();
+      let d = Math.round(window._pts[i][3]*1000)/1000;
+      ctx.fillText(`${window._pts[i][1]},${window._pts[i][2]}:${d}`, x + _2d_x_offset + 5, y + _2d_y_offset);
     }
-    if (PaintMode === 'fillstroke') {
-      ctx.fillStyle =
-        `rgba(${round(clr[0] * 255)}, ${round(clr[1] * 255)}, ${round(clr[2] * 255)}, ${1.0})`;
+    ctx.lineWidth = 2.0;
+    ctx.strokeStyle = 'black';
+    ctx.fillStyle = 'rgba(255,0,0,0.5)'; 
+    for (let i = 0; i < window._traces.length; i++) {
+      let trace = window._traces[i];
+      let [ x, y ] = trace[trace.length - 1];
+      ctx.beginPath();
+      ctx.moveTo(x + _2d_x_offset, y + _2d_y_offset);
+      for (let j = 0; j < window._traces[i].length; j++) {
+      // loop around face, defining polygon
+        let [ x, y ] = trace[j];
+        ctx.lineTo(x + _2d_x_offset, y + _2d_y_offset);
+      }
+      ctx.stroke();
       ctx.fill();
-      ctx.strokeStyle = 'rgba(0,0,0,0.3)'; // light lines, less cartoony, more render-y
-      ctx.stroke();
+    // let d = Math.round(window._pts[i][3]*1000)/1000;
+    // ctx.fillText(`${window._pts[i][1]},${window._pts[i][2]}:${d}`, x + _2d_x_offset + 5, y + _2d_y_offset);
     }
-    if (PaintMode === 'stroke') {
-      ctx.strokeStyle = 'rgba(0,0,0,0.8)';
-      ctx.stroke();
-    }
+    
+    // console.log('rayorigin z', ((persp_z_max * persp_ratio) - persp_z_min) / (1 - persp_ratio));
+    // const magicz = ((persp_ratio) / (1 - persp_ratio)) * (perspective_scale - persp_z_max + persp_z_min / persp_ratio);
+    // const z0 = ((persp_z_max * persp_ratio) - persp_z_min) / (1 - persp_ratio);
+    // const scalefactor = (perspective_scale * persp_ratio) / (1 - persp_ratio);
+    // console.log('magic z', scalefactor-z0);
+    // labelFaces(poly, tvec);
+
+    ctx.restore();
+  } catch (e) {
+    console.log(e)
+  } finally {
+    // reset coords, for setting absolute rotation, as poly is passed by ref
+    poly.vertices = oldxyz;
   }
-
-  // labelFaces(poly, tvec);
-
-  // reset coords, for setting absolute rotation, as poly is passed by ref
-  poly.vertices = oldxyz;
 };
 
 const labelFaces = function (poly, tvec, show_hidden = false) {
@@ -235,7 +278,7 @@ const labelFaces = function (poly, tvec, show_hidden = false) {
 // -----------------------------------------------------------------------------------
 const drawShape = function () {
   clear();
-  globPolys.map((p, i) => drawpoly(p, [0 + (3 * i), 0, 3]));
+  globPolys.map((p, i) => drawpoly(p, [0 + (3 * i), 0, 0]));
 };
 
 // update V E F stats on page

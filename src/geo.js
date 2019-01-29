@@ -81,6 +81,10 @@ export const randomchoice = function (array) {
 export const mult = (c, vec) =>
   [c * vec[0], c * vec[1], c * vec[2]];
 
+// 2d scalar multiplication
+export const mult2d = (c, vec) =>
+  [c * vec[0], c * vec[1]];
+
 // 3d element-wise multiply
 export const _mult = (vec1, vec2) =>
   [vec1[0] * vec2[0], vec1[1] * vec2[1], vec1[2] * vec2[2]];
@@ -93,17 +97,21 @@ export const add = (vec1, vec2) =>
 export const add2d = (vec1, vec2) =>
   [vec1[0] + vec2[0], vec1[1] + vec2[1]];
 
-// 2d scalar multiplication
-export const mult2d = (c, vec) =>
-  [c * vec[0], c * vec[1]];
-
 // 3d vector subtraction
 export const sub = (vec1, vec2) =>
   [vec1[0] - vec2[0], vec1[1] - vec2[1], vec1[2] - vec2[2]];
 
+// 2d vector subtraction
+export const sub2d = (vec1, vec2) =>
+  [vec1[0] - vec2[0], vec1[1] - vec2[1]];
+
 // 3d dot product
 export const dot = (vec1, vec2) =>
   (vec1[0] * vec2[0]) + (vec1[1] * vec2[1]) + (vec1[2] * vec2[2]);
+
+// 2d dot product
+export const dot2d = (vec1, vec2) =>
+  (vec1[0] * vec2[0]) + (vec1[1] * vec2[1]);
 
 // 3d cross product d1 x d2
 export const cross = (d1, d2) =>
@@ -111,17 +119,25 @@ export const cross = (d1, d2) =>
     (d1[2] * d2[0]) - (d1[0] * d2[2]),
     (d1[0] * d2[1]) - (d1[1] * d2[0]) ];
 
+// 2d scalar cross product d1 x d2
+export const cross2d = (d1, d2) =>
+  (d1[0] * d2[1]) - (d1[1] * d2[0]);
+
 // vector norm
 export const mag = vec => sqrt(dot(vec, vec));
+export const mag2d = vec => sqrt(dot2d(vec, vec));
 
 // vector magnitude squared
 export const mag2 = vec => dot(vec, vec);
+export const mag22d = vec => dot2d(vec, vec);
 
 // makes vector unit length
 export const unit = vec => mult(1 / sqrt(mag2(vec)), vec);
+export const unit2d = vec => mult2d(1 / sqrt(mag22d(vec)), vec);
 
 // midpoint between vec1, vec2
 export const midpoint = (vec1, vec2) => mult(1 / 2.0, add(vec1, vec2));
+export const midpoint2d = (vec1, vec2) => mult2d(1 / 2.0, add2d(vec1, vec2));
 
 // parametric segment between vec1, vec2 w. parameter t ranging from 0 to 1
 export const tween = (vec1, vec2, t) =>
@@ -132,7 +148,7 @@ export const tween = (vec1, vec2, t) =>
 export const tween2d = (vec1, vec2, t) =>
   [ ((1 - t) * vec1[0]) + (t * vec2[0]),
     ((1 - t) * vec1[1]) + (t * vec2[1])];
-  
+
 // uses above to go one-third of the way along vec1->vec2 line
 export const oneThird = (vec1, vec2) => tween(vec1, vec2, 1 / 3.0);
 
@@ -208,7 +224,7 @@ export const calcCentroid = function (vertices) {
   return mult(1 / vertices.length, centroidV);
 };
 
-// calculate centroid of array of vertices
+// calculate centroid of array of vertices in 2d
 export const calcCentroid2d = function (vertices) {
   // running sum of vertex coords
   let centroidV = [0, 0];
@@ -242,6 +258,18 @@ export const planararea = function (vertices) {
     [v1, v2] = [v2, v3];
   }
   area = abs(dot(normal(vertices), vsum) / 2.0);
+  return area;
+};
+
+export const planararea2d = function (vertices) {
+  let area = 0.0;
+  let vsum = 0.0;
+  let [v1, v2] = vertices.slice(-2);
+  for (let v3 of vertices) {
+    vsum += cross2d(v1, v2);
+    [v1, v2] = [v2, v3];
+  }
+  area = abs(vsum / 2.0);
   return area;
 };
 
@@ -381,22 +409,24 @@ export const vec_rotm = function (angle, x, y, z) {
 // scales perspective such that inside depth regions min_real_depth <--> max_real_depth
 // perspective lengths vary no more than:   desired_ratio
 // with target dimension of roughly length: desired_length
-export const perspT = function (vec3, max_real_depth, min_real_depth,
-  desired_ratio, desired_length) {
-  const z0 =
-    ((max_real_depth * desired_ratio) - min_real_depth) / (1 - desired_ratio);
-  const scalefactor =
-    (desired_length * desired_ratio) / (1 - desired_ratio);
+export const perspT = function (vec3, max_real_depth, min_real_depth, desired_ratio, desired_length) {
+  const z0 = ((max_real_depth * desired_ratio) - min_real_depth) / (1 - desired_ratio);
+  const scalefactor = (desired_length * desired_ratio) / (1 - desired_ratio);
   // projected [X, Y]
   return [(scalefactor * vec3[0]) / (vec3[2] + z0), (scalefactor * vec3[1]) / (vec3[2] + z0)];
 };
 
+// z-depth to use where [screen_x, screen_y, magic_z_depth] corresponds to correct world-ray from origin
+export const magic_depth = function (max_real_depth, min_real_depth, desired_ratio, desired_length) {
+  const z0 = ((max_real_depth * desired_ratio) - min_real_depth) / (1 - desired_ratio);
+  const scalefactor = (desired_length * desired_ratio) / (1 - desired_ratio);
+  return scalefactor - z0;
+};
+
 // Inverses perspective transform by projecting plane onto a unit sphere at origin
 export const invperspT =
-  function (x, y, dx, dy, max_real_depth, min_real_depth,
-    desired_ratio, desired_length) {
-    const z0 =
-    ((max_real_depth * desired_ratio) - min_real_depth) / (1 - desired_ratio);
+  function (x, y, dx, dy, max_real_depth, min_real_depth, desired_ratio, desired_length) {
+    const z0 = ((max_real_depth * desired_ratio) - min_real_depth) / (1 - desired_ratio);
     const s = (desired_length * desired_ratio) / (1 - desired_ratio);
     const xp = x - dx;
     const yp = y - dy;

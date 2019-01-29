@@ -217,6 +217,15 @@ export class Polyhedron {
     return normalsArray;
   }
 
+  // get array of array of vertices in faces
+  faceVerts () {
+    const vertsArray = [];
+    for (let face of this.faces) {
+      vertsArray.push(face.map(vidx => this.vertices[vidx]));
+    }
+    return vertsArray;
+  }
+
   // informative string
   data () {
     const nEdges = (this.faces.length + this.vertices.length) - 2; // E = V + F - 2
@@ -259,6 +268,7 @@ export class Polyhedron {
     return sqrt(min2);
   }
 }
+
 
 // ===================================================================================================
 // Primitive Polyhedra Seeds
