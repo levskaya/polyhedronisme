@@ -33,6 +33,15 @@ export { random, round, floor, sqrt,
 
 export const log10 = x => log(x) / LN10;
 
+export const sign = function (x) {
+  if (x === 0) {
+    return 0;
+  } else {
+    return x / abs(x);
+  }
+};
+
+
 export function __range__ (left, right, inclusive) {
   let range = [];
   let ascending = left < right;
@@ -80,6 +89,14 @@ export const _mult = (vec1, vec2) =>
 export const add = (vec1, vec2) =>
   [vec1[0] + vec2[0], vec1[1] + vec2[1], vec1[2] + vec2[2]];
 
+// 2d vector addition
+export const add2d = (vec1, vec2) =>
+  [vec1[0] + vec2[0], vec1[1] + vec2[1]];
+
+// 2d scalar multiplication
+export const mult2d = (c, vec) =>
+  [c * vec[0], c * vec[1]];
+
 // 3d vector subtraction
 export const sub = (vec1, vec2) =>
   [vec1[0] - vec2[0], vec1[1] - vec2[1], vec1[2] - vec2[2]];
@@ -112,6 +129,10 @@ export const tween = (vec1, vec2, t) =>
     ((1 - t) * vec1[1]) + (t * vec2[1]),
     ((1 - t) * vec1[2]) + (t * vec2[2])];
 
+export const tween2d = (vec1, vec2, t) =>
+  [ ((1 - t) * vec1[0]) + (t * vec2[0]),
+    ((1 - t) * vec1[1]) + (t * vec2[1])];
+  
 // uses above to go one-third of the way along vec1->vec2 line
 export const oneThird = (vec1, vec2) => tween(vec1, vec2, 1 / 3.0);
 
@@ -186,6 +207,17 @@ export const calcCentroid = function (vertices) {
   }
   return mult(1 / vertices.length, centroidV);
 };
+
+// calculate centroid of array of vertices
+export const calcCentroid2d = function (vertices) {
+  // running sum of vertex coords
+  let centroidV = [0, 0];
+  for (let v of vertices) {
+    centroidV = add2d(centroidV, v);
+  }
+  return mult2d(1 / vertices.length, centroidV);
+};
+
 
 // calculate average normal vector for array of vertices
 export const normal = function (vertices) {
@@ -389,4 +421,32 @@ export const getVec2VecRotM = function (vec1, vec2) {
   const axis  = cross(vec1, vec2);
   const angle = acos(dot(vec1, vec2));
   return vec_rotm(-1 * angle, axis[0], axis[1], axis[2]);
+};
+
+// 2d point inclusion in 2d poly by winding number
+// see http://geomalgorithms.com/a03-_inclusion.html
+export const pointInPolygon = function (point, vs) {
+  const [ x, y ] = point;
+  let wn = 0;
+  const isLeft = function (P0, P1, P2) {
+    return (P1[0] - P0[0]) * (P2[1] - P0[1]) - (P2[0] - P0[0]) * (P1[1] - P0[1]);
+  }
+  for (var i = 0, j = vs.length - 1; i < vs.length; j = i++) {
+    const [ xi, yi ] = vs[i];
+    const [ xj, yj ] = vs[j];
+    if (yj <= y) { // <= orig
+      if (yi > y) {
+        if (isLeft([xj, yj], [xi, yi], [x, y]) > 0) {
+          wn++;
+        }
+      }
+    } else {
+      if (yi <= y) { // <= orig
+        if (isLeft([xj, yj], [xi, yi], [x, y]) < 0) {
+          wn--;
+        }
+      }
+    }
+  }
+  return wn !== 0;
 };

@@ -7,23 +7,21 @@
 // Released under the MIT License
 
 /* eslint-disable camelcase */
-/* eslint-disable standard/array-bracket-even-spacing */
-/* eslint-disable no-multi-spaces */
-/* eslint-disable no-undef */
-
-import Vue from 'vue'
-import { _ } from 'underscore';
 
 // polyfills for saving png/obj/vrml
 import 'file-saver';
 import 'blobjs';
 import 'canvas-toBlob';
 
+import Vue from 'vue'
+import { _ } from 'underscore';
+
 import { add, clone, eye3, mv3, mm3, getVec2VecRotM, perspT, invperspT,
   vec_rotm, rotm, mult, dot, unit, normal, round, randomchoice, PI } from './geo';
 import { rwb_palette, sortfaces, palette, rndcolors } from './polyhedron';
 import { generatePoly } from './parser';
 import { triangulate } from './topo_operators';
+import { toOBJ, toVRML } from './exporters';
 // import * as testing from './testing'
 
 // docs
@@ -48,14 +46,14 @@ new Vue({
 let ctx = {}; // for global access to canvas context
 let globPolys = {}; // constructed polyhedras
 
-const CANVAS_WIDTH  = 720; // canvas dims
+const CANVAS_WIDTH = 720; // canvas dims
 const CANVAS_HEIGHT = 500; // canvas dims
 let globRotM = clone(eye3);
 let globLastRotM = clone(eye3);
-let perspective_scale = 800;
-const persp_z_max = 5;
-const persp_z_min = 0;
-const persp_ratio = 0.8;
+export let perspective_scale = 800;
+export const persp_z_max = 5;
+export const persp_z_min = 0;
+export const persp_ratio = 0.8;
 const _2d_x_offset = CANVAS_WIDTH / 2;
 const _2d_y_offset = CANVAS_HEIGHT / 2;
 
@@ -85,15 +83,16 @@ const DEFAULT_RECIPES = [
 const saveText = function (text, filename) {
   const blb = new Blob([text],
     {type: `text/plain;charset=${document.characterSet}`});
+  /* eslint-disable no-undef */
   saveAs(blb, filename);
 }
 
 // parses URL string for polyhedron recipe, for bookmarking
 // should use #! href format instead
-const parseurl = function () {
+const parseURL = function () {
   let e;
   const urlParams = {};
-  const a = /\+/g;  // Regex for replacing addition symbol with a space
+  const a = /\+/g; // Regex for replacing addition symbol with a space
   const r = /([^&=]+)=?([^&]*)/g;
   const d = s => decodeURIComponent(s.replace(a, ' '));
   const q = window.location.search.substring(1);
@@ -105,7 +104,7 @@ const parseurl = function () {
 };
 
 // update the shareable link URL with the current recipe and palette
-const setlink = function () {
+const setLink = function () {
   const specs = $('#spec').val().split(/\s+/g).slice(0, 2);
   // strip any existing parameters
   let link = location.protocol + '//' + location.host + location.pathname;
@@ -136,17 +135,6 @@ const init = function () {
     ctx.fillStyle = BG_COLOR;
     ctx.fillRect(0, 0, CANVAS_WIDTH, CANVAS_HEIGHT);
   }
-
-  const exp = $('#expandcollapse');
-  exp.click(function () {
-    if (/minus/.test(exp.attr('src'))) {  // Contains 'minus'
-      $('#morestats').hide();
-      exp.attr('src', 'media/plus.png');
-    } else {
-      $('#morestats').show();
-      exp.attr('src', 'media/minus.png');
-    }
-  });
 };
 
 // clear canvas
@@ -165,7 +153,7 @@ const clear = function () {
 // ===================================================================================================
 const drawpoly = function (poly, tvec) {
   let v;
-  if (!tvec) { tvec = [3, 3, 3]; }
+  if (!tvec) { tvec = [0, 0, 3]; }
 
   // rotate poly in 3d
   const oldxyz = _.map(poly.vertices, x => x);
@@ -209,7 +197,7 @@ const drawpoly = function (poly, tvec) {
       ctx.fillStyle =
         `rgba(${round(clr[0] * 255)}, ${round(clr[1] * 255)}, ${round(clr[2] * 255)}, ${1.0})`;
       ctx.fill();
-      ctx.strokeStyle = 'rgba(0,0,0,0.3)';  // light lines, less cartoony, more render-y
+      ctx.strokeStyle = 'rgba(0,0,0,0.3)'; // light lines, less cartoony, more render-y
       ctx.stroke();
     }
     if (PaintMode === 'stroke') {
@@ -218,9 +206,30 @@ const drawpoly = function (poly, tvec) {
     }
   }
 
+  // labelFaces(poly, tvec);
+
   // reset coords, for setting absolute rotation, as poly is passed by ref
   poly.vertices = oldxyz;
 };
+
+const labelFaces = function (poly, tvec, show_hidden = false) {
+  // Label all visible faces
+  ctx.font = '10px Arial';
+  ctx.fillStyle = 'black';
+  let centers = poly.centers();
+  let normals = poly.normals();
+  for (let fno = 0; fno < poly.faces.length; fno++) {
+    let [x, y] = perspT(add(tvec, centers[fno]), persp_z_max, persp_z_min, persp_ratio, perspective_scale);
+    if (normals[fno][2] < 0 && show_hidden) {
+      ctx.fillStyle = 'gray';
+      ctx.fillText(`${fno}`, x + _2d_x_offset, y + _2d_y_offset);
+    } else {
+      ctx.fillStyle = 'black';
+      ctx.fillText(`${fno}`, x + _2d_x_offset, y + _2d_y_offset);
+    }
+  }
+  // window._fvs = poly.faces.map(f => f.map(v => poly.vertices[v]));
+}
 
 // draw polyhedra just once
 // -----------------------------------------------------------------------------------
@@ -246,20 +255,20 @@ $(function () { // wait for page to load
   init(); // init canvas
 
   let specs;
-  const urlParams = parseurl(); // see if recipe is spec'd in URL
+  const urlParams = parseURL(); // see if recipe is spec'd in URL
   if ('recipe' in urlParams) {
     specs = [urlParams['recipe']];
     $('#spec').val(specs);
   } else {
     specs = [randomchoice(DEFAULT_RECIPES)];
     $('#spec').val(specs);
-    setlink();
+    setLink();
   }
 
   // set initial palette spec
   if ('palette' in urlParams) {
     PALETTE = urlParams['palette'].split(/\s+/g);
-    setlink();
+    setLink();
   }
   $('#palette').val(PALETTE.reduce((x, y) => x + ' ' + y));
 
@@ -280,14 +289,14 @@ $(function () { // wait for page to load
     globPolys = _.map(specs, x => generatePoly(x));
     updateStats();
     // animateShape()
-    setlink();
+    setLink();
     drawShape();
   });
 
   // when palette changes in input, redraw polyhedra
   $('#palette').change(function (e) {
     PALETTE = $(this).val().split(/\s+/g);
-    setlink();
+    setLink();
     drawShape();
   });
 
@@ -296,7 +305,7 @@ $(function () { // wait for page to load
     let newpalette = rndcolors();
     PALETTE = newpalette;
     $('#palette').val(newpalette.join(' '));
-    setlink();
+    setLink();
     drawShape();
   });
 
@@ -399,7 +408,7 @@ $(function () { // wait for page to load
   });
 
   $('#objsavebutton').click(function (e) {
-    const objtxt = globPolys[0].toOBJ();
+    const objtxt = toOBJ(globPolys[0]);
     const spec = $('#spec').val().split(/\s+/g)[0];
     const filename = `polyhedronisme-${spec.replace(/\([^)]+\)/g, '')}.obj`;
     saveText(objtxt, filename);
@@ -407,7 +416,7 @@ $(function () { // wait for page to load
 
   $('#x3dsavebutton').click(function (e) {
     const triangulated = triangulate(globPolys[0], true); // triangulate to preserve face_colors for 3d printing
-    const x3dtxt = triangulated.toVRML();
+    const x3dtxt = toVRML(triangulated);
     const spec = $('#spec').val().split(/\s+/g)[0];
     const filename = `polyhedronisme-${spec.replace(/\([^)]+\)/g, '')}.wrl`;
     saveText(x3dtxt, filename);
