@@ -39,6 +39,9 @@ and __op__ is one of these [polyhedron-building operators][1]
   __w__ | whirl
   __q__ | quinto
   __l__ | loft
+  __K__ | stake
+  __L__ | lace
+  __I__ | join-lace
   <!--
   __h__ | half (caution: requires even-sided faces, and can produce digons)
   __n__ | needle
