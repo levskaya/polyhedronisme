@@ -23,7 +23,7 @@ import { generatePoly } from './parser';
 import { triangulate } from './topo_operators';
 import { toOBJ, toVRML } from './exporters';
 // import * as testing from './testing'
-import { hardsortfaces } from './depth';
+import { sortFacesCarefully } from './depth';
 
 // docs
 import frontText from './components/front.md'
@@ -154,27 +154,27 @@ const clear = function () {
 // ===================================================================================================
 export const drawpoly = function (poly, tvec) {
   let v;
-  if (!tvec) { tvec = [0, 0, 3]; }
+  if (!tvec) { tvec = [0, 0, 0]; }
 
   // rotate poly in 3d
   const oldxyz = _.map(poly.vertices, x => x);
-  poly.vertices = _.map(poly.vertices, x => mv3(globRotM, x));
+  poly.vertices = _.map(poly.vertices, x => add(mv3(globRotM, x), tvec));
 
   try {
     // z sort faces
-    // sortfaces(poly);
-    hardsortfaces(poly, tvec);
+    sortfaces(poly);
+    //sortFacesCarefully(poly);
 
     for (let fno = 0; fno < poly.faces.length; fno++) {
       var face = poly.faces[fno];
       ctx.beginPath();
       // move to first vertex of face
       const v0 = face[face.length - 1];
-      let [x, y] = perspT(add(tvec, poly.vertices[v0]), persp_z_max, persp_z_min, persp_ratio, perspective_scale);
+      let [x, y] = perspT(poly.vertices[v0], persp_z_max, persp_z_min, persp_ratio, perspective_scale);
       ctx.moveTo(x + _2d_x_offset, y + _2d_y_offset);
       // loop around face, defining polygon
       for (v of face) {
-        [x, y] = perspT(add(tvec, poly.vertices[v]), persp_z_max, persp_z_min, persp_ratio, perspective_scale);
+        [x, y] = perspT(poly.vertices[v], persp_z_max, persp_z_min, persp_ratio, perspective_scale);
         ctx.lineTo(x + _2d_x_offset, y + _2d_y_offset);
       }
 
@@ -210,43 +210,39 @@ export const drawpoly = function (poly, tvec) {
     }
 
     ctx.save();
-    /*
+    
     ctx.fillStyle = 'red';
-    for (let i = 0; i < window._pts.length; i++) {
-      let [ x, y ] = window._pts[i][0];
-      ctx.beginPath();
-      ctx.arc(x + _2d_x_offset, y + _2d_y_offset, 3, 0, Math.PI * 2);
-      ctx.fill();
-      let d = Math.round(window._pts[i][3]*1000)/1000;
-      ctx.fillText(`${window._pts[i][1]},${window._pts[i][2]}:${d}`, x + _2d_x_offset + 5, y + _2d_y_offset);
+    if (window._pts) {
+      for (let i = 0; i < window._pts.length; i++) {
+        let [ x, y ] = window._pts[i][0];
+        ctx.beginPath();
+        ctx.arc(x + _2d_x_offset, y + _2d_y_offset, 3, 0, Math.PI * 2);
+        ctx.fill();
+        let d = Math.round(window._pts[i][3]*1000)/1000;
+        ctx.fillText(`${window._pts[i][1]},${window._pts[i][2]}:${d}`, x + _2d_x_offset + 5, y + _2d_y_offset);
+      }
     }
     ctx.lineWidth = 2.0;
     ctx.strokeStyle = 'black';
-    ctx.fillStyle = 'rgba(255,0,0,0.5)'; 
-    for (let i = 0; i < window._traces.length; i++) {
-      let trace = window._traces[i];
-      let [ x, y ] = trace[trace.length - 1];
-      ctx.beginPath();
-      ctx.moveTo(x + _2d_x_offset, y + _2d_y_offset);
-      for (let j = 0; j < window._traces[i].length; j++) {
-      // loop around face, defining polygon
-        let [ x, y ] = trace[j];
-        ctx.lineTo(x + _2d_x_offset, y + _2d_y_offset);
+    ctx.fillStyle = 'rgba(255,0,0,0.5)';
+    if (window._traces) {
+      for (let i = 0; i < window._traces.length; i++) {
+        let trace = window._traces[i];
+        let [ x, y ] = trace[trace.length - 1];
+        ctx.beginPath();
+        ctx.moveTo(x + _2d_x_offset, y + _2d_y_offset);
+        for (let j = 0; j < window._traces[i].length; j++) {
+          // loop around face, defining polygon
+          let [ x, y ] = trace[j];
+          ctx.lineTo(x + _2d_x_offset, y + _2d_y_offset);
+        }
       }
       ctx.stroke();
       ctx.fill();
-    // let d = Math.round(window._pts[i][3]*1000)/1000;
-    // ctx.fillText(`${window._pts[i][1]},${window._pts[i][2]}:${d}`, x + _2d_x_offset + 5, y + _2d_y_offset);
-    } */
-    
-    // console.log('rayorigin z', ((persp_z_max * persp_ratio) - persp_z_min) / (1 - persp_ratio));
-    // const magicz = ((persp_ratio) / (1 - persp_ratio)) * (perspective_scale - persp_z_max + persp_z_min / persp_ratio);
-    // const z0 = ((persp_z_max * persp_ratio) - persp_z_min) / (1 - persp_ratio);
-    // const scalefactor = (perspective_scale * persp_ratio) / (1 - persp_ratio);
-    // console.log('magic z', scalefactor-z0);
-    // labelFaces(poly, tvec);
-
+    } 
+    // labelFaces(poly);
     ctx.restore();
+
   } catch (e) {
     console.log(e)
   } finally {
@@ -255,14 +251,14 @@ export const drawpoly = function (poly, tvec) {
   }
 };
 
-const labelFaces = function (poly, tvec, show_hidden = false) {
+const labelFaces = function (poly, show_hidden = false) {
   // Label all visible faces
   ctx.font = '10px Arial';
   ctx.fillStyle = 'black';
   let centers = poly.centers();
   let normals = poly.normals();
   for (let fno = 0; fno < poly.faces.length; fno++) {
-    let [x, y] = perspT(add(tvec, centers[fno]), persp_z_max, persp_z_min, persp_ratio, perspective_scale);
+    let [x, y] = perspT(centers[fno], persp_z_max, persp_z_min, persp_ratio, perspective_scale);
     if (normals[fno][2] < 0 && show_hidden) {
       ctx.fillStyle = 'gray';
       ctx.fillText(`${fno}`, x + _2d_x_offset, y + _2d_y_offset);
@@ -278,7 +274,7 @@ const labelFaces = function (poly, tvec, show_hidden = false) {
 // -----------------------------------------------------------------------------------
 const drawShape = function () {
   clear();
-  globPolys.map((p, i) => drawpoly(p, [0 + (3 * i), 0, 0]));
+  globPolys.map((p, i) => drawpoly(p, [0 + (3 * i), 0, 3]));
 };
 
 // update V E F stats on page
