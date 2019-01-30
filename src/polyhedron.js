@@ -13,8 +13,9 @@
 import { _ } from 'underscore';
 import { add, sub, mult, mag2, linePointDist2, normal, __range__,
   random, sigfigs, planararea, faceSignature, sqrt, sin, cos, PI, pow } from './geo';
-import { PALETTE, COLOR_METHOD, COLOR_SENSITIVITY } from './main';
+import { VISIBILITY_ZNORMAL_CUTOFF, PALETTE, COLOR_METHOD, COLOR_SENSITIVITY } from './main';
 import { canonicalXYZ, adjustXYZ } from './geo_operators';
+import { sortFacesCarefully } from './depth';
 
 
 // Polyhedra Functions
@@ -143,18 +144,28 @@ export const paintPolyhedron = function (poly) {
 
 // z sorts faces of poly
 // -------------------------------------------------------------------------
-export const sortfaces = function (poly) {
-  const centroids  = poly.centers();
-  const normals    = poly.normals();
+export const sortFaces = function (poly, mode = 'FAST') {
+  if (mode === 'FAST') {
+    sortFacesFast(poly); // defined below
+  } else {
+    sortFacesCarefully(poly); // much, much more complicated, slower, ~perfect
+  }
+}
 
-  // sort by centroid z-depth
+// Very fast, practical face-ordering that works fine for most polyhedra.
+// - Fails for mixtures of long, thin faces and smaller polygons.
+export const sortFacesFast = function (poly) {
+  const centroids = poly.centers();
+  const normals = poly.normals();
+
+  // Painter's algorithm
   // const zCentroidSort = (a, b) => a[0][2] - b[0][2];
 
+  // Modified Painter's algorithm
   // First sort by faces pointing backwards, if both point forwards compare centroids z-depth.
   const zCentroidNormalSort = function (a, b) {
-    return -100 * (a[1][2] < -0.01) + 100 * (b[1][2] < -0.01) + a[0][2] - b[0][2];
+    return -1000 * (a[1][2] < -0.01) + 1000 * (b[1][2] < -0.01) + a[0][2] - b[0][2];
   }
-
   const zsortIndex = _.zip(centroids, normals, __range__(0, poly.faces.length, false))
     .sort(zCentroidNormalSort)
     .map(x => x[2]);
@@ -162,6 +173,7 @@ export const sortfaces = function (poly) {
   // sort all face-associated properties
   poly.faces = zsortIndex.map(idx => poly.faces[idx]);
   poly.face_classes = zsortIndex.map(idx => poly.face_classes[idx]);
+  poly.visibility = zsortIndex.map(idx => normals[idx][2] > VISIBILITY_ZNORMAL_CUTOFF);
 };
 
 
@@ -172,7 +184,10 @@ export class Polyhedron {
     this.faces = faces || [];
     // array of vertex coords.  vertices.length = # of vertices
     this.vertices  = verts || [];
+    // name used for linking
     this.name = name  || 'null polyhedron';
+    // used for rendering
+    this.visibility = [];
   }
 
   // return a non-redundant list of the polyhedron's edges

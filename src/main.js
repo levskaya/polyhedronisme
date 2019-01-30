@@ -18,7 +18,7 @@ import { _ } from 'underscore';
 
 import { add, clone, eye3, mv3, mm3, getVec2VecRotM, perspT, invperspT,
   vec_rotm, rotm, mult, dot, unit, normal, round, randomchoice, PI } from './geo';
-import { rwb_palette, sortfaces, palette, rndcolors } from './polyhedron';
+import { rwb_palette, sortFaces, palette, rndcolors } from './polyhedron';
 import { generatePoly } from './parser';
 import { triangulate } from './topo_operators';
 import { toOBJ, toVRML } from './exporters';
@@ -58,6 +58,10 @@ export const persp_ratio = 0.8;
 const _2d_x_offset = CANVAS_WIDTH / 2;
 const _2d_y_offset = CANVAS_HEIGHT / 2;
 
+export let SORTING_ALGO = 'FAST'; // or 'CAREFUL';
+window.set_algo = x => (SORTING_ALGO = x);
+
+export const VISIBILITY_ZNORMAL_CUTOFF = -0.1;
 export var PALETTE = rwb_palette;
 const BG_CLEAR = true; // clear background or colored?
 const BG_COLOR = 'rgba(255,255,255,1.0)'; // background color
@@ -162,10 +166,10 @@ export const drawpoly = function (poly, tvec) {
 
   try {
     // z sort faces
-    sortfaces(poly);
-    //sortFacesCarefully(poly);
+    sortFaces(poly, SORTING_ALGO);
 
     for (let fno = 0; fno < poly.faces.length; fno++) {
+      if (!poly.visibility[fno]) { continue; }
       var face = poly.faces[fno];
       ctx.beginPath();
       // move to first vertex of face
@@ -239,7 +243,7 @@ export const drawpoly = function (poly, tvec) {
       }
       ctx.stroke();
       ctx.fill();
-    } 
+    }
     // labelFaces(poly);
     ctx.restore();
 

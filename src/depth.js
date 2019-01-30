@@ -17,7 +17,7 @@ import * as martinez from 'martinez-polygon-clipping';
 import { abs, add, sub, mag2, __range__,
   calcCentroid, calcCentroid2d, dot2d, sqrt, sin, planararea2d,
   cos, PI, pow, dot, tween, tween2d, perspT } from './geo';
-import { persp_z_max, persp_z_min, persp_ratio, perspective_scale } from './main';
+import { VISIBILITY_ZNORMAL_CUTOFF, persp_z_max, persp_z_min, persp_ratio, perspective_scale } from './main';
 import { Polyhedron }  from './polyhedron';
 import { TopoSorter } from './toposort';
 
@@ -61,6 +61,28 @@ const simple_intersect = function (A_Vs2d, B_Vs2d) {
     return [];
   }
 }
+
+const simple_difference = function (A_Vs2d, B_Vs2d) {
+  // find 2d intersection of two polygons each specified as list of 2d vertices.
+  try {
+    // martinez lib expects geojson multi-path polygon which uses repeated final vertices.
+    const A_Vs2d_ = A_Vs2d.concat([A_Vs2d[0]]);
+    const B_Vs2d_ = B_Vs2d.concat([B_Vs2d[0]]);
+    const result = martinez.diff([A_Vs2d_], [B_Vs2d_]);
+    // assume simple intersection structure
+    // take 1st polygon, 1st path, drop last repeated vertex
+    if (result.length > 0 && result[0].length > 0) {
+      //return result[0][0].slice(0, result[0][0].length);
+      console.log(result);
+    } else {
+      return [];
+    }
+  } catch (e) { // catch rare errors
+    console.log(e);
+    return [];
+  }
+}
+window.simple_difference = simple_difference;
 
 const get_inset_verts = function (verts, alpha) {
   let c = calcCentroid(verts);
@@ -153,8 +175,8 @@ export const sortFacesCarefully = function (poly) {
   let visible_faces = [];
   let zsortIndex = [];
   // debug
-  window._pts = [];
-  window._traces = [];
+  // window._pts = [];
+  // window._traces = [];
 
   // pre-sort by z-centroid
   alldata.sort((a, b) => a[0][2] - b[0][2]);
@@ -194,4 +216,5 @@ export const sortFacesCarefully = function (poly) {
   // sort all face-associated properties according to the topological sort
   poly.faces = zsortIndex.map(idx => poly.faces[idx]);
   poly.face_classes = zsortIndex.map(idx => poly.face_classes[idx]);
+  poly.visibility = zsortIndex.map(idx => normals[idx][2] > VISIBILITY_ZNORMAL_CUTOFF); 
 };
