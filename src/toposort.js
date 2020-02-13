@@ -22,11 +22,13 @@ export class TopoSorter {
     // inverted graph
     this.revgraph = __range__(0, num_nodes, false).map(i => []);
     this.num_nodes = num_nodes;
+    this.num_edges = 0;
   }
 
   addEdge (n, m) {
     this.fwdgraph[n].push(m);
     this.revgraph[m].push(n);
+    this.num_edges++;
   }
 
   removeEdge (n, m) {
@@ -35,6 +37,7 @@ export class TopoSorter {
     if (idxm > -1 && idxn > -1) {
       this.fwdgraph[n].splice(idxm, 1);
       this.revgraph[m].splice(idxn, 1);
+      this.num_edges--;
     } else {
       throw new Error('Malformed graph.');
     }

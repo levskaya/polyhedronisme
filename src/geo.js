@@ -452,6 +452,7 @@ export const getVec2VecRotM = function (vec1, vec2) {
   const angle = acos(dot(vec1, vec2));
   return vec_rotm(-1 * angle, axis[0], axis[1], axis[2]);
 };
+window.getVec2VecRotM=getVec2VecRotM;
 
 // 2d point inclusion in 2d poly by winding number
 // see http://geomalgorithms.com/a03-_inclusion.html
