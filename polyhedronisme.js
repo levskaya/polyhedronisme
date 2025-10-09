@@ -7055,35 +7055,39 @@ const planarize = function(vertices, faces) {
 };
 
 // combines above three constraint adjustments in iterative cycle
-const canonicalize = function(poly, Niter) {
-  if (!Niter) { 
-    Niter = 1;
-  }
-  console.log(`Canonicalizing ${poly.name}...`);
-  const faces = poly.faces;
-  const edges = poly.edges();
-  let newVs = poly.vertices;
-  let maxChange = 1.0; // convergence tracker
-  for (let i = 0; i <= Niter; i++) {
-    const oldVs = copyVecArray(newVs); //copy vertices
-    newVs = tangentify(newVs, edges);
-    newVs = recenter(newVs, edges);
-    newVs = planarize(newVs, faces);
-    maxChange = _.max(_.map(_.zip(newVs, oldVs), 
-                            ([x, y])=>mag(sub(x, y))
-                            ));
-    if (maxChange < 1e-8) {
-      break;
+const canonicalize = async function (poly, Niter) {
+    if (!Niter) {
+        Niter = 1;
     }
-  }
-  // one should now rescale, but not rescaling here makes for very interesting numerical
-  // instabilities that make interesting mutants on multiple applications...
-  // more experience will tell what to do
-  //newVs = rescale(newVs)
-  console.log(`[canonicalization done, last |deltaV|=${maxChange}]`);
-  const newpoly = new polyhedron(newVs, poly.faces, poly.name);
-  console.log("canonicalize" , newpoly);
-  return newpoly;
+    console.log(`Canonicalizing ${poly.name}...`);
+    const faces = poly.faces;
+    const edges = poly.edges();
+    let newVs = poly.vertices;
+    let maxChange = 1.0; // convergence tracker
+    for (let i = 0; i <= Niter; i++) {
+        const oldVs = copyVecArray(newVs); //copy vertices
+        newVs = tangentify(newVs, edges);
+        newVs = recenter(newVs, edges);
+        newVs = planarize(newVs, faces);
+        maxChange = _.max(_.map(_.zip(newVs, oldVs),
+            ([x, y]) => mag(sub(x, y))
+        ));
+        if (maxChange < 1e-8) {
+            break;
+        }
+        // update the display to show animated progress
+        // TODO: test and debug
+        drawShape();
+        await scheduler.yield();
+    }
+    // one should now rescale, but not rescaling here makes for very interesting numerical
+    // instabilities that make interesting mutants on multiple applications...
+    // more experience will tell what to do
+    //newVs = rescale(newVs)
+    console.log(`[canonicalization done, last |deltaV|=${maxChange}]`);
+    const newpoly = new polyhedron(newVs, poly.faces, poly.name);
+    console.log("canonicalize", newpoly);
+    return newpoly;
 };
 
 // Hacky Canonicalization Algorithm
