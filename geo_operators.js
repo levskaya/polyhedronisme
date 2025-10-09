@@ -108,10 +108,14 @@ const canonicalize = async function (poly, Niter) {
         if (maxChange < 1e-8) {
             break;
         }
+        
+        // Update the polyhedron vertices to show progress
+        poly.vertices = newVs;
         // update the display to show animated progress
         // TODO: test and debug
         drawShape();
-        await scheduler.yield();
+        // Yield to browser to allow display update
+        await new Promise(resolve => setTimeout(resolve, 0));
     }
     // one should now rescale, but not rescaling here makes for very interesting numerical
     // instabilities that make interesting mutants on multiple applications...
