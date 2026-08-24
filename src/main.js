@@ -32,7 +32,6 @@ import frontText from './components/front.md'
 require('./assets/polyhedronisme.css');
 
 // debug
-// window.testrig = testing.testrig;
 Vue.config.productionTip = false;
 
 // eslint-disable-next-line no-new
@@ -59,7 +58,7 @@ const _2d_x_offset = CANVAS_WIDTH / 2;
 const _2d_y_offset = CANVAS_HEIGHT / 2;
 
 export let SORTING_ALGO = 'FAST'; // or 'CAREFUL';
-window.set_algo = x => (SORTING_ALGO = x);
+// window.set_algo = x => (SORTING_ALGO = x);
 
 // Back-face culling cutoff disabled for now (set to -Infinity so all faces pass through)
 export const VISIBILITY_ZNORMAL_CUTOFF = -Infinity; // originally -0.1

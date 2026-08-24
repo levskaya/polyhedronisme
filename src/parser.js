@@ -14,8 +14,6 @@ import * as polyhedron from './polyhedron';
 import * as topo from './topo_operators';
 import * as geo from './geo_operators';
 
-import * as depth from './depth';
-
 // Load peg.js parser for operator-chain-on-base-polyhedra recipes
 var opParser = require('./original.pegjs');
 
@@ -34,9 +32,7 @@ const primitiveMap = {
   'Y': polyhedron.pyramid,    // takes integer arg
   'J': polyhedron.johnson,    // takes integer arg
   'U': polyhedron.cupola,     // takes integer arg
-  'V': polyhedron.anticupola,  // takes integer arg
-  'Q': polyhedron.Qgrid,  // takes integer arg
-  'X': depth.testShape
+  'V': polyhedron.anticupola  // takes integer arg
 };
 
 const opMap = {

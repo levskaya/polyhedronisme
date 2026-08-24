@@ -12,12 +12,8 @@
 /* eslint-disable no-multi-spaces */
 
 import _ from 'underscore';
-// window._ = _;
-
 import * as martinez from 'martinez-polygon-clipping';
 import * as polygonclipping from 'polygon-clipping';
-window.martinez = martinez;
-window.polygonclipping = polygonclipping;
 
 import { abs, add, sub, mag2, __range__,
   calcCentroid, calcCentroid2d, dot2d, sqrt, sin, planararea2d,
@@ -75,35 +71,11 @@ const simple_intersect = function (A_Vs2d, B_Vs2d) {
     }
   } catch (e) { // catch rare errors
     console.log(e);
-    // console.log(printpoly(A_Vs2d_), printpoly(B_Vs2d_));
     console.log(printpoly(A_Vs2d), printpoly(B_Vs2d));
     return [];
   }
 }
-window.simple_intersect=simple_intersect;
-/*
-const simple_difference = function (A_Vs2d, B_Vs2d) {
-  // find 2d intersection of two polygons each specified as list of 2d vertices.
-  try {
-    // martinez lib expects geojson multi-path polygon which uses repeated final vertices.
-    const A_Vs2d_ = A_Vs2d.concat([A_Vs2d[0]]);
-    const B_Vs2d_ = B_Vs2d.concat([B_Vs2d[0]]);
-    const result = martinez.diff([A_Vs2d_], [B_Vs2d_]);
-    // assume simple intersection structure
-    // take 1st polygon, 1st path, drop last repeated vertex
-    if (result.length > 0 && result[0].length > 0) {
-      // return result[0][0].slice(0, result[0][0].length);
-      console.log(result);
-    } else {
-      return [];
-    }
-  } catch (e) { // catch rare errors
-    console.log(e);
-    return [];
-  }
-}
-window.simple_difference = simple_difference;
-*/
+
 export const get_inset_verts = function (verts, alpha) {
   let c = calcCentroid(verts);
   return verts.map(v => tween(v, c, alpha))
@@ -168,8 +140,6 @@ export const P_obscures_Q = function (P, Q) {
   if (isect.length === 0) {  // no intersection
     return 0;
   }
-  // window._traces.push(isect); // debug
-
   const c2d = calcCentroid2d(isect);  // get 2d centroid of projected 2d intersection area
   const area2d = planararea2d(isect); // measure intersection area in pixel coordinates
   if (area2d < AREA_CUTOFF) {  // if intersection is tiny, ignore
@@ -195,9 +165,6 @@ export const sortFacesCarefully = function (poly) {
   const original_face_idx = x => x[4];
   let visible_faces = [];
   let zsortIndex = [];
-  // debug
-  // window._pts = [];
-  // window._traces = [];
 
   // pre-sort by z-centroid
   alldata.sort((a, b) => a[0][2] - b[0][2]);
