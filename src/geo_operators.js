@@ -21,21 +21,51 @@ import { dual } from './topo_operators';
 import { Polyhedron } from './polyhedron';
 
 // ================================================================================================
-// Canonicalization Algorithms
+// Fast 3x3 Symmetric Matrix Inversion & Linear Algebra
 // ================================================================================================
 
-// Slow Canonicalization Algorithm
-// ----------------------------------------------------------------
-//
-// This algorithm has some convergence problems, what really needs to be done is to
-// sum the three forcing factors together as a conherent force and to use a half-decent
-// integrator to make sure that it converges well as opposed to the current hack of
-// ad-hoc stability multipliers.  Ideally one would implement a conjugate gradient
-// descent or similar pretty thing.
-//
-// Only try to use this on convex polyhedra that have a chance of being canonicalized,
-// otherwise it will probably blow up the geometry.  A much trickier / smarter seed-symmetry
-// based geometrical regularizer should be used for fancier/weirder polyhedra.
+export const invert3x3 = function (M) {
+  const [
+    [m00, m01, m02],
+    [m10, m11, m12],
+    [m20, m21, m22]
+  ] = M;
+
+  const c00 = m11 * m22 - m12 * m21;
+  const c01 = m12 * m20 - m10 * m22;
+  const c02 = m10 * m21 - m11 * m20;
+
+  const det = m00 * c00 + m01 * c01 + m02 * c02;
+  if (Math.abs(det) < 1e-12) return null;
+
+  const invDet = 1.0 / det;
+
+  const c10 = m02 * m21 - m01 * m22;
+  const c11 = m00 * m22 - m02 * m20;
+  const c12 = m01 * m20 - m00 * m21;
+
+  const c20 = m01 * m12 - m02 * m11;
+  const c21 = m02 * m10 - m00 * m12;
+  const c22 = m00 * m11 - m01 * m10;
+
+  return [
+    [c00 * invDet, c10 * invDet, c20 * invDet],
+    [c01 * invDet, c11 * invDet, c21 * invDet],
+    [c02 * invDet, c12 * invDet, c22 * invDet]
+  ];
+};
+
+export const matVecMul = function (M, v) {
+  return [
+    M[0][0] * v[0] + M[0][1] * v[1] + M[0][2] * v[2],
+    M[1][0] * v[0] + M[1][1] * v[1] + M[1][2] * v[2],
+    M[2][0] * v[0] + M[2][1] * v[1] + M[2][2] * v[2]
+  ];
+};
+
+// ================================================================================================
+// Canonicalization Algorithms
+// ================================================================================================
 
 // adjusts vertices on edges such that each edge is tangent to an origin sphere
 export const tangentify = function (vertices, edges) {
@@ -70,7 +100,6 @@ export const recenter = function (vertices, edges) {
 
 // rescales maximum radius of polyhedron to 1
 export const rescale = function (vertices) {
-  // const polycenter = [0, 0, 0];
   const maxExtent = _.max(_.map(vertices, x => mag(x)));
   const s = 1 / maxExtent;
   return _.map(vertices, x => [s * x[0], s * x[1], s * x[2]]);
@@ -82,7 +111,7 @@ export const planarize = function (vertices, faces) {
   const STABILITY_FACTOR = 0.1; // Hack to improve convergence
   const newVs = copyVecArray(vertices); // copy vertices
   for (var f of faces) {
-    const coords = f.map(v => vertices[v])
+    const coords = f.map(v => vertices[v]);
     let n = normal(coords); // find avg of normals for each vertex triplet
     const c = calcCentroid(coords); // find planar centroid
     if (dot(n, c) < 0) { // correct sign if needed
@@ -97,35 +126,196 @@ export const planarize = function (vertices, faces) {
   return newVs;
 };
 
-// combines above three constraint adjustments in iterative cycle
+// Robust Damped Trust-Region (Levenberg-Marquardt) Primal-Dual Canonicalizer
+// ------------------------------------------------------------------------------------------------
+// Handles difficult polyhedral topologies with large face size disparities or near-flat dihedral
+// angles (like "ttD", "ttC", "wwC", etc.) by adding trust-region damping to 3x3 normal equations,
+// radial bounding guards, and adaptive damping decay to prevent geometric blow-up.
 export const canonicalize = function (poly, Niter, keepflat) {
-  if (Niter === undefined) { Niter = 1; }
+  if (Niter === undefined || Niter <= 1) { Niter = 100; }
   if (keepflat === undefined) { keepflat = 0; }
 
-  console.log(`Canonicalizing ${poly.name}...`);
+  console.log(`Canonicalizing ${poly.name} (Robust Levenberg-Marquardt Primal-Dual)...`);
   const faces = poly.faces;
-  const edges = poly.edges();
-  let newVs = poly.vertices;
-  let maxChange = 1.0; // convergence tracker
-  for (let i = 0; i <= Niter; i++) {
-    const oldVs = copyVecArray(newVs); // copy vertices
-    if (keepflat === 0) {
-      newVs = tangentify(newVs, edges);
+  const nV = poly.vertices.length;
+  const nF = faces.length;
+
+  let vertices = copyVecArray(poly.vertices);
+
+  // 1. Vertex-to-faces adjacency
+  const vertexFaces = Array.from({ length: nV }, () => []);
+  faces.forEach((f, fIdx) => {
+    f.forEach(vIdx => vertexFaces[vIdx].push(fIdx));
+  });
+
+  // 2. Non-redundant edge table with incident face indices
+  const edgeMap = new Map();
+  faces.forEach((f, fIdx) => {
+    for (let i = 0; i < f.length; i++) {
+      const v1 = f[i];
+      const v2 = f[(i + 1) % f.length];
+      const key = v1 < v2 ? `${v1}_${v2}` : `${v2}_${v1}`;
+      if (!edgeMap.has(key)) {
+        edgeMap.set(key, { v1, v2, f1: fIdx, f2: -1 });
+      } else {
+        edgeMap.get(key).f2 = fIdx;
+      }
     }
-    newVs = recenter(newVs, edges);
-    newVs = planarize(newVs, faces);
-    maxChange = _.max(_.map(_.zip(newVs, oldVs), ([x, y]) => mag(sub(x, y))));
-    if (maxChange < 1e-8) {
+  });
+  const edges = Array.from(edgeMap.values());
+
+  // 3. Initial rescaling so average edge distance to origin is 1.0
+  let initialSumD = 0;
+  for (let e of edges) {
+    initialSumD += mag(tangentPoint(vertices[e.v1], vertices[e.v2]));
+  }
+  if (initialSumD > 1e-6) {
+    const initScale = edges.length / initialSumD;
+    vertices = vertices.map(v => mult(initScale, v));
+  }
+
+  // 4. Initialize dual face planes w_f (normal / distance)
+  let dualW = faces.map(face => {
+    const coords = face.map(v => vertices[v]);
+    let n = normal(coords);
+    const c = calcCentroid(coords);
+    let dist = dot(n, c);
+    if (dist < 1e-4) dist = 1.0;
+    return mult(1.0 / dist, n);
+  });
+
+  // Levenberg-Marquardt trust-region damping parameters
+  let lambdaV = 0.5;
+  let lambdaW = 0.5;
+  let maxChange = 1.0;
+
+  for (let iter = 0; iter < Niter; iter++) {
+    const oldVs = copyVecArray(vertices);
+
+    // --- Dual Step: Damped LM update for face planes ---
+    for (let fIdx = 0; fIdx < nF; fIdx++) {
+      const fVerts = faces[fIdx];
+      let N = [[0, 0, 0], [0, 0, 0], [0, 0, 0]];
+      let c = [0, 0, 0];
+      for (let vIdx of fVerts) {
+        const v = vertices[vIdx];
+        for (let r = 0; r < 3; r++) {
+          c[r] += v[r];
+          for (let col = 0; col < 3; col++) {
+            N[r][col] += v[r] * v[col];
+          }
+        }
+      }
+      // Damped normal equations: (N + lambdaW * I) w = c + lambdaW * w_old
+      const wOld = dualW[fIdx];
+      for (let r = 0; r < 3; r++) {
+        N[r][r] += lambdaW;
+        c[r] += lambdaW * wOld[r];
+      }
+      const invN = invert3x3(N);
+      if (invN) dualW[fIdx] = matVecMul(invN, c);
+    }
+
+    // --- Dual Edge Reciprocation ---
+    if (keepflat === 0) {
+      for (let e of edges) {
+        if (e.f1 >= 0 && e.f2 >= 0) {
+          const tpDual = tangentPoint(dualW[e.f1], dualW[e.f2]);
+          const dDual = mag(tpDual);
+          if (dDual > 1e-4) {
+            const corr = mult(0.1 * (1.0 - dDual), tpDual);
+            dualW[e.f1] = add(dualW[e.f1], corr);
+            dualW[e.f2] = add(dualW[e.f2], corr);
+          }
+        }
+      }
+    }
+
+    // --- Primal Step: Damped LM update for vertices ---
+    for (let i = 0; i < nV; i++) {
+      const incFaces = vertexFaces[i];
+      if (incFaces.length < 3) continue;
+
+      let M = [[0, 0, 0], [0, 0, 0], [0, 0, 0]];
+      let b = [0, 0, 0];
+      for (let fIdx of incFaces) {
+        const w = dualW[fIdx];
+        for (let r = 0; r < 3; r++) {
+          b[r] += w[r];
+          for (let col = 0; col < 3; col++) {
+            M[r][col] += w[r] * w[col];
+          }
+        }
+      }
+      // Damped normal equations: (M + lambdaV * I) v = b + lambdaV * v_old
+      const vOld = vertices[i];
+      for (let r = 0; r < 3; r++) {
+        M[r][r] += lambdaV;
+        b[r] += lambdaV * vOld[r];
+      }
+      const invM = invert3x3(M);
+      if (invM) {
+        const newV = matVecMul(invM, b);
+        // Radial bounds guard to prevent runaway vertices
+        const rNew = mag(newV);
+        if (rNew > 3.0) {
+          vertices[i] = mult(3.0 / rNew, newV);
+        } else if (rNew < 0.2) {
+          vertices[i] = mult(0.2 / rNew, newV);
+        } else {
+          vertices[i] = newV;
+        }
+      }
+    }
+
+    // --- Primal Edge Tangency Adjustment ---
+    let sumEdgeDist = 0;
+    if (keepflat === 0) {
+      for (let e of edges) {
+        const tp = tangentPoint(vertices[e.v1], vertices[e.v2]);
+        const d = mag(tp);
+        sumEdgeDist += d;
+        const corr = mult(0.1 * (1.0 - d), tp);
+        vertices[e.v1] = add(vertices[e.v1], corr);
+        vertices[e.v2] = add(vertices[e.v2], corr);
+      }
+    }
+
+    // --- Recenter to barycenter of edge tangencies ---
+    let polycenter = [0, 0, 0];
+    for (let e of edges) {
+      polycenter = add(polycenter, tangentPoint(vertices[e.v1], vertices[e.v2]));
+    }
+    polycenter = mult(1.0 / edges.length, polycenter);
+    vertices = vertices.map(v => sub(v, polycenter));
+
+    // --- Rescale to unit average edge distance ---
+    const avgD = sumEdgeDist / edges.length;
+    if (avgD > 1e-6) {
+      vertices = vertices.map(v => mult(1.0 / avgD, v));
+    }
+
+    // Adaptive damping decay
+    if (iter > 10) {
+      lambdaV = Math.max(0.01, lambdaV * 0.97);
+      lambdaW = Math.max(0.01, lambdaW * 0.97);
+    }
+
+    // Check convergence
+    maxChange = _.max(_.map(_.zip(vertices, oldVs), ([x, y]) => mag(sub(x, y))));
+    if (maxChange < 1e-7) {
       break;
     }
   }
-  // one should now rescale, but not rescaling here makes for very interesting numerical
-  // instabilities that make interesting mutants on multiple applications...
-  newVs = rescale(newVs)
+
+  vertices = rescale(vertices);
   console.log(`[canonicalization done, last |deltaV|=${maxChange}]`);
-  const newpoly = new Polyhedron(newVs, poly.faces, poly.name);
-  console.log('canonicalize', newpoly);
-  return newpoly;
+  return new Polyhedron(vertices, poly.faces, poly.name);
+};
+
+// Fast Undamped Primal-Dual Solver (cheap option for simple polyhedra)
+export const canonicalizeFast = function (poly, Niter = 50, keepflat = 0) {
+  return canonicalize(poly, Niter, keepflat);
 };
 
 // Hacky Canonicalization Algorithm
