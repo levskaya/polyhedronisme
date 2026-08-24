@@ -61,7 +61,8 @@ const _2d_y_offset = CANVAS_HEIGHT / 2;
 export let SORTING_ALGO = 'FAST'; // or 'CAREFUL';
 window.set_algo = x => (SORTING_ALGO = x);
 
-export const VISIBILITY_ZNORMAL_CUTOFF = -0.1;
+// Back-face culling cutoff disabled for now (set to -Infinity so all faces pass through)
+export const VISIBILITY_ZNORMAL_CUTOFF = -Infinity; // originally -0.1
 export var PALETTE = rwb_palette;
 const BG_CLEAR = true; // clear background or colored?
 const BG_COLOR = 'rgba(255,255,255,1.0)'; // background color
@@ -169,7 +170,8 @@ export const drawpoly = function (poly, tvec) {
     sortFaces(poly, SORTING_ALGO);
 
     for (let fno = 0; fno < poly.faces.length; fno++) {
-      if (!poly.visibility[fno]) { continue; }
+      // Back-face culling disabled for now (was leading to artifacts on certain polyhedra/orientations)
+      // if (!poly.visibility[fno]) { continue; }
       var face = poly.faces[fno];
       ctx.beginPath();
       // move to first vertex of face
