@@ -42,9 +42,10 @@ export const rwb_palette =
 [ '#ff7777', '#dddddd', '#889999', '#fff0e5',
   '#aa3333', '#ff0000', '#ffffff', '#aaaaaa'];
 
-export const palette = function (n) {
-  const k = n % PALETTE.length;
-  return hextofloats(PALETTE[k])
+export const palette = function (n, pal = (typeof PALETTE !== 'undefined' ? PALETTE : rwb_palette)) {
+  const p = (pal && pal.length) ? pal : rwb_palette;
+  const k = ((n % p.length) + p.length) % p.length;
+  return hextofloats(p[k]);
 };
 
 // converts [h,s,l] float args to [r,g,b] list

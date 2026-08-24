@@ -12,8 +12,10 @@
 /* eslint-disable camelcase */
 /* eslint-disable standard/array-bracket-even-spacing */
 /* eslint-disable no-multi-spaces */
-import { normal } from './geo';
-import { palette } from './polyhedron';
+import { normal, dot, unit, mult, round, add, mv3, clone, perspT, eye3 } from './geo';
+import { palette as defaultPalette, sortFaces } from './polyhedron';
+import * as polygonclipping from 'polygon-clipping';
+import * as martinez from 'martinez-polygon-clipping';
 
 const vertColors = function (poly) {
   const vertcolors = [];
@@ -82,7 +84,7 @@ export const toX3D = function (poly) {
   // per-face Color
   x3dstr += '<Color color="';
   for (let cl of vertColors(this)) { // @face_class
-    const clr = palette(cl);
+    const clr = defaultPalette(cl);
     x3dstr += `${clr[0]} ${clr[1]} ${clr[2]} `;
   }
   x3dstr += '"/>';
@@ -146,7 +148,7 @@ color Color
 `;
   // per-face Color
   for (let cl of poly.face_classes) {
-    const clr = palette(cl);
+    const clr = defaultPalette(cl);
     x3dstr += `${clr[0]} ${clr[1]} ${clr[2]} ,`;
   }
   x3dstr = x3dstr.slice(0, +-2 + 1 || undefined);
@@ -155,7 +157,7 @@ color Color
 }
 colorPerVertex FALSE
 coordIndex
-[\
+[
 `;
   // face indices
   for (let f of poly.faces) {
@@ -180,7 +182,183 @@ coordIndex
       }
     }
   ]
-}\
+}
 `;
   return x3dstr;
+};
+
+// Helper: converts a MultiPolygon array to an SVG path d attribute string
+function multiPolyToPath(multiPoly) {
+  let d = '';
+  for (const poly of multiPoly) {
+    for (const ring of poly) {
+      if (!ring || ring.length === 0) continue;
+      d += `M ${ring[0][0].toFixed(2)} ${ring[0][1].toFixed(2)} `;
+      for (let i = 1; i < ring.length; i++) {
+        d += `L ${ring[i][0].toFixed(2)} ${ring[i][1].toFixed(2)} `;
+      }
+      d += 'Z ';
+    }
+  }
+  return d.trim();
 }
+
+// Produces clean 2D vector SVG with hidden face culling and polygon clipping
+export const toSVG = function (polyIn, options = {}) {
+  const width = options.width || 720;
+  const height = options.height || 500;
+  const xOffset = width / 2;
+  const yOffset = height / 2;
+  const rotM = options.rotM || clone(eye3);
+  const tvec = options.tvec || [0, 0, 3];
+  const pPalette = options.palette || defaultPalette;
+  const paintMode = options.paintMode || 'fillstroke';
+  const cullHidden = options.cullHidden !== false;
+  const scale = options.perspective_scale || 1200;
+  const zMax = options.persp_z_max || 5;
+  const zMin = options.persp_z_min || 0;
+  const pRatio = options.persp_ratio || 0.8;
+  const cutoff = options.visibility_cutoff !== undefined ? options.visibility_cutoff : -0.1;
+
+  // Clone polyhedron so input geometry is not mutated
+  const poly = clone(polyIn);
+  poly.vertices = poly.vertices.map(v => add(mv3(rotM, v), tvec));
+
+  // Sort faces back-to-front carefully (Painter's order)
+  try {
+    sortFaces(poly, 'CAREFUL');
+  } catch (e) {
+    sortFaces(poly, 'FAST');
+  }
+
+  const diffFn = (polygonclipping && polygonclipping.difference) ||
+    (martinez && martinez.diff);
+  const unionFn = (polygonclipping && polygonclipping.union) ||
+    (martinez && martinez.union);
+
+  // Extract visible 2D faces with their shading and colors
+  const visibleFaces = [];
+  for (let fno = 0; fno < poly.faces.length; fno++) {
+    if (!poly.visibility[fno]) continue;
+    const face = poly.faces[fno];
+    const face_verts = face.map(v => poly.vertices[v]);
+    const norm = normal(face_verts);
+    if (norm[2] <= cutoff) continue;
+
+    // 2D projected ring (closed ring for polygon-clipping / SVG)
+    const ring2d = face.map(v => {
+      const [px, py] = perspT(poly.vertices[v], zMax, zMin, pRatio, scale);
+      return [px + xOffset, py + yOffset];
+    });
+    const ring2dClosed = ring2d.concat([ring2d[0]]);
+
+    // Calculate cosine illumination and color
+    let clr;
+    if (typeof pPalette === 'function') {
+      clr = pPalette(poly.face_classes[fno]);
+    } else if (Array.isArray(pPalette)) {
+      clr = defaultPalette(poly.face_classes[fno], pPalette);
+    } else {
+      clr = defaultPalette(poly.face_classes[fno]);
+    }
+    const illum = dot(norm, unit([1, -1, 0]));
+    clr = mult((((illum / 2.0) + 0.5) * 0.7) + 0.3, clr);
+    const r = round(clr[0] * 255);
+    const g = round(clr[1] * 255);
+    const b = round(clr[2] * 255);
+    const fillClr = `rgb(${r},${g},${b})`;
+
+    visibleFaces.push({
+      fno,
+      face,
+      ring2dClosed,
+      fillClr,
+      clr
+    });
+  }
+
+  const svgPaths = [];
+
+  if (cullHidden && diffFn && unionFn) {
+    // Process front-to-back (from highest z / foreground down to background)
+    let occluderMask = [];
+
+    for (let i = visibleFaces.length - 1; i >= 0; i--) {
+      const vf = visibleFaces[i];
+      const subjectPoly = [[[ ...vf.ring2dClosed ]]];
+
+      let visibleRegion;
+      if (occluderMask.length === 0) {
+        visibleRegion = subjectPoly;
+      } else {
+        try {
+          visibleRegion = diffFn(subjectPoly, occluderMask);
+        } catch (e) {
+          visibleRegion = subjectPoly;
+        }
+      }
+
+      if (visibleRegion && visibleRegion.length > 0) {
+        const d = multiPolyToPath(visibleRegion);
+        if (d.length > 0) {
+          svgPaths.push({
+            d,
+            fillClr: vf.fillClr
+          });
+        }
+        // Accumulate face into occluder mask
+        try {
+          if (occluderMask.length === 0) {
+            occluderMask = subjectPoly;
+          } else {
+            occluderMask = unionFn(occluderMask, subjectPoly);
+          }
+        } catch (e) {
+          // ignore union failures
+        }
+      }
+    }
+    // Re-reverse paths back to back-to-front order for natural layer rendering
+    svgPaths.reverse();
+  } else {
+    // Standard back-to-front rendering without 2D polygon subtraction
+    for (let i = 0; i < visibleFaces.length; i++) {
+      const vf = visibleFaces[i];
+      const d = multiPolyToPath([[[ ...vf.ring2dClosed ]]]);
+      if (d.length > 0) {
+        svgPaths.push({
+          d,
+          fillClr: vf.fillClr
+        });
+      }
+    }
+  }
+
+  // Construct SVG output
+  let strokeAttr = '';
+  if (paintMode === 'fillstroke') {
+    strokeAttr = 'stroke="rgba(0,0,0,0.3)" stroke-width="0.5"';
+  } else if (paintMode === 'stroke') {
+    strokeAttr = 'stroke="rgba(0,0,0,0.8)" stroke-width="0.5"';
+  } else {
+    strokeAttr = 'stroke="none"';
+  }
+
+  let svg = `<?xml version="1.0" encoding="UTF-8"?>
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 ${width} ${height}" width="${width}" height="${height}">
+  <title>Polyhedronisme SVG - ${poly.name || 'Polyhedron'}</title>
+  <g fill-rule="evenodd" stroke-linejoin="round" stroke-linecap="round" ${strokeAttr}>
+`;
+
+  for (const pathObj of svgPaths) {
+    const fillStr = (paintMode === 'stroke') ? 'none' : pathObj.fillClr;
+    svg += `    <path d="${pathObj.d}" fill="${fillStr}" />\n`;
+  }
+
+  svg += `  </g>
+</svg>
+`;
+
+  return svg;
+};
+

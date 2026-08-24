@@ -21,7 +21,7 @@ import { add, clone, eye3, mv3, mm3, getVec2VecRotM, perspT, invperspT,
 import { rwb_palette, sortFaces, palette, rndcolors } from './polyhedron';
 import { generatePoly } from './parser';
 import { triangulate } from './topo_operators';
-import { toOBJ, toVRML } from './exporters';
+import { toOBJ, toVRML, toSVG } from './exporters';
 // import * as testing from './testing'
 import { sortFacesCarefully } from './depth';
 
@@ -448,6 +448,22 @@ $(function () { // wait for page to load
     const spec = $('#spec').val().split(/\s+/g)[0];
     const filename = `polyhedronisme-${spec.replace(/\([^)]+\)/g, '')}.png`;
     canvas.toBlobHD(blob => saveAs(blob, filename));
+  });
+
+  $('#svgsavebutton').click(function (e) {
+    const svgtxt = toSVG(globPolys[0], {
+      rotM: globRotM,
+      palette: palette,
+      paintMode: PaintMode,
+      cullHidden: true,
+      perspective_scale: perspective_scale,
+      persp_z_max: persp_z_max,
+      persp_z_min: persp_z_min,
+      persp_ratio: persp_ratio
+    });
+    const spec = $('#spec').val().split(/\s+/g)[0];
+    const filename = `polyhedronisme-${spec.replace(/\([^)]+\)/g, '')}.svg`;
+    saveText(svgtxt, filename);
   });
 
   $('#objsavebutton').click(function (e) {
