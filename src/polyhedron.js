@@ -10,7 +10,7 @@
 /* eslint-disable camelcase */
 /* eslint-disable standard/array-bracket-even-spacing */
 /* eslint-disable no-multi-spaces */
-import { _ } from 'underscore';
+import _ from 'underscore';
 import { add, sub, mult, mag2, linePointDist2, normal, __range__,
   random, sigfigs, planararea, faceSignature, sqrt, sin, cos, PI, pow } from './geo';
 import { VISIBILITY_ZNORMAL_CUTOFF, PALETTE, COLOR_METHOD, COLOR_SENSITIVITY } from './main';

@@ -14,7 +14,7 @@ import 'blobjs';
 import 'canvas-toBlob';
 
 import Vue from 'vue'
-import { _ } from 'underscore';
+import _ from 'underscore';
 
 import { add, clone, eye3, mv3, mm3, getVec2VecRotM, perspT, invperspT,
   vec_rotm, rotm, mult, dot, unit, normal, round, randomchoice, PI } from './geo';

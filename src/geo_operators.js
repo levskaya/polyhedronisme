@@ -14,7 +14,7 @@
 /* eslint-disable standard/array-bracket-even-spacing */
 /* eslint-disable no-multi-spaces */
 
-import { _ } from 'underscore';
+import _ from 'underscore';
 import { add, sub, mult, dot, mag, unit, normal, orthogonal, edgeDist,
   copyVecArray, tangentPoint, calcCentroid, reciprocal, sqrt } from './geo';
 import { dual } from './topo_operators';

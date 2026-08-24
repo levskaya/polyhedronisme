@@ -11,15 +11,12 @@
 /* eslint-disable standard/array-bracket-even-spacing */
 /* eslint-disable no-multi-spaces */
 
-import { _ } from 'underscore';
+import _ from 'underscore';
 // window._ = _;
 
-// works pretty well, but occasionally infinite-loops and hangs tab :(
-// import * as martinez from 'martinez-polygon-clipping';
-// try adding this loop-guard PR by hand: https://github.com/w8r/martinez/pull/66/files
-
-// best polygon clipping lib:  lots of bugfixes in, almost always accurate:
+import * as martinez from 'martinez-polygon-clipping';
 import * as polygonclipping from 'polygon-clipping';
+window.martinez = martinez;
 window.polygonclipping = polygonclipping;
 
 import { abs, add, sub, mag2, __range__,
@@ -62,15 +59,16 @@ export const testShape = function () {
 
 const simple_intersect = function (A_Vs2d, B_Vs2d) {
   // find 2d intersection of two polygons each specified as list of 2d vertices.
-  // martinez lib expects geojson multi-path polygon which uses repeated final vertices.
+  // polygon-clipping / martinez lib expects geojson multi-path polygon which uses repeated final vertices.
   const A_Vs2d_ = A_Vs2d.concat([A_Vs2d[0]]);
   const B_Vs2d_ = B_Vs2d.concat([B_Vs2d[0]]);
   try {
-    // const result = martinez.intersection([A_Vs2d_], [B_Vs2d_]);
-    const result = polygonclipping.intersection([A_Vs2d_], [B_Vs2d_]);
+    const fn = (polygonclipping && polygonclipping.intersection) ||
+      (martinez && martinez.intersection);
+    const result = fn([A_Vs2d_], [B_Vs2d_]);
     // assume simple intersection structure
     // take 1st polygon, 1st path, drop last repeated vertex
-    if (result.length > 0 && result[0].length > 0) {
+    if (result && result.length > 0 && result[0].length > 0) {
       return result[0][0].slice(0, result[0][0].length);
     } else {
       return [];
