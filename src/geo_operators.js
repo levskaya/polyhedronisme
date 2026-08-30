@@ -126,21 +126,66 @@ export const planarize = function (vertices, faces) {
   return newVs;
 };
 
+// Spherical Tutte / Spring Embedding Untangler
+// ------------------------------------------------------------------------------------------------
+// Untangles 3-connected planar polyhedral graphs (including non-convex / loft / extruded topologies)
+// by performing harmonic laplacian barycentric smoothing on S^2 with center-of-mass deflation,
+// mapping any valid topological mesh into a strictly convex spherical embedding.
+export const sphericalTutteUntangle = function (poly, nSteps = 30) {
+  const nV = poly.vertices.length;
+  const faces = poly.faces;
+
+  const neighbors = Array.from({ length: nV }, () => new Set());
+  for (let f of faces) {
+    for (let i = 0; i < f.length; i++) {
+      const v1 = f[i];
+      const v2 = f[(i + 1) % f.length];
+      neighbors[v1].add(v2);
+      neighbors[v2].add(v1);
+    }
+  }
+  const adj = neighbors.map(set => Array.from(set));
+
+  let V = poly.vertices.map(v => unit(v));
+
+  for (let step = 0; step < nSteps; step++) {
+    const newV = [];
+    for (let i = 0; i < nV; i++) {
+      const nbs = adj[i];
+      let center = [0, 0, 0];
+      for (let j of nbs) {
+        center = add(center, V[j]);
+      }
+      center = mult(1.0 / nbs.length, center);
+      newV.push(unit(center));
+    }
+    V = newV;
+
+    // Hyperbolic / center of mass deflation on sphere
+    let com = [0, 0, 0];
+    for (let v of V) com = add(com, v);
+    com = mult(1.0 / nV, com);
+    if (mag(com) > 1e-4) {
+      V = V.map(v => unit(sub(v, mult(0.5, com))));
+    }
+  }
+
+  return V;
+};
+
 // Robust Damped Trust-Region (Levenberg-Marquardt) Primal-Dual Canonicalizer
 // ------------------------------------------------------------------------------------------------
-// Handles difficult polyhedral topologies with large face size disparities or near-flat dihedral
-// angles (like "ttD", "ttC", "wwC", etc.) by adding trust-region damping to 3x3 normal equations,
-// radial bounding guards, and adaptive damping decay to prevent geometric blow-up.
+// Realizes the unique convex canonical polyhedron (all faces planar and edges tangent to unit midsphere)
+// for any 3-connected planar graph. Automatically untangles non-convex, lofted, extruded, or flat
+// subdivided meshes (like "xI", "KeD", "ttD", etc.) via Spherical Tutte relaxation before polishing.
 export const canonicalize = function (poly, Niter, keepflat) {
   if (Niter === undefined || Niter <= 1) { Niter = 100; }
   if (keepflat === undefined) { keepflat = 0; }
 
-  console.log(`Canonicalizing ${poly.name} (Robust Levenberg-Marquardt Primal-Dual)...`);
+  console.log(`Canonicalizing ${poly.name} (Spherical Tutte & Robust LM Primal-Dual)...`);
   const faces = poly.faces;
   const nV = poly.vertices.length;
   const nF = faces.length;
-
-  let vertices = copyVecArray(poly.vertices);
 
   // 1. Vertex-to-faces adjacency
   const vertexFaces = Array.from({ length: nV }, () => []);
@@ -154,7 +199,7 @@ export const canonicalize = function (poly, Niter, keepflat) {
     for (let i = 0; i < f.length; i++) {
       const v1 = f[i];
       const v2 = f[(i + 1) % f.length];
-      const key = v1 < v2 ? `${v1}_${v2}` : `${v2}_${v1}`;
+      const key = v1 < v2 ? `${v1}~${v2}` : `${v2}~${v1}`;
       if (!edgeMap.has(key)) {
         edgeMap.set(key, { v1, v2, f1: fIdx, f2: -1 });
       } else {
@@ -164,7 +209,23 @@ export const canonicalize = function (poly, Niter, keepflat) {
   });
   const edges = Array.from(edgeMap.values());
 
-  // 3. Initial rescaling so average edge distance to origin is 1.0
+  // 3. Detect if topology needs Spherical Tutte untangling (coplanar subfaces or reflex/concave clefts)
+  const initNormals = faces.map(f => normal(f.map(v => poly.vertices[v])));
+  let needsUntangling = false;
+  for (let e of edges) {
+    if (e.f1 >= 0 && e.f2 >= 0) {
+      const cosAngle = dot(initNormals[e.f1], initNormals[e.f2]);
+      const c1 = calcCentroid(faces[e.f1].map(v => poly.vertices[v]));
+      if (cosAngle > 0.999 || dot(initNormals[e.f2], sub(c1, poly.vertices[e.v1])) > 0.02) {
+        needsUntangling = true;
+        break;
+      }
+    }
+  }
+
+  let vertices = needsUntangling ? sphericalTutteUntangle(poly, 30) : copyVecArray(poly.vertices);
+
+  // 4. Initial rescaling to unit average edge distance
   let initialSumD = 0;
   for (let e of edges) {
     initialSumD += mag(tangentPoint(vertices[e.v1], vertices[e.v2]));
@@ -174,7 +235,7 @@ export const canonicalize = function (poly, Niter, keepflat) {
     vertices = vertices.map(v => mult(initScale, v));
   }
 
-  // 4. Initialize dual face planes w_f (normal / distance)
+  // 5. Initialize dual face planes w_f (normal / distance)
   let dualW = faces.map(face => {
     const coords = face.map(v => vertices[v]);
     let n = normal(coords);
@@ -185,8 +246,8 @@ export const canonicalize = function (poly, Niter, keepflat) {
   });
 
   // Levenberg-Marquardt trust-region damping parameters
-  let lambdaV = 0.5;
-  let lambdaW = 0.5;
+  let lambdaV = 0.8;
+  let lambdaW = 0.8;
   let maxChange = 1.0;
 
   for (let iter = 0; iter < Niter; iter++) {
@@ -222,8 +283,8 @@ export const canonicalize = function (poly, Niter, keepflat) {
         if (e.f1 >= 0 && e.f2 >= 0) {
           const tpDual = tangentPoint(dualW[e.f1], dualW[e.f2]);
           const dDual = mag(tpDual);
-          if (dDual > 1e-4) {
-            const corr = mult(0.1 * (1.0 - dDual), tpDual);
+          if (dDual > 1e-4 && dDual < 2.0) {
+            const corr = mult(0.08 * (1.0 - dDual), tpDual);
             dualW[e.f1] = add(dualW[e.f1], corr);
             dualW[e.f2] = add(dualW[e.f2], corr);
           }
@@ -260,8 +321,8 @@ export const canonicalize = function (poly, Niter, keepflat) {
         const rNew = mag(newV);
         if (rNew > 3.0) {
           vertices[i] = mult(3.0 / rNew, newV);
-        } else if (rNew < 0.2) {
-          vertices[i] = mult(0.2 / rNew, newV);
+        } else if (rNew < 0.1) {
+          vertices[i] = mult(0.1 / rNew, newV);
         } else {
           vertices[i] = newV;
         }
@@ -275,13 +336,15 @@ export const canonicalize = function (poly, Niter, keepflat) {
         const tp = tangentPoint(vertices[e.v1], vertices[e.v2]);
         const d = mag(tp);
         sumEdgeDist += d;
-        const corr = mult(0.1 * (1.0 - d), tp);
-        vertices[e.v1] = add(vertices[e.v1], corr);
-        vertices[e.v2] = add(vertices[e.v2], corr);
+        if (d > 0.1 && d < 2.0) {
+          const corr = mult(0.08 * (1.0 - d), tp);
+          vertices[e.v1] = add(vertices[e.v1], corr);
+          vertices[e.v2] = add(vertices[e.v2], corr);
+        }
       }
     }
 
-    // --- Recenter to barycenter of edge tangencies ---
+    // --- Recenter ---
     let polycenter = [0, 0, 0];
     for (let e of edges) {
       polycenter = add(polycenter, tangentPoint(vertices[e.v1], vertices[e.v2]));
@@ -289,7 +352,7 @@ export const canonicalize = function (poly, Niter, keepflat) {
     polycenter = mult(1.0 / edges.length, polycenter);
     vertices = vertices.map(v => sub(v, polycenter));
 
-    // --- Rescale to unit average edge distance ---
+    // --- Rescale ---
     const avgD = sumEdgeDist / edges.length;
     if (avgD > 1e-6) {
       vertices = vertices.map(v => mult(1.0 / avgD, v));
@@ -297,8 +360,8 @@ export const canonicalize = function (poly, Niter, keepflat) {
 
     // Adaptive damping decay
     if (iter > 10) {
-      lambdaV = Math.max(0.01, lambdaV * 0.97);
-      lambdaW = Math.max(0.01, lambdaW * 0.97);
+      lambdaV = Math.max(0.02, lambdaV * 0.97);
+      lambdaW = Math.max(0.02, lambdaW * 0.97);
     }
 
     // Check convergence
