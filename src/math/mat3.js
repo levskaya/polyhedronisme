@@ -31,43 +31,15 @@ export const copy = (out, a) => {
   return out;
 };
 
-// Convert legacy nested matrix [[a,b,c],[d,e,f],[g,h,i]] to flat 9 array
-export const fromNested = (nested, out = create()) => {
-  out[0] = nested[0][0]; out[1] = nested[0][1]; out[2] = nested[0][2];
-  out[3] = nested[1][0]; out[4] = nested[1][1]; out[5] = nested[1][2];
-  out[6] = nested[2][0]; out[7] = nested[2][1]; out[8] = nested[2][2];
-  return out;
-};
-
-// Convert flat 9 array to legacy nested matrix [[a,b,c],[d,e,f],[g,h,i]]
-export const toNested = (flat) => [
-  [flat[0], flat[1], flat[2]],
-  [flat[3], flat[4], flat[5]],
-  [flat[6], flat[7], flat[8]]
-];
-
 // Matrix multiplication: out = A * B
 export const multiply = (A, B, out = create()) => {
-  // Support both flat arrays and legacy nested arrays transparently
-  const a00 = A[0] !== undefined && typeof A[0] === 'number' ? A[0] : A[0][0];
-  const a01 = A[1] !== undefined && typeof A[1] === 'number' ? A[1] : A[0][1];
-  const a02 = A[2] !== undefined && typeof A[2] === 'number' ? A[2] : A[0][2];
-  const a10 = A[3] !== undefined && typeof A[3] === 'number' ? A[3] : A[1][0];
-  const a11 = A[4] !== undefined && typeof A[4] === 'number' ? A[4] : A[1][1];
-  const a12 = A[5] !== undefined && typeof A[5] === 'number' ? A[5] : A[1][2];
-  const a20 = A[6] !== undefined && typeof A[6] === 'number' ? A[6] : A[2][0];
-  const a21 = A[7] !== undefined && typeof A[7] === 'number' ? A[7] : A[2][1];
-  const a22 = A[8] !== undefined && typeof A[8] === 'number' ? A[8] : A[2][2];
+  const a00 = A[0]; const a01 = A[1]; const a02 = A[2];
+  const a10 = A[3]; const a11 = A[4]; const a12 = A[5];
+  const a20 = A[6]; const a21 = A[7]; const a22 = A[8];
 
-  const b00 = B[0] !== undefined && typeof B[0] === 'number' ? B[0] : B[0][0];
-  const b01 = B[1] !== undefined && typeof B[1] === 'number' ? B[1] : B[0][1];
-  const b02 = B[2] !== undefined && typeof B[2] === 'number' ? B[2] : B[0][2];
-  const b10 = B[3] !== undefined && typeof B[3] === 'number' ? B[3] : B[1][0];
-  const b11 = B[4] !== undefined && typeof B[4] === 'number' ? B[4] : B[1][1];
-  const b12 = B[5] !== undefined && typeof B[5] === 'number' ? B[5] : B[1][2];
-  const b20 = B[6] !== undefined && typeof B[6] === 'number' ? B[6] : B[2][0];
-  const b21 = B[7] !== undefined && typeof B[7] === 'number' ? B[7] : B[2][1];
-  const b22 = B[8] !== undefined && typeof B[8] === 'number' ? B[8] : B[2][2];
+  const b00 = B[0]; const b01 = B[1]; const b02 = B[2];
+  const b10 = B[3]; const b11 = B[4]; const b12 = B[5];
+  const b20 = B[6]; const b21 = B[7]; const b22 = B[8];
 
   out[0] = (a00 * b00) + (a01 * b10) + (a02 * b20);
   out[1] = (a00 * b01) + (a01 * b11) + (a02 * b21);
@@ -85,23 +57,13 @@ export const multiply = (A, B, out = create()) => {
 
 // Matrix-vector multiply: out = M * v
 export const multiplyVec3 = (M, v, out = [0, 0, 0]) => {
-  const m00 = M[0] !== undefined && typeof M[0] === 'number' ? M[0] : M[0][0];
-  const m01 = M[1] !== undefined && typeof M[1] === 'number' ? M[1] : M[0][1];
-  const m02 = M[2] !== undefined && typeof M[2] === 'number' ? M[2] : M[0][2];
-  const m10 = M[3] !== undefined && typeof M[3] === 'number' ? M[3] : M[1][0];
-  const m11 = M[4] !== undefined && typeof M[4] === 'number' ? M[4] : M[1][1];
-  const m12 = M[5] !== undefined && typeof M[5] === 'number' ? M[5] : M[1][2];
-  const m20 = M[6] !== undefined && typeof M[6] === 'number' ? M[6] : M[2][0];
-  const m21 = M[7] !== undefined && typeof M[7] === 'number' ? M[7] : M[2][1];
-  const m22 = M[8] !== undefined && typeof M[8] === 'number' ? M[8] : M[2][2];
-
   const x = v[0];
   const y = v[1];
   const z = v[2];
 
-  out[0] = (m00 * x) + (m01 * y) + (m02 * z);
-  out[1] = (m10 * x) + (m11 * y) + (m12 * z);
-  out[2] = (m20 * x) + (m21 * y) + (m22 * z);
+  out[0] = (M[0] * x) + (M[1] * y) + (M[2] * z);
+  out[1] = (M[3] * x) + (M[4] * y) + (M[5] * z);
+  out[2] = (M[6] * x) + (M[7] * y) + (M[8] * z);
   return out;
 };
 
@@ -119,15 +81,9 @@ export const transpose = (M, out = create()) => {
 
 // Fast 3x3 Matrix Inversion via cofactor expansion. Returns null if singular.
 export const invert = (M, out = create()) => {
-  const m00 = M[0] !== undefined && typeof M[0] === 'number' ? M[0] : M[0][0];
-  const m01 = M[1] !== undefined && typeof M[1] === 'number' ? M[1] : M[0][1];
-  const m02 = M[2] !== undefined && typeof M[2] === 'number' ? M[2] : M[0][2];
-  const m10 = M[3] !== undefined && typeof M[3] === 'number' ? M[3] : M[1][0];
-  const m11 = M[4] !== undefined && typeof M[4] === 'number' ? M[4] : M[1][1];
-  const m12 = M[5] !== undefined && typeof M[5] === 'number' ? M[5] : M[1][2];
-  const m20 = M[6] !== undefined && typeof M[6] === 'number' ? M[6] : M[2][0];
-  const m21 = M[7] !== undefined && typeof M[7] === 'number' ? M[7] : M[2][1];
-  const m22 = M[8] !== undefined && typeof M[8] === 'number' ? M[8] : M[2][2];
+  const m00 = M[0]; const m01 = M[1]; const m02 = M[2];
+  const m10 = M[3]; const m11 = M[4]; const m12 = M[5];
+  const m20 = M[6]; const m21 = M[7]; const m22 = M[8];
 
   const c00 = (m11 * m22) - (m12 * m21);
   const c01 = (m12 * m20) - (m10 * m22);

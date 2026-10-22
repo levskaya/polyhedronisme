@@ -49,9 +49,9 @@ const CANVAS_WIDTH = 720; // canvas dims
 const CANVAS_HEIGHT = 500; // canvas dims
 let globQuat = quat.create();
 let globLastQuat = quat.create();
-let globRotM = clone(eye3);
+let globRotM = mat3.create();
 const updateRotM = function () {
-  globRotM = mat3.toNested(mat3.fromQuat(globQuat));
+  mat3.fromQuat(globQuat, globRotM);
 };
 export let perspective_scale = 1200;
 export const persp_z_max = 5;

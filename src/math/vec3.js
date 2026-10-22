@@ -33,18 +33,10 @@ export const sub = (a, b, out = [0, 0, 0]) => {
   return out;
 };
 
-export const scale = (a, b, out = [0, 0, 0]) => {
-  let v, s;
-  if (typeof a === 'number') {
-    s = a;
-    v = b;
-  } else {
-    v = a;
-    s = b;
-  }
-  out[0] = v[0] * s;
-  out[1] = v[1] * s;
-  out[2] = v[2] * s;
+export const scale = (a, s, out = [0, 0, 0]) => {
+  out[0] = a[0] * s;
+  out[1] = a[1] * s;
+  out[2] = a[2] * s;
   return out;
 };
 

@@ -75,7 +75,7 @@ export const randomchoice = function (array) {
 
 // 3D Vector Math Primitives
 // ===================================================================================================
-export const mult = vec3.scale;
+export const mult = (c, vec) => vec3.scale(vec, c);
 export const add = vec3.add;
 export const sub = vec3.sub;
 export const _mult = vec3.multiply;
@@ -98,7 +98,7 @@ export const planararea = vec3.planarArea;
 
 // 2D Vector Math Primitives
 // ===================================================================================================
-export const mult2d = vec2.scale;
+export const mult2d = (c, vec) => vec2.scale(vec, c);
 export const add2d = vec2.add;
 export const sub2d = vec2.sub;
 export const dot2d = vec2.dot;
@@ -183,15 +183,15 @@ export const copyVecArray = function (vecArray) {
 // ===================================================================================================
 export const mv3 = (mat, vec) => mat3.multiplyVec3(mat, vec);
 export const mm3 = (A, B) => mat3.multiply(A, B);
-export const eye3 = [[1, 0, 0], [0, 1, 0], [0, 0, 1]];
+export const eye3 = [1, 0, 0, 0, 1, 0, 0, 0, 1];
 
-export const rotm = (phi, theta, psi) => mat3.toNested(mat3.fromEuler(phi, theta, psi));
-export const vec_rotm = (angle, x, y, z) => mat3.toNested(mat3.fromAxisAngle([x, y, z], angle));
+export const rotm = (phi, theta, psi) => mat3.fromEuler(phi, theta, psi);
+export const vec_rotm = (angle, x, y, z) => mat3.fromAxisAngle([x, y, z], angle);
 
 // Returns rotation matrix taking vec1 to vec2
 export const getVec2VecRotM = function (vec1, vec2) {
   const q = quat.fromUnitVectors(unit(vec1), unit(vec2));
-  return mat3.toNested(mat3.fromQuat(q));
+  return mat3.fromQuat(q);
 };
 if (typeof window !== 'undefined') {
   window.getVec2VecRotM = getVec2VecRotM;
