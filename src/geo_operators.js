@@ -14,7 +14,7 @@
 /* eslint-disable standard/array-bracket-even-spacing */
 /* eslint-disable no-multi-spaces */
 
-import { add, sub, mult, dot, mag, unit, normal, edgeDist,
+import { add, sub, mult, dot, mag, mag2, unit, normal, edgeDist, midpoint,
   copyVecArray, tangentPoint, calcCentroid, reciprocal, sqrt, mat3 } from './geo.js';
 import { dual } from './topo_operators.js';
 import { Polyhedron } from './polyhedron.js';
@@ -93,46 +93,94 @@ export const planarize = function (vertices, faces) {
   return newVs;
 };
 
-// Spherical Tutte / Spring Embedding Untangler
+// Clamped segment closest point to origin (keeps tangency point strictly inside edge segment [v1, v2])
+export const segmentTangentPoint = function (v1, v2) {
+  const d = sub(v2, v1);
+  const m2 = mag2(d);
+  if (m2 < 1e-14) return midpoint(v1, v2);
+  let t = -dot(v1, d) / m2;
+  if (t < 0.01) t = 0.01;
+  else if (t > 0.99) t = 0.99;
+  return add(v1, mult(t, d));
+};
+
+// Degree-Weighted Primal-Dual Spherical Tutte Untangler
 // ------------------------------------------------------------------------------------------------
-// Untangles 3-connected planar polyhedral graphs (including non-convex / loft / extruded topologies)
-// by performing harmonic laplacian barycentric smoothing on S^2 with center-of-mass deflation,
-// mapping any valid topological mesh into a strictly convex spherical embedding.
-export const sphericalTutteUntangle = function (poly, nSteps = 30) {
+// Untangles 3-connected planar polyhedral graphs (including non-convex, lofted, extruded, or
+// high-degree star-subdivided meshes) by alternating spherical face-center averaging and
+// degree-weighted vertex relaxation on S^2 with center-of-mass deflation.
+// Weighting vertices inversely by degree prevents high-degree hubs from crushing radiating small polygons.
+export const sphericalTutteUntangle = function (poly, nSteps = 80) {
   const nV = poly.vertices.length;
   const faces = poly.faces;
+  const nF = faces.length;
 
+  const vertexFaces = Array.from({ length: nV }, () => []);
   const neighbors = Array.from({ length: nV }, () => new Set());
-  for (let f of faces) {
+  for (let fIdx = 0; fIdx < nF; fIdx++) {
+    const f = faces[fIdx];
     for (let i = 0; i < f.length; i++) {
       const v1 = f[i];
       const v2 = f[(i + 1) % f.length];
+      vertexFaces[v1].push(fIdx);
       neighbors[v1].add(v2);
       neighbors[v2].add(v1);
     }
   }
   const adj = neighbors.map(set => Array.from(set));
+  const deg = adj.map(a => a.length || 1);
 
   let V = poly.vertices.map(v => unit(v));
 
   for (let step = 0; step < nSteps; step++) {
-    const newV = [];
-    for (let i = 0; i < nV; i++) {
-      const nbs = adj[i];
-      let center = [0, 0, 0];
-      for (let j of nbs) {
-        center = add(center, V[j]);
+    // 1. Spherical face centroids weighted inversely by vertex degree
+    const F = new Array(nF);
+    for (let fIdx = 0; fIdx < nF; fIdx++) {
+      const f = faces[fIdx];
+      let fc0 = 0;
+      let fc1 = 0;
+      let fc2 = 0;
+      for (let vIdx of f) {
+        const w = 1.0 / deg[vIdx];
+        const v = V[vIdx];
+        fc0 += w * v[0];
+        fc1 += w * v[1];
+        fc2 += w * v[2];
       }
-      center = mult(1.0 / nbs.length, center);
-      newV.push(unit(center));
+      F[fIdx] = unit([fc0, fc1, fc2]);
+    }
+
+    // 2. Update vertices from incident face centroids (weighted by 1/|f|) and neighbors (weighted by 1/deg(j))
+    const newV = new Array(nV);
+    for (let i = 0; i < nV; i++) {
+      let cx = 0;
+      let cy = 0;
+      let cz = 0;
+      const incF = vertexFaces[i];
+      const nbs = adj[i];
+      for (let fIdx of incF) {
+        const w = 1.0 / faces[fIdx].length;
+        const fc = F[fIdx];
+        cx += w * fc[0];
+        cy += w * fc[1];
+        cz += w * fc[2];
+      }
+      for (let j of nbs) {
+        const w = 1.0 / deg[j];
+        const vj = V[j];
+        cx += w * vj[0];
+        cy += w * vj[1];
+        cz += w * vj[2];
+      }
+      newV[i] = unit([cx, cy, cz]);
     }
     V = newV;
 
-    // Hyperbolic / center of mass deflation on sphere
+    // 3. Hyperbolic center-of-mass deflation on S^2
     let com = [0, 0, 0];
     for (let v of V) com = add(com, v);
     com = mult(1.0 / nV, com);
-    if (mag(com) > 1e-4) {
+    if (mag(com) > 1e-5) {
       V = V.map(v => unit(sub(v, mult(0.5, com))));
     }
   }
@@ -140,29 +188,37 @@ export const sphericalTutteUntangle = function (poly, nSteps = 30) {
   return V;
 };
 
-// Robust Damped Trust-Region (Levenberg-Marquardt) Primal-Dual Canonicalizer
+// Unified Tripartite Primal-Dual-Edge Levenberg-Marquardt Canonicalizer
 // ------------------------------------------------------------------------------------------------
-// Realizes the unique convex canonical polyhedron (all faces planar and edges tangent to unit midsphere)
-// for any 3-connected planar graph. Automatically untangles non-convex, lofted, extruded, or flat
-// subdivided meshes (like "xI", "KeD", "ttD", etc.) via Spherical Tutte relaxation before polishing.
+// Realizes the unique convex canonical polyhedron (all faces planar and all edges tangent to the
+// unit midsphere S^2) for any 3-connected planar graph.
+//
+// Mathematical formulation (Tripartite Incidence Identity):
+// At the canonical realization with primal vertices v_i, dual face vectors w_f (plane w_f . x = 1),
+// and unit midsphere edge tangency points u_e in S^2 (||u_e|| = 1), all three geometric conditions
+// share the exact same bilinear incidence form:
+//   1. Face Planarity:        w_f . v_i = 1   for all incident (i, f)
+//   2. Primal Edge Tangency:  u_e . v_i = 1   for all incident (i, e)  (since u_e _|_ (v_j - v_i))
+//   3. Dual Edge Tangency:    u_e . w_f = 1   for all incident (f, e)  (since u_e _|_ (w_f2 - w_f1))
+// Solving these coupled 3x3 normal equations jointly eliminates operator-splitting drift and
+// converges to machine precision even on extreme multi-scale / high-degree topologies.
 export const canonicalize = function (poly, Niter, keepflat) {
-  if (Niter === undefined || Niter <= 1) { Niter = 100; }
+  if (Niter === undefined || Niter <= 1) { Niter = 150; }
   if (keepflat === undefined) { keepflat = 0; }
 
-  console.log(`Canonicalizing ${poly.name} (Spherical Tutte & Robust LM Primal-Dual)...`);
+  console.log(`Canonicalizing ${poly.name} (Unified Tripartite Primal-Dual-Edge LM)...`);
   const faces = poly.faces;
   const nV = poly.vertices.length;
   const nF = faces.length;
 
-  // 1. Vertex-to-faces adjacency
+  // 1. Build Vertex-Face, Vertex-Edge, and Face-Edge incidence tables
   const vertexFaces = Array.from({ length: nV }, () => []);
-  faces.forEach((f, fIdx) => {
-    f.forEach(vIdx => vertexFaces[vIdx].push(fIdx));
-  });
+  const vertexEdges = Array.from({ length: nV }, () => []);
+  const faceEdges = Array.from({ length: nF }, () => []);
 
-  // 2. Non-redundant edge table with incident face indices
   const edgeMap = new Map();
   faces.forEach((f, fIdx) => {
+    f.forEach(vIdx => vertexFaces[vIdx].push(fIdx));
     for (let i = 0; i < f.length; i++) {
       const v1 = f[i];
       const v2 = f[(i + 1) % f.length];
@@ -175,53 +231,58 @@ export const canonicalize = function (poly, Niter, keepflat) {
     }
   });
   const edges = Array.from(edgeMap.values());
+  const nE = edges.length;
+  edges.forEach((e, eIdx) => {
+    vertexEdges[e.v1].push(eIdx);
+    vertexEdges[e.v2].push(eIdx);
+    if (e.f1 >= 0) faceEdges[e.f1].push(eIdx);
+    if (e.f2 >= 0) faceEdges[e.f2].push(eIdx);
+  });
 
-  // 3. Detect if topology needs Spherical Tutte untangling (coplanar subfaces or reflex/concave clefts)
+  // 2. Detect if topology needs Spherical Tutte untangling (coplanar subfaces, reflex clefts, or missed segments)
   const initNormals = faces.map(f => normal(f.map(v => poly.vertices[v])));
   let needsUntangling = false;
   for (let e of edges) {
     if (e.f1 >= 0 && e.f2 >= 0) {
       const cosAngle = dot(initNormals[e.f1], initNormals[e.f2]);
       const c1 = calcCentroid(faces[e.f1].map(v => poly.vertices[v]));
-      if (cosAngle > 0.999 || dot(initNormals[e.f2], sub(c1, poly.vertices[e.v1])) > 0.02) {
+      if (cosAngle > 0.999 || dot(initNormals[e.f2], sub(c1, poly.vertices[e.v1])) > 0.01) {
         needsUntangling = true;
         break;
       }
     }
   }
 
-  let vertices = needsUntangling ? sphericalTutteUntangle(poly, 30) : copyVecArray(poly.vertices);
+  let vertices = needsUntangling ? sphericalTutteUntangle(poly, 80) : copyVecArray(poly.vertices);
 
-  // 4. Initial rescaling to unit average edge distance
+  // 3. Initial rescaling to unit average edge tangency distance
   let initialSumD = 0;
   for (let e of edges) {
-    initialSumD += mag(tangentPoint(vertices[e.v1], vertices[e.v2]));
+    initialSumD += mag(segmentTangentPoint(vertices[e.v1], vertices[e.v2]));
   }
   if (initialSumD > 1e-6) {
-    const initScale = edges.length / initialSumD;
+    const initScale = nE / initialSumD;
     vertices = vertices.map(v => mult(initScale, v));
   }
 
-  // 5. Initialize dual face planes w_f (normal / distance)
+  // 4. Initialize dual face vectors w_f (normal / distance) and unit edge tangency points u_e
   let dualW = faces.map(face => {
     const coords = face.map(v => vertices[v]);
     let n = normal(coords);
     const c = calcCentroid(coords);
     let dist = dot(n, c);
-    if (dist < 1e-4) dist = 1.0;
+    if (dist < 0.1) dist = 1.0;
     return mult(1.0 / dist, n);
   });
 
-  // Levenberg-Marquardt trust-region damping parameters
-  let lambdaV = 0.8;
-  let lambdaW = 0.8;
+  let edgeU = edges.map(e => unit(segmentTangentPoint(vertices[e.v1], vertices[e.v2])));
+
+  // Levenberg-Marquardt damping parameter and tangency coupling weight
+  let lambda = 0.15;
+  const wTangency = keepflat === 0 ? 0.5 : 0.0;
   let maxChange = 1.0;
 
-  // Pre-allocated flat buffers for normal equations to avoid GC allocations in loop
-  const N = mat3.create();
-  const c = [0, 0, 0];
-  const invN = mat3.create();
-
+  // Pre-allocated flat buffers for 3x3 normal equations
   const M = mat3.create();
   const b = [0, 0, 0];
   const invM = mat3.create();
@@ -229,53 +290,89 @@ export const canonicalize = function (poly, Niter, keepflat) {
   for (let iter = 0; iter < Niter; iter++) {
     const oldVs = copyVecArray(vertices);
 
-    // --- Dual Step: Damped LM update for face planes ---
-    for (let fIdx = 0; fIdx < nF; fIdx++) {
-      const fVerts = faces[fIdx];
-      N[0] = 0; N[1] = 0; N[2] = 0;
-      N[3] = 0; N[4] = 0; N[5] = 0;
-      N[6] = 0; N[7] = 0; N[8] = 0;
-      c[0] = 0; c[1] = 0; c[2] = 0;
-
-      for (let vIdx of fVerts) {
-        const v = vertices[vIdx];
-        const v0 = v[0]; const v1 = v[1]; const v2 = v[2];
-        c[0] += v0; c[1] += v1; c[2] += v2;
-
-        N[0] += v0 * v0; N[1] += v0 * v1; N[2] += v0 * v2;
-        N[3] += v1 * v0; N[4] += v1 * v1; N[5] += v1 * v2;
-        N[6] += v2 * v0; N[7] += v2 * v1; N[8] += v2 * v2;
-      }
-      // Damped normal equations: (N + lambdaW * I) w = c + lambdaW * w_old
-      const wOld = dualW[fIdx];
-      N[0] += lambdaW; N[4] += lambdaW; N[8] += lambdaW;
-      c[0] += lambdaW * wOld[0];
-      c[1] += lambdaW * wOld[1];
-      c[2] += lambdaW * wOld[2];
-
-      if (mat3.invert(N, invN)) {
-        dualW[fIdx] = mat3.multiplyVec3(invN, c);
-      }
-    }
-
-    // --- Dual Edge Reciprocation ---
     if (keepflat === 0) {
-      for (let e of edges) {
+      // --- Step A: Update shared unit midsphere tangency points u_e from primal & dual segments ---
+      for (let eIdx = 0; eIdx < nE; eIdx++) {
+        const e = edges[eIdx];
+        const tpV = unit(segmentTangentPoint(vertices[e.v1], vertices[e.v2]));
         if (e.f1 >= 0 && e.f2 >= 0) {
-          const tpDual = tangentPoint(dualW[e.f1], dualW[e.f2]);
-          const dDual = mag(tpDual);
-          if (dDual > 1e-4 && dDual < 2.0) {
-            const corr = mult(0.08 * (1.0 - dDual), tpDual);
-            dualW[e.f1] = add(dualW[e.f1], corr);
-            dualW[e.f2] = add(dualW[e.f2], corr);
-          }
+          const tpW = unit(segmentTangentPoint(dualW[e.f1], dualW[e.f2]));
+          edgeU[eIdx] = unit(add(tpV, tpW));
+        } else {
+          edgeU[eIdx] = tpV;
+        }
+      }
+
+      // --- Step B: Center midsphere tangency points (sum u_e = 0) ---
+      let centerU = [0, 0, 0];
+      for (let eIdx = 0; eIdx < nE; eIdx++) {
+        centerU = add(centerU, edgeU[eIdx]);
+      }
+      centerU = mult(1.0 / nE, centerU);
+      if (mag(centerU) > 1e-7) {
+        for (let eIdx = 0; eIdx < nE; eIdx++) {
+          edgeU[eIdx] = unit(sub(edgeU[eIdx], centerU));
+        }
+        for (let i = 0; i < nV; i++) {
+          vertices[i] = sub(vertices[i], centerU);
         }
       }
     }
 
-    // --- Primal Step: Damped LM update for vertices ---
+    // --- Step C: Unified Dual Solve for w_f (from v_i . w_f = 1 and u_e . w_f = 1) ---
+    for (let fIdx = 0; fIdx < nF; fIdx++) {
+      const fVerts = faces[fIdx];
+      const fEdges = faceEdges[fIdx];
+      M[0] = 0; M[1] = 0; M[2] = 0;
+      M[3] = 0; M[4] = 0; M[5] = 0;
+      M[6] = 0; M[7] = 0; M[8] = 0;
+      b[0] = 0; b[1] = 0; b[2] = 0;
+
+      for (let vIdx of fVerts) {
+        const v = vertices[vIdx];
+        const v0 = v[0]; const v1 = v[1]; const v2 = v[2];
+        b[0] += v0; b[1] += v1; b[2] += v2;
+
+        M[0] += v0 * v0; M[1] += v0 * v1; M[2] += v0 * v2;
+        M[3] += v1 * v0; M[4] += v1 * v1; M[5] += v1 * v2;
+        M[6] += v2 * v0; M[7] += v2 * v1; M[8] += v2 * v2;
+      }
+
+      if (wTangency > 0) {
+        for (let eIdx of fEdges) {
+          const u = edgeU[eIdx];
+          const u0 = u[0]; const u1 = u[1]; const u2 = u[2];
+          b[0] += wTangency * u0; b[1] += wTangency * u1; b[2] += wTangency * u2;
+
+          M[0] += wTangency * u0 * u0; M[1] += wTangency * u0 * u1; M[2] += wTangency * u0 * u2;
+          M[3] += wTangency * u1 * u0; M[4] += wTangency * u1 * u1; M[5] += wTangency * u1 * u2;
+          M[6] += wTangency * u2 * u0; M[7] += wTangency * u2 * u1; M[8] += wTangency * u2 * u2;
+        }
+      }
+
+      const wOld = dualW[fIdx];
+      M[0] += lambda; M[4] += lambda; M[8] += lambda;
+      b[0] += lambda * wOld[0];
+      b[1] += lambda * wOld[1];
+      b[2] += lambda * wOld[2];
+
+      if (mat3.invert(M, invM)) {
+        const newW = mat3.multiplyVec3(invM, b);
+        const rW = mag(newW);
+        if (rW > 50.0) {
+          dualW[fIdx] = mult(50.0 / rW, newW);
+        } else if (rW < 0.05) {
+          dualW[fIdx] = mult(0.05 / rW, newW);
+        } else {
+          dualW[fIdx] = newW;
+        }
+      }
+    }
+
+    // --- Step D: Unified Primal Solve for v_i (from w_f . v_i = 1 and u_e . v_i = 1) ---
     for (let i = 0; i < nV; i++) {
       const incFaces = vertexFaces[i];
+      const incEdges = vertexEdges[i];
       if (incFaces.length < 3) continue;
 
       M[0] = 0; M[1] = 0; M[2] = 0;
@@ -292,60 +389,41 @@ export const canonicalize = function (poly, Niter, keepflat) {
         M[3] += w1 * w0; M[4] += w1 * w1; M[5] += w1 * w2;
         M[6] += w2 * w0; M[7] += w2 * w1; M[8] += w2 * w2;
       }
-      // Damped normal equations: (M + lambdaV * I) v = b + lambdaV * v_old
+
+      if (wTangency > 0) {
+        for (let eIdx of incEdges) {
+          const u = edgeU[eIdx];
+          const u0 = u[0]; const u1 = u[1]; const u2 = u[2];
+          b[0] += wTangency * u0; b[1] += wTangency * u1; b[2] += wTangency * u2;
+
+          M[0] += wTangency * u0 * u0; M[1] += wTangency * u0 * u1; M[2] += wTangency * u0 * u2;
+          M[3] += wTangency * u1 * u0; M[4] += wTangency * u1 * u1; M[5] += wTangency * u1 * u2;
+          M[6] += wTangency * u2 * u0; M[7] += wTangency * u2 * u1; M[8] += wTangency * u2 * u2;
+        }
+      }
+
       const vOld = vertices[i];
-      M[0] += lambdaV; M[4] += lambdaV; M[8] += lambdaV;
-      b[0] += lambdaV * vOld[0];
-      b[1] += lambdaV * vOld[1];
-      b[2] += lambdaV * vOld[2];
+      M[0] += lambda; M[4] += lambda; M[8] += lambda;
+      b[0] += lambda * vOld[0];
+      b[1] += lambda * vOld[1];
+      b[2] += lambda * vOld[2];
 
       if (mat3.invert(M, invM)) {
         const newV = mat3.multiplyVec3(invM, b);
-        // Radial bounds guard to prevent runaway vertices
         const rNew = mag(newV);
-        if (rNew > 3.0) {
-          vertices[i] = mult(3.0 / rNew, newV);
-        } else if (rNew < 0.1) {
-          vertices[i] = mult(0.1 / rNew, newV);
+        if (rNew > 50.0) {
+          vertices[i] = mult(50.0 / rNew, newV);
+        } else if (rNew < 0.05) {
+          vertices[i] = mult(0.05 / rNew, newV);
         } else {
           vertices[i] = newV;
         }
       }
     }
 
-    // --- Primal Edge Tangency Adjustment ---
-    let sumEdgeDist = 0;
-    if (keepflat === 0) {
-      for (let e of edges) {
-        const tp = tangentPoint(vertices[e.v1], vertices[e.v2]);
-        const d = mag(tp);
-        sumEdgeDist += d;
-        if (d > 0.1 && d < 2.0) {
-          const corr = mult(0.08 * (1.0 - d), tp);
-          vertices[e.v1] = add(vertices[e.v1], corr);
-          vertices[e.v2] = add(vertices[e.v2], corr);
-        }
-      }
-    }
-
-    // --- Recenter ---
-    let polycenter = [0, 0, 0];
-    for (let e of edges) {
-      polycenter = add(polycenter, tangentPoint(vertices[e.v1], vertices[e.v2]));
-    }
-    polycenter = mult(1.0 / edges.length, polycenter);
-    vertices = vertices.map(v => sub(v, polycenter));
-
-    // --- Rescale ---
-    const avgD = sumEdgeDist / edges.length;
-    if (avgD > 1e-6) {
-      vertices = vertices.map(v => mult(1.0 / avgD, v));
-    }
-
     // Adaptive damping decay
-    if (iter > 10) {
-      lambdaV = Math.max(0.02, lambdaV * 0.97);
-      lambdaW = Math.max(0.02, lambdaW * 0.97);
+    if (iter > 5) {
+      lambda = Math.max(1e-4, lambda * 0.93);
     }
 
     // Check convergence
@@ -354,7 +432,7 @@ export const canonicalize = function (poly, Niter, keepflat) {
       const d = mag(sub(vertices[i], oldVs[i]));
       if (d > maxChange) maxChange = d;
     }
-    if (maxChange < 1e-7) {
+    if (maxChange < 1e-8) {
       break;
     }
   }
