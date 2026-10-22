@@ -18,8 +18,8 @@
 // STL or VRML for 3D Printing.
 //
 
-import { clone, project2dface, __range__ } from './geo';
-import { Polyhedron } from './polyhedron';
+import { clone, project2dface, __range__ } from './geo.js';
+import { Polyhedron } from './polyhedron.js';
 
 // Ear-based triangulation of 2d faces, takes array of 2d coords in the face ordering
 // Returns indices of the new diagonal lines to cut.

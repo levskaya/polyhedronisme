@@ -10,17 +10,15 @@
 /* eslint-disable camelcase */
 /* eslint-disable standard/array-bracket-even-spacing */
 /* eslint-disable no-multi-spaces */
-
-import _ from 'underscore';
 import * as martinez from 'martinez-polygon-clipping';
 import * as polygonclipping from 'polygon-clipping';
 
 import { abs, add, sub, mag2, __range__,
   calcCentroid, calcCentroid2d, dot2d, sqrt, sin, planararea2d,
-  cos, PI, pow, dot, tween, tween2d, perspT } from './geo';
-import { VISIBILITY_ZNORMAL_CUTOFF, persp_z_max, persp_z_min, persp_ratio, perspective_scale } from './main';
-import { Polyhedron }  from './polyhedron';
-import { TopoSorter } from './toposort';
+  cos, PI, pow, dot, tween, tween2d, perspT,
+  persp_z_max, persp_z_min, persp_ratio, perspective_scale } from './geo.js';
+import { Polyhedron, VISIBILITY_ZNORMAL_CUTOFF } from './polyhedron.js';
+import { TopoSorter } from './toposort.js';
 
 
 const printpoly = function (p) {
@@ -148,6 +146,7 @@ export const P_obscures_Q = function (P, Q) {
   // measure depth of reverse-projected intersection centroid on both 3d polygonal planes
   const Pdepth = mag2(sub(project_screen_ray_onto_plane(sigma, z0, c2d, Pc, Pn), origin));
   const Qdepth = mag2(sub(project_screen_ray_onto_plane(sigma, z0, c2d, Qc, Qn), origin));
+
   // return depth ordering as sign
   return (Pdepth > Qdepth) ? -1 : 1;
 };
@@ -160,7 +159,7 @@ export const sortFacesCarefully = function (poly) {
   const faceverts2d  = faceverts.map(get_2d_vertices);
   const extents2d = faceverts2d.map(get_2dextents);
   const idxs = __range__(0, poly.faces.length, false);
-  let alldata = _.zip(centroids, normals, faceverts2d, extents2d, idxs);
+  let alldata = idxs.map(i => [centroids[i], normals[i], faceverts2d[i], extents2d[i], i]);
   const znormal = x => x[1][2];
   const original_face_idx = x => x[4];
   let visible_faces = [];
@@ -178,8 +177,8 @@ export const sortFacesCarefully = function (poly) {
     }
   }
 
-  // Guard against NaNs... (TODO: fix the upstream cause)
-  if (_.reduce(_.map(_.flatten(faceverts2d), x => isNaN(x)), (x, y) => x || y)) {
+  // Guard against NaNs...
+  if (faceverts2d.some(face => face.some(([x, y]) => isNaN(x) || isNaN(y)))) {
     console.log(faceverts2d);
     console.log(faceverts);
     return;

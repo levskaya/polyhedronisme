@@ -14,54 +14,17 @@
 /* eslint-disable standard/array-bracket-even-spacing */
 /* eslint-disable no-multi-spaces */
 
-import _ from 'underscore';
-import { add, sub, mult, dot, mag, unit, normal, orthogonal, edgeDist,
-  copyVecArray, tangentPoint, calcCentroid, reciprocal, sqrt } from './geo';
-import { dual } from './topo_operators';
-import { Polyhedron } from './polyhedron';
+import { add, sub, mult, dot, mag, unit, normal, edgeDist,
+  copyVecArray, tangentPoint, calcCentroid, reciprocal, sqrt, mat3 } from './geo.js';
+import { dual } from './topo_operators.js';
+import { Polyhedron } from './polyhedron.js';
 
 // ================================================================================================
-// Fast 3x3 Symmetric Matrix Inversion & Linear Algebra
+// Fast 3x3 Matrix Inversion & Linear Algebra (Delegated to mat3)
 // ================================================================================================
 
-export const invert3x3 = function (M) {
-  const [
-    [m00, m01, m02],
-    [m10, m11, m12],
-    [m20, m21, m22]
-  ] = M;
-
-  const c00 = m11 * m22 - m12 * m21;
-  const c01 = m12 * m20 - m10 * m22;
-  const c02 = m10 * m21 - m11 * m20;
-
-  const det = m00 * c00 + m01 * c01 + m02 * c02;
-  if (Math.abs(det) < 1e-12) return null;
-
-  const invDet = 1.0 / det;
-
-  const c10 = m02 * m21 - m01 * m22;
-  const c11 = m00 * m22 - m02 * m20;
-  const c12 = m01 * m20 - m00 * m21;
-
-  const c20 = m01 * m12 - m02 * m11;
-  const c21 = m02 * m10 - m00 * m12;
-  const c22 = m00 * m11 - m01 * m10;
-
-  return [
-    [c00 * invDet, c10 * invDet, c20 * invDet],
-    [c01 * invDet, c11 * invDet, c21 * invDet],
-    [c02 * invDet, c12 * invDet, c22 * invDet]
-  ];
-};
-
-export const matVecMul = function (M, v) {
-  return [
-    M[0][0] * v[0] + M[0][1] * v[1] + M[0][2] * v[2],
-    M[1][0] * v[0] + M[1][1] * v[1] + M[1][2] * v[2],
-    M[2][0] * v[0] + M[2][1] * v[1] + M[2][2] * v[2]
-  ];
-};
+export const invert3x3 = mat3.invert;
+export const matVecMul = mat3.multiplyVec3;
 
 // ================================================================================================
 // Canonicalization Algorithms
@@ -95,14 +58,18 @@ export const recenter = function (vertices, edges) {
   }
   polycenter = mult(1 / edges.length, polycenter);
   // subtract off any deviation from center
-  return _.map(vertices, x => sub(x, polycenter));
+  return vertices.map(x => sub(x, polycenter));
 };
 
 // rescales maximum radius of polyhedron to 1
 export const rescale = function (vertices) {
-  const maxExtent = _.max(_.map(vertices, x => mag(x)));
-  const s = 1 / maxExtent;
-  return _.map(vertices, x => [s * x[0], s * x[1], s * x[2]]);
+  let maxExtent = 0;
+  for (let i = 0; i < vertices.length; i++) {
+    const m = mag(vertices[i]);
+    if (m > maxExtent) maxExtent = m;
+  }
+  const s = maxExtent > 1e-12 ? 1 / maxExtent : 1;
+  return vertices.map(x => [s * x[0], s * x[1], s * x[2]]);
 };
 
 // adjusts vertices in each face to improve its planarity
@@ -250,31 +217,45 @@ export const canonicalize = function (poly, Niter, keepflat) {
   let lambdaW = 0.8;
   let maxChange = 1.0;
 
+  // Pre-allocated flat buffers for normal equations to avoid GC allocations in loop
+  const N = mat3.create();
+  const c = [0, 0, 0];
+  const invN = mat3.create();
+
+  const M = mat3.create();
+  const b = [0, 0, 0];
+  const invM = mat3.create();
+
   for (let iter = 0; iter < Niter; iter++) {
     const oldVs = copyVecArray(vertices);
 
     // --- Dual Step: Damped LM update for face planes ---
     for (let fIdx = 0; fIdx < nF; fIdx++) {
       const fVerts = faces[fIdx];
-      let N = [[0, 0, 0], [0, 0, 0], [0, 0, 0]];
-      let c = [0, 0, 0];
+      N[0] = 0; N[1] = 0; N[2] = 0;
+      N[3] = 0; N[4] = 0; N[5] = 0;
+      N[6] = 0; N[7] = 0; N[8] = 0;
+      c[0] = 0; c[1] = 0; c[2] = 0;
+
       for (let vIdx of fVerts) {
         const v = vertices[vIdx];
-        for (let r = 0; r < 3; r++) {
-          c[r] += v[r];
-          for (let col = 0; col < 3; col++) {
-            N[r][col] += v[r] * v[col];
-          }
-        }
+        const v0 = v[0]; const v1 = v[1]; const v2 = v[2];
+        c[0] += v0; c[1] += v1; c[2] += v2;
+
+        N[0] += v0 * v0; N[1] += v0 * v1; N[2] += v0 * v2;
+        N[3] += v1 * v0; N[4] += v1 * v1; N[5] += v1 * v2;
+        N[6] += v2 * v0; N[7] += v2 * v1; N[8] += v2 * v2;
       }
       // Damped normal equations: (N + lambdaW * I) w = c + lambdaW * w_old
       const wOld = dualW[fIdx];
-      for (let r = 0; r < 3; r++) {
-        N[r][r] += lambdaW;
-        c[r] += lambdaW * wOld[r];
+      N[0] += lambdaW; N[4] += lambdaW; N[8] += lambdaW;
+      c[0] += lambdaW * wOld[0];
+      c[1] += lambdaW * wOld[1];
+      c[2] += lambdaW * wOld[2];
+
+      if (mat3.invert(N, invN)) {
+        dualW[fIdx] = mat3.multiplyVec3(invN, c);
       }
-      const invN = invert3x3(N);
-      if (invN) dualW[fIdx] = matVecMul(invN, c);
     }
 
     // --- Dual Edge Reciprocation ---
@@ -297,26 +278,29 @@ export const canonicalize = function (poly, Niter, keepflat) {
       const incFaces = vertexFaces[i];
       if (incFaces.length < 3) continue;
 
-      let M = [[0, 0, 0], [0, 0, 0], [0, 0, 0]];
-      let b = [0, 0, 0];
+      M[0] = 0; M[1] = 0; M[2] = 0;
+      M[3] = 0; M[4] = 0; M[5] = 0;
+      M[6] = 0; M[7] = 0; M[8] = 0;
+      b[0] = 0; b[1] = 0; b[2] = 0;
+
       for (let fIdx of incFaces) {
         const w = dualW[fIdx];
-        for (let r = 0; r < 3; r++) {
-          b[r] += w[r];
-          for (let col = 0; col < 3; col++) {
-            M[r][col] += w[r] * w[col];
-          }
-        }
+        const w0 = w[0]; const w1 = w[1]; const w2 = w[2];
+        b[0] += w0; b[1] += w1; b[2] += w2;
+
+        M[0] += w0 * w0; M[1] += w0 * w1; M[2] += w0 * w2;
+        M[3] += w1 * w0; M[4] += w1 * w1; M[5] += w1 * w2;
+        M[6] += w2 * w0; M[7] += w2 * w1; M[8] += w2 * w2;
       }
       // Damped normal equations: (M + lambdaV * I) v = b + lambdaV * v_old
       const vOld = vertices[i];
-      for (let r = 0; r < 3; r++) {
-        M[r][r] += lambdaV;
-        b[r] += lambdaV * vOld[r];
-      }
-      const invM = invert3x3(M);
-      if (invM) {
-        const newV = matVecMul(invM, b);
+      M[0] += lambdaV; M[4] += lambdaV; M[8] += lambdaV;
+      b[0] += lambdaV * vOld[0];
+      b[1] += lambdaV * vOld[1];
+      b[2] += lambdaV * vOld[2];
+
+      if (mat3.invert(M, invM)) {
+        const newV = mat3.multiplyVec3(invM, b);
         // Radial bounds guard to prevent runaway vertices
         const rNew = mag(newV);
         if (rNew > 3.0) {
@@ -365,7 +349,11 @@ export const canonicalize = function (poly, Niter, keepflat) {
     }
 
     // Check convergence
-    maxChange = _.max(_.map(_.zip(vertices, oldVs), ([x, y]) => mag(sub(x, y))));
+    maxChange = 0;
+    for (let i = 0; i < nV; i++) {
+      const d = mag(sub(vertices[i], oldVs[i]));
+      if (d > maxChange) maxChange = d;
+    }
     if (maxChange < 1e-7) {
       break;
     }

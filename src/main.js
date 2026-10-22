@@ -14,10 +14,9 @@ import 'blobjs';
 import 'canvas-toBlob';
 
 import Vue from 'vue'
-import _ from 'underscore';
 
 import { add, clone, eye3, mv3, mm3, getVec2VecRotM, perspT, invperspT,
-  vec_rotm, rotm, mult, dot, unit, normal, round, randomchoice, PI } from './geo';
+  vec_rotm, rotm, mult, dot, unit, normal, round, randomchoice, PI, quat, mat3 } from './geo';
 import { rwb_palette, sortFaces, palette, rndcolors } from './polyhedron';
 import { generatePoly } from './parser';
 import { triangulate } from './topo_operators';
@@ -48,8 +47,12 @@ export let globPolys = {}; // constructed polyhedras
 
 const CANVAS_WIDTH = 720; // canvas dims
 const CANVAS_HEIGHT = 500; // canvas dims
+let globQuat = quat.create();
+let globLastQuat = quat.create();
 let globRotM = clone(eye3);
-let globLastRotM = clone(eye3);
+const updateRotM = function () {
+  globRotM = mat3.toNested(mat3.fromQuat(globQuat));
+};
 export let perspective_scale = 1200;
 export const persp_z_max = 5;
 export const persp_z_min = 0;
@@ -161,8 +164,8 @@ export const drawpoly = function (poly, tvec) {
   if (!tvec) { tvec = [0, 0, 0]; }
 
   // rotate poly in 3d
-  const oldxyz = _.map(poly.vertices, x => x);
-  poly.vertices = _.map(poly.vertices, x => add(mv3(globRotM, x), tvec));
+  const oldxyz = poly.vertices.map(x => x);
+  poly.vertices = poly.vertices.map(x => add(mv3(globRotM, x), tvec));
 
   try {
     // z sort faces
@@ -317,7 +320,7 @@ $(function () { // wait for page to load
   $('#palette').val(PALETTE.reduce((x, y) => x + ' ' + y));
 
   // construct the polyhedra from spec
-  globPolys = _.map(specs, x => generatePoly(x));
+  globPolys = specs.map(x => generatePoly(x));
   updateStats();
 
   // draw it
@@ -330,7 +333,7 @@ $(function () { // wait for page to load
   $('#spec').change(function (e) {
     // only allow one recipe for now
     let specs = $('#spec').val().split(/\s+/g).slice(0, 2);
-    globPolys = _.map(specs, x => generatePoly(x));
+    globPolys = specs.map(x => generatePoly(x));
     updateStats();
     // animateShape()
     setLink();
@@ -381,7 +384,7 @@ $(function () { // wait for page to load
       LastSphVec = tmpvec;
     }
     // copy last transform state
-    globLastRotM = clone(globRotM);
+    quat.copy(globLastQuat, globQuat);
   });
   $('#poly').mouseup(function (e) {
     e.preventDefault();
@@ -404,7 +407,10 @@ $(function () { // wait for page to load
       // quick NaN check
       if (((SphVec[0] * SphVec[1] * SphVec[2] * 0) === 0) &&
            ((LastSphVec[0] * LastSphVec[1] * LastSphVec[2] * 0) === 0)) {
-        globRotM = mm3(getVec2VecRotM(LastSphVec, SphVec), globLastRotM);
+        const deltaQ = quat.fromUnitVectors(unit(LastSphVec), unit(SphVec));
+        quat.multiply(deltaQ, globLastQuat, globQuat);
+        quat.normalize(globQuat, globQuat);
+        updateRotM();
       }
       drawShape();
     }
@@ -428,17 +434,20 @@ $(function () { // wait for page to load
   });
 
   $('#siderot').click(function (e) {
-    globRotM = vec_rotm(PI / 2, 0, 1, 0);
+    quat.setAxisAngle([0, 1, 0], PI / 2, globQuat);
+    updateRotM();
     drawShape();
   });
 
   $('#toprot').click(function (e) {
-    globRotM = vec_rotm(PI / 2, 1, 0, 0);
+    quat.setAxisAngle([1, 0, 0], PI / 2, globQuat);
+    updateRotM();
     drawShape();
   });
 
   $('#frontrot').click(function (e) {
-    globRotM = rotm(0, 0, 0);
+    quat.identity(globQuat);
+    updateRotM();
     drawShape();
   });
 

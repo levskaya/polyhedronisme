@@ -14,8 +14,8 @@
 /* eslint-disable standard/array-bracket-even-spacing */
 /* eslint-disable no-multi-spaces */
 
-import { add, sub, mult, mag, unit, calcCentroid, midpoint, oneThird, intersect, tween } from './geo';
-import { Polyhedron } from './polyhedron';
+import { add, sub, mult, mag, unit, calcCentroid, midpoint, oneThird, intersect, tween } from './geo.js';
+import { Polyhedron } from './polyhedron.js';
 
 // ===================================================================================================
 // Polyhedron Flagset Construct
@@ -868,7 +868,7 @@ export const perspectiva1 = function (poly) {
 
 // Triangulate - general polygon triangularization algorithm - defined in separate file
 // ------------------------------------------------------------------------------------------
-export { triangulate } from './triangulate';
+export { triangulate } from './triangulate.js';
 
 
 // Hollow (skeletonize)

@@ -1,4 +1,3 @@
-
 // Polyhédronisme
 // ===================================================================================================
 //
@@ -15,37 +14,30 @@
 /* eslint-disable standard/array-bracket-even-spacing */
 /* eslint-disable no-multi-spaces */
 
-import _ from 'underscore';
+import * as vec2 from './math/vec2.js';
+import * as vec3 from './math/vec3.js';
+import * as mat3 from './math/mat3.js';
+import * as quat from './math/quat.js';
 
-// Math / Vector / Matrix Functions
+export { vec2, vec3, mat3, quat };
+
+// Math Functions & Constants
 // ===================================================================================================
-
-// import math functions to local namespace
 const { random, round, floor, sqrt,
-  // eslint-disable-next-line no-unused-vars
   sin, cos, tan, asin, acos, atan, PI,
-  abs, pow, log, LN10} = Math;
+  abs, pow, log, LN10 } = Math;
 
-// export math functions via this namespace
 export { random, round, floor, sqrt,
   sin, cos, tan, asin, acos, atan, PI,
-  abs, pow, log, LN10};
+  abs, pow, log, LN10 };
 
-export const log10 = x => log(x) / LN10;
-
-export const sign = function (x) {
-  if (x === 0) {
-    return 0;
-  } else {
-    return x / abs(x);
-  }
-};
-
+export const log10 = Math.log10;
+export const sign = Math.sign;
 
 export function __range__ (left, right, inclusive) {
-  let range = [];
-  let ascending = left < right;
-  let end = !inclusive ? right : ascending ? right + 1 : right - 1;
+  const range = [];
+  const ascending = left < right;
+  const end = !inclusive ? right : ascending ? right + 1 : right - 1;
   for (let i = left; ascending ? i < end : i > end; ascending ? i++ : i--) {
     range.push(i);
   }
@@ -54,7 +46,8 @@ export function __range__ (left, right, inclusive) {
 
 // returns string w. nsigs digits ignoring magnitude
 export const sigfigs = function (N, nsigs) {
-  const mantissa = N / pow(10, floor(log10(N)));
+  if (N === 0) return '0';
+  const mantissa = N / pow(10, floor(log10(abs(N))));
   const truncated_mantissa = round(mantissa * pow(10, (nsigs - 1)));
   return `${truncated_mantissa}`;
 };
@@ -64,8 +57,11 @@ export const clone = function (obj) {
   if ((obj == null) || (typeof obj !== 'object')) {
     return obj;
   }
+  if (Array.isArray(obj)) {
+    return obj.map(clone);
+  }
   const newInstance = new obj.constructor();
-  for (let key in obj) {
+  for (let key of Object.keys(obj)) {
     newInstance[key] = clone(obj[key]);
   }
   return newInstance;
@@ -77,126 +73,43 @@ export const randomchoice = function (array) {
   return array[n];
 };
 
-// 3d scalar multiplication
-export const mult = (c, vec) =>
-  [c * vec[0], c * vec[1], c * vec[2]];
+// 3D Vector Math Primitives
+// ===================================================================================================
+export const mult = vec3.scale;
+export const add = vec3.add;
+export const sub = vec3.sub;
+export const _mult = vec3.multiply;
+export const dot = vec3.dot;
+export const cross = vec3.cross;
+export const mag = vec3.mag;
+export const mag2 = vec3.magSq;
+export const unit = vec3.normalize;
+export const midpoint = vec3.midpoint;
+export const tween = vec3.lerp;
+export const oneThird = vec3.oneThird;
+export const reciprocal = vec3.reciprocal;
+export const tangentPoint = vec3.tangentPoint;
+export const edgeDist = vec3.edgeDist;
+export const linePointDist2 = vec3.linePointDistSq;
+export const orthogonal = vec3.orthogonal;
+export const calcCentroid = vec3.calcCentroid;
+export const normal = vec3.normal;
+export const planararea = vec3.planarArea;
 
-// 2d scalar multiplication
-export const mult2d = (c, vec) =>
-  [c * vec[0], c * vec[1]];
-
-// 3d element-wise multiply
-export const _mult = (vec1, vec2) =>
-  [vec1[0] * vec2[0], vec1[1] * vec2[1], vec1[2] * vec2[2]];
-
-// 3d vector addition
-export const add = (vec1, vec2) =>
-  [vec1[0] + vec2[0], vec1[1] + vec2[1], vec1[2] + vec2[2]];
-
-// 2d vector addition
-export const add2d = (vec1, vec2) =>
-  [vec1[0] + vec2[0], vec1[1] + vec2[1]];
-
-// 3d vector subtraction
-export const sub = (vec1, vec2) =>
-  [vec1[0] - vec2[0], vec1[1] - vec2[1], vec1[2] - vec2[2]];
-
-// 2d vector subtraction
-export const sub2d = (vec1, vec2) =>
-  [vec1[0] - vec2[0], vec1[1] - vec2[1]];
-
-// 3d dot product
-export const dot = (vec1, vec2) =>
-  (vec1[0] * vec2[0]) + (vec1[1] * vec2[1]) + (vec1[2] * vec2[2]);
-
-// 2d dot product
-export const dot2d = (vec1, vec2) =>
-  (vec1[0] * vec2[0]) + (vec1[1] * vec2[1]);
-
-// 3d cross product d1 x d2
-export const cross = (d1, d2) =>
-  [ (d1[1] * d2[2]) - (d1[2] * d2[1]),
-    (d1[2] * d2[0]) - (d1[0] * d2[2]),
-    (d1[0] * d2[1]) - (d1[1] * d2[0]) ];
-
-// 2d scalar cross product d1 x d2
-export const cross2d = (d1, d2) =>
-  (d1[0] * d2[1]) - (d1[1] * d2[0]);
-
-// vector norm
-export const mag = vec => sqrt(dot(vec, vec));
-export const mag2d = vec => sqrt(dot2d(vec, vec));
-
-// vector magnitude squared
-export const mag2 = vec => dot(vec, vec);
-export const mag22d = vec => dot2d(vec, vec);
-
-// makes vector unit length
-export const unit = vec => mult(1 / sqrt(mag2(vec)), vec);
-export const unit2d = vec => mult2d(1 / sqrt(mag22d(vec)), vec);
-
-// midpoint between vec1, vec2
-export const midpoint = (vec1, vec2) => mult(1 / 2.0, add(vec1, vec2));
-export const midpoint2d = (vec1, vec2) => mult2d(1 / 2.0, add2d(vec1, vec2));
-
-// parametric segment between vec1, vec2 w. parameter t ranging from 0 to 1
-export const tween = (vec1, vec2, t) =>
-  [ ((1 - t) * vec1[0]) + (t * vec2[0]),
-    ((1 - t) * vec1[1]) + (t * vec2[1]),
-    ((1 - t) * vec1[2]) + (t * vec2[2])];
-
-export const tween2d = (vec1, vec2, t) =>
-  [ ((1 - t) * vec1[0]) + (t * vec2[0]),
-    ((1 - t) * vec1[1]) + (t * vec2[1])];
-
-// uses above to go one-third of the way along vec1->vec2 line
-export const oneThird = (vec1, vec2) => tween(vec1, vec2, 1 / 3.0);
-
-// reflect 3vec in unit sphere, spherical reciprocal
-export const reciprocal = vec => mult(1.0 / mag2(vec), vec);
-
-// point where line v1...v2 tangent to an origin sphere
-export const tangentPoint = function (v1, v2) {
-  const d = sub(v2, v1);
-  return sub(v1, mult(dot(d, v1) / mag2(d), d));
-};
-
-// distance of line v1...v2 to origin
-export const edgeDist = (v1, v2) => sqrt(mag2(tangentPoint(v1, v2)));
-
-// square of distance from point v3 to line segment v1...v2
-// http://mathworld.wolfram.com/Point-LineDistance3-Dimensional.html
-// calculates min distance from
-// point v3 to finite line segment between v1 and v2
-export const linePointDist2 = function (v1, v2, v3) {
-  let result;
-  const d21 = sub(v2, v1);
-  const d13 = sub(v1, v3);
-  const d23 = sub(v2, v3);
-  const m2 = mag2(d21);
-  const t = -dot(d13, d21) / m2;
-  if (t <= 0) {
-    // closest to point beyond v1, clip to |v3-v1|^2
-    result = mag2(d13);
-  } else if (t >= 1) {
-    // closest to point beyond v2, clip to |v3-v2|^2
-    result = mag2(d23);
-  } else {
-    // closest in-between v1, v2
-    result = mag2(cross(d21, d13)) / m2;
-  }
-  return result;
-};
-
-// find vector orthogonal to plane of 3 pts
-// -- do the below algos assume this be normalized or not?
-export const orthogonal = function (v1, v2, v3) {
-  // adjacent edge vectors
-  const d1 = sub(v2, v1);
-  const d2 = sub(v3, v2);
-  // cross product
-  return cross(d1, d2);
-};
+// 2D Vector Math Primitives
+// ===================================================================================================
+export const mult2d = vec2.scale;
+export const add2d = vec2.add;
+export const sub2d = vec2.sub;
+export const dot2d = vec2.dot;
+export const cross2d = vec2.cross;
+export const mag2d = vec2.mag;
+export const mag22d = vec2.magSq;
+export const unit2d = vec2.normalize;
+export const midpoint2d = vec2.midpoint;
+export const tween2d = vec2.lerp;
+export const calcCentroid2d = vec2.calcCentroid;
+export const planararea2d = vec2.planarArea;
 
 // find first element common to 3 sets by brute force search
 export const intersect = function (set1, set2, set3) {
@@ -212,65 +125,6 @@ export const intersect = function (set1, set2, set3) {
     }
   }
   return null; // empty intersection
-};
-
-// calculate centroid of array of vertices
-export const calcCentroid = function (vertices) {
-  // running sum of vertex coords
-  let centroidV = [0, 0, 0];
-  for (let v of vertices) {
-    centroidV = add(centroidV, v);
-  }
-  return mult(1 / vertices.length, centroidV);
-};
-
-// calculate centroid of array of vertices in 2d
-export const calcCentroid2d = function (vertices) {
-  // running sum of vertex coords
-  let centroidV = [0, 0];
-  for (let v of vertices) {
-    centroidV = add2d(centroidV, v);
-  }
-  return mult2d(1 / vertices.length, centroidV);
-};
-
-
-// calculate average normal vector for array of vertices
-export const normal = function (vertices) {
-  // running sum of normal vectors
-  let normalV = [0, 0, 0];
-  let [v1, v2] = vertices.slice(-2);
-  for (let v3 of vertices) {
-    normalV = add(normalV, orthogonal(v1, v2, v3));
-    [v1, v2] = [v2, v3];
-  } // shift over one
-  return unit(normalV);
-};
-
-// calculates area planar face by summing over subtriangle areas
-// this assumes planarity.
-export const planararea = function (vertices) {
-  let area = 0.0;
-  let vsum = [0.0, 0.0, 0.0];
-  let [v1, v2] = vertices.slice(-2);
-  for (let v3 of vertices) {
-    vsum = add(vsum, cross(v1, v2));
-    [v1, v2] = [v2, v3];
-  }
-  area = abs(dot(normal(vertices), vsum) / 2.0);
-  return area;
-};
-
-export const planararea2d = function (vertices) {
-  let area = 0.0;
-  let vsum = 0.0;
-  let [v1, v2] = vertices.slice(-2);
-  for (let v3 of vertices) {
-    vsum += cross2d(v1, v2);
-    [v1, v2] = [v2, v3];
-  }
-  area = abs(vsum / 2.0);
-  return area;
 };
 
 // congruence signature for assigning same colors to congruent faces
@@ -291,23 +145,29 @@ export const faceSignature = function (vertices, sensitivity) {
   let sig = '';
   for (x of cross_array) { sig += sigfigs(x, sensitivity); }
   // hack to make reflected faces share the same signature
-  for (x of cross_array.reverse()) { sig += sigfigs(x, sensitivity); }
+  for (x of cross_array.slice().reverse()) { sig += sigfigs(x, sensitivity); }
 
   return sig;
 };
 
-// projects 3d polyhedral face to 2d polygon
-// for triangulation and face display
+// projects 3d polyhedral face to 2d polygon for triangulation and face display
 export const project2dface = function (verts) {
-  let tmpverts = clone(verts);
+  if (verts.length < 3) return verts.map(() => [0, 0]);
   const v0 = verts[0];
-  tmpverts = _.map(tmpverts, x => x - v0);
-
   const n = normal(verts);
-  const c = unit(calcCentroid(verts)); // XXX: correct?
-  const p = cross(n, c);
 
-  return tmpverts.map((v) => [dot(n, v), dot(p, v)]);
+  // Form an orthonormal in-plane basis (u, v)
+  let u = sub(verts[1], v0);
+  if (mag2(u) < 1e-12) {
+    u = sub(verts[2], v0);
+  }
+  u = unit(u);
+  const v = cross(n, u);
+
+  return verts.map((pt) => {
+    const d = sub(pt, v0);
+    return [dot(u, d), dot(v, d)];
+  });
 };
 
 // copies array of arrays by value (deep copy)
@@ -319,97 +179,33 @@ export const copyVecArray = function (vecArray) {
   return newVecArray;
 };
 
-// 3d matrix vector multiply
-export const mv3 = (mat, vec) =>
-  // Ghetto custom def of matrix-vector mult
-  // example matrix: [[a,b,c],[d,e,f],[g,h,i]]
-  [(mat[0][0] * vec[0]) + (mat[0][1] * vec[1]) + (mat[0][2] * vec[2]),
-    (mat[1][0] * vec[0]) + (mat[1][1] * vec[1]) + (mat[1][2] * vec[2]),
-    (mat[2][0] * vec[0]) + (mat[2][1] * vec[1]) + (mat[2][2] * vec[2])];
-
-// 3d matrix matrix multiply
-export const mm3 = (A, B) =>
-  [[(A[0][0] * B[0][0]) + (A[0][1] * B[1][0]) + (A[0][2] * B[2][0]),
-    (A[0][0] * B[0][1]) + (A[0][1] * B[1][1]) + (A[0][2] * B[2][1]),
-    (A[0][0] * B[0][2]) + (A[0][1] * B[1][2]) + (A[0][2] * B[2][2])],
-  [ (A[1][0] * B[0][0]) + (A[1][1] * B[1][0]) + (A[1][2] * B[2][0]),
-    (A[1][0] * B[0][1]) + (A[1][1] * B[1][1]) + (A[1][2] * B[2][1]),
-    (A[1][0] * B[0][2]) + (A[1][1] * B[1][2]) + (A[1][2] * B[2][2])],
-  [ (A[2][0] * B[0][0]) + (A[2][1] * B[1][0]) + (A[2][2] * B[2][0]),
-    (A[2][0] * B[0][1]) + (A[2][1] * B[1][1]) + (A[2][2] * B[2][1]),
-    (A[2][0] * B[0][2]) + (A[2][1] * B[1][2]) + (A[2][2] * B[2][2])]];
-
+// 3D Matrix & Linear Algebra
+// ===================================================================================================
+export const mv3 = (mat, vec) => mat3.multiplyVec3(mat, vec);
+export const mm3 = (A, B) => mat3.multiply(A, B);
 export const eye3 = [[1, 0, 0], [0, 1, 0], [0, 0, 1]];
 
-// Rotation Matrix
-// Not ordered at all in agreement with euler angles!
-// use quaternions instead
-export const rotm = function (phi, theta, psi) {
-  const xy_mat = [
-    [cos(phi), -1.0 * sin(phi),  0.0],
-    [sin(phi),        cos(phi),  0.0],
-    [     0.0,             0.0,  1.0]];
+export const rotm = (phi, theta, psi) => mat3.toNested(mat3.fromEuler(phi, theta, psi));
+export const vec_rotm = (angle, x, y, z) => mat3.toNested(mat3.fromAxisAngle([x, y, z], angle));
 
-  const yz_mat = [
-    [cos(theta), 0, -1.0 * sin(theta)],
-    [         0, 1,                 0],
-    [sin(theta), 0,        cos(theta)]];
-
-  const xz_mat = [
-    [1.0,        0,               0],
-    [  0, cos(psi), -1.0 * sin(psi)],
-    [  0, sin(psi),        cos(psi)]];
-
-  return mm3(xz_mat, mm3(yz_mat, xy_mat));
+// Returns rotation matrix taking vec1 to vec2
+export const getVec2VecRotM = function (vec1, vec2) {
+  const q = quat.fromUnitVectors(unit(vec1), unit(vec2));
+  return mat3.toNested(mat3.fromQuat(q));
 };
-
-// Rotation Matrix defined by rotation about (unit) axis [x,y,z] for angle radians
-export const vec_rotm = function (angle, x, y, z) {
-  let m;
-  angle /= 2;
-  const sinA = sin(angle);
-  const cosA = cos(angle);
-  const sinA2 = sinA * sinA;
-  const length = mag([x, y, z]);
-  if (length === 0) {
-    [x, y, z] = [0, 0, 1];
-  }
-  if (length !== 1) {
-    [x, y, z] = unit([x, y, z]);
-  }
-  if ((x === 1) && (y === 0) && (z === 0)) {
-    m =
-    [ [1,                      0,           0],
-      [0,    1 - (2 * sinA2), 2 * sinA * cosA],
-      [0,   -2 * sinA * cosA, 1 - (2 * sinA2)]];
-  } else if ((x === 0) && (y === 1) && (z === 0)) {
-    m =
-    [ [1 - (2 * sinA2), 0,  -2 * sinA * cosA],
-      [              0, 1,                 0],
-      [2 * sinA * cosA, 0,   1 - (2 * sinA2)]];
-  } else if ((x === 0) && (y === 0) && (z === 1)) {
-    m =
-    [ [ 1 - (2 * sinA2),   2 * sinA * cosA, 0],
-      [-2 * sinA * cosA,   1 - (2 * sinA2), 0],
-      [               0,                 0, 1]];
-  } else {
-    const x2 = x * x;
-    const y2 = y * y;
-    const z2 = z * z;
-    m =
-    [ [1 - (2 * (y2 + z2) * sinA2), 2 * ((x * y * sinA2) + (z * sinA * cosA)), 2 * ((x * z * sinA2) - (y * sinA * cosA))],
-      [2 * ((y * x * sinA2) - (z * sinA * cosA)), 1 - (2 * (z2 + x2) * sinA2), 2 * ((y * z * sinA2) + (x * sinA * cosA))],
-      [2 * ((z * x * sinA2) + (y * sinA * cosA)), 2 * ((z * y * sinA2) - (x * sinA * cosA)), 1 - (2 * (x2 + y2) * sinA2)]];
-  }
-  return m;
-};
+if (typeof window !== 'undefined') {
+  window.getVec2VecRotM = getVec2VecRotM;
+}
 
 // Perspective Transform
+// ===================================================================================================
+export const persp_z_max = 5;
+export const persp_z_min = 0;
+export const persp_ratio = 0.8;
+export const perspective_scale = 1200;
+
 // assumes world's been rotated appropriately such that Z is depth
-// scales perspective such that inside depth regions min_real_depth <--> max_real_depth
-// perspective lengths vary no more than:   desired_ratio
-// with target dimension of roughly length: desired_length
-export const perspT = function (vec3, max_real_depth, min_real_depth, desired_ratio, desired_length) {
+export const perspT = function (vec3, max_real_depth = persp_z_max, min_real_depth = persp_z_min, desired_ratio = persp_ratio, desired_length = perspective_scale) {
   const z0 = ((max_real_depth * desired_ratio) - min_real_depth) / (1 - desired_ratio);
   const scalefactor = (desired_length * desired_ratio) / (1 - desired_ratio);
   // projected [X, Y]
@@ -424,55 +220,47 @@ export const magic_depth = function (max_real_depth, min_real_depth, desired_rat
 };
 
 // Inverses perspective transform by projecting plane onto a unit sphere at origin
-export const invperspT =
-  function (x, y, dx, dy, max_real_depth, min_real_depth, desired_ratio, desired_length) {
-    const z0 = ((max_real_depth * desired_ratio) - min_real_depth) / (1 - desired_ratio);
-    const s = (desired_length * desired_ratio) / (1 - desired_ratio);
-    const xp = x - dx;
-    const yp = y - dy;
-    const s2 = s * s;
-    const z02 = z0 * z0;
-    const xp2 = xp * xp;
-    const yp2 = yp * yp;
+export const invperspT = function (x, y, dx, dy, max_real_depth, min_real_depth, desired_ratio, desired_length) {
+  const z0 = ((max_real_depth * desired_ratio) - min_real_depth) / (1 - desired_ratio);
+  const s = (desired_length * desired_ratio) / (1 - desired_ratio);
+  const xp = x - dx;
+  const yp = y - dy;
+  const s2 = s * s;
+  const z02 = z0 * z0;
+  const xp2 = xp * xp;
+  const yp2 = yp * yp;
+  const denom = 2.0 * (s2 + xp2 + yp2);
 
-    const xsphere = ((2 * s * xp * z0) +
-                    sqrt((4 * s2 * xp2 * z02) +
-                    (4 * xp2 * (s2 + xp2 + yp2) * (1 - z02)))) / (2.0 * (s2 + xp2 + yp2));
-    const ysphere = (((s * yp * z0) / (s2 + xp2 + yp2)) +
-                   ((yp * sqrt((4 * s2 * z02) +
-                   (4 * (s2 + xp2 + yp2) * (1 - z02)))) / (2.0 * (s2 + xp2 + yp2))));
-    const zsphere = sqrt(1 - (xsphere * xsphere) - (ysphere * ysphere));
+  const xsphere = ((2 * s * xp * z0) +
+                  sqrt((4 * s2 * xp2 * z02) +
+                  (4 * xp2 * (s2 + xp2 + yp2) * (1 - z02)))) / denom;
+  const ysphere = (((s * yp * z0) / (s2 + xp2 + yp2)) +
+                 ((yp * sqrt((4 * s2 * z02) +
+                 (4 * (s2 + xp2 + yp2) * (1 - z02)))) / denom));
+  const zsphere = sqrt(Math.max(0, 1 - (xsphere * xsphere) - (ysphere * ysphere)));
 
-    return [xsphere, ysphere, zsphere];
-  };
-
-// Returns rotation matrix that takes vec1 to vec2
-export const getVec2VecRotM = function (vec1, vec2) {
-  const axis  = cross(vec1, vec2);
-  const angle = acos(dot(vec1, vec2));
-  return vec_rotm(-1 * angle, axis[0], axis[1], axis[2]);
+  return [xsphere, ysphere, zsphere];
 };
-window.getVec2VecRotM=getVec2VecRotM;
 
-// 2d point inclusion in 2d poly by winding number
+// 2D point inclusion in 2D poly by winding number
 // see http://geomalgorithms.com/a03-_inclusion.html
 export const pointInPolygon = function (point, vs) {
   const [ x, y ] = point;
   let wn = 0;
   const isLeft = function (P0, P1, P2) {
-    return (P1[0] - P0[0]) * (P2[1] - P0[1]) - (P2[0] - P0[0]) * (P1[1] - P0[1]);
-  }
+    return ((P1[0] - P0[0]) * (P2[1] - P0[1])) - ((P2[0] - P0[0]) * (P1[1] - P0[1]));
+  };
   for (var i = 0, j = vs.length - 1; i < vs.length; j = i++) {
     const [ xi, yi ] = vs[i];
     const [ xj, yj ] = vs[j];
-    if (yj <= y) { // <= orig
+    if (yj <= y) {
       if (yi > y) {
         if (isLeft([xj, yj], [xi, yi], [x, y]) > 0) {
           wn++;
         }
       }
     } else {
-      if (yi <= y) { // <= orig
+      if (yi <= y) {
         if (isLeft([xj, yj], [xi, yi], [x, y]) < 0) {
           wn--;
         }

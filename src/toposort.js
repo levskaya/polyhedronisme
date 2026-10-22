@@ -11,7 +11,7 @@
 /* eslint-disable standard/array-bracket-even-spacing */
 /* eslint-disable no-multi-spaces */
 
-import { __range__ } from './geo';
+import { __range__ } from './geo.js';
 
 // Single-shot class for performing Kahn's algorithm to topologically sort nodes in a DAG.
 export class TopoSorter {

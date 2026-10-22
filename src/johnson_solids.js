@@ -11,7 +11,7 @@
 /* eslint-disable standard/array-bracket-even-spacing */
 /* eslint-disable no-multi-spaces */
 
-import { Polyhedron } from './polyhedron';
+import { Polyhedron } from './polyhedron.js';
 
 // Johnson Solids - geometry extracted from george hart's VRML models.
 

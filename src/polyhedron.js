@@ -9,13 +9,14 @@
 
 /* eslint-disable camelcase */
 /* eslint-disable standard/array-bracket-even-spacing */
-/* eslint-disable no-multi-spaces */
-import _ from 'underscore';
 import { add, sub, mult, mag2, linePointDist2, normal, __range__,
-  random, sigfigs, planararea, faceSignature, sqrt, sin, cos, PI, pow } from './geo';
-import { VISIBILITY_ZNORMAL_CUTOFF, PALETTE, COLOR_METHOD, COLOR_SENSITIVITY } from './main';
-import { canonicalXYZ, adjustXYZ } from './geo_operators';
-import { sortFacesCarefully } from './depth';
+  random, sigfigs, planararea, faceSignature, sqrt, sin, cos, PI, pow } from './geo.js';
+import { canonicalXYZ, adjustXYZ } from './geo_operators.js';
+import { sortFacesCarefully } from './depth.js';
+
+export const VISIBILITY_ZNORMAL_CUTOFF = -Infinity;
+export const COLOR_METHOD = 'signature';
+export const COLOR_SENSITIVITY = 2;
 
 
 // Polyhedra Functions
@@ -117,7 +118,7 @@ export const paintPolyhedron = function (poly) {
     if (hash in colormemory) {
       return colormemory[hash];
     } else {
-      const fclr = _.toArray(colormemory).length;
+      const fclr = Object.keys(colormemory).length;
       colormemory[hash] = fclr;
       return fclr;
     }
@@ -139,7 +140,7 @@ export const paintPolyhedron = function (poly) {
     }
     poly.face_classes.push(clr);
   }
-  console.log(_.toArray(colormemory).length + ' face classes');
+  console.log(Object.keys(colormemory).length + ' face classes');
   return poly;
 };
 
@@ -167,7 +168,8 @@ export const sortFacesFast = function (poly) {
   const zCentroidNormalSort = function (a, b) {
     return -1000 * (a[1][2] < -0.01) + 1000 * (b[1][2] < -0.01) + a[0][2] - b[0][2];
   }
-  const zsortIndex = _.zip(centroids, normals, __range__(0, poly.faces.length, false))
+  const zsortIndex = poly.faces
+    .map((_, idx) => [centroids[idx], normals[idx], idx])
     .sort(zCentroidNormalSort)
     .map(x => x[2]);
 
@@ -206,7 +208,7 @@ export class Polyhedron {
         uniqEdges[`${a}~${b}`] = e;
       }
     }
-    return _.values(uniqEdges);
+    return Object.values(uniqEdges);
   }
 
   // get array of face centers
@@ -536,5 +538,5 @@ export const anticupola = function (n, alpha, height) {
 }
 
 // Johnson solids geometry in separate file
-export { johnson } from './johnson_solids';
+export { johnson } from './johnson_solids.js';
 
