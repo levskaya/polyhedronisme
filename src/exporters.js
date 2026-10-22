@@ -55,7 +55,7 @@ export const toOBJ = function (poly) {
   return objstr;
 };
 
-export const toX3D = function (poly) {
+export const toX3D = function (poly, pal) {
   let v;
   // ShapeWays uses 1unit = 1meter, so reduce to 3cm scale
   const SCALE_FACTOR = 0.03;
@@ -84,7 +84,7 @@ export const toX3D = function (poly) {
   // per-face Color
   x3dstr += '<Color color="';
   for (let cl of vertColors(this)) { // @face_class
-    const clr = defaultPalette(cl);
+    const clr = defaultPalette(cl, pal);
     x3dstr += `${clr[0]} ${clr[1]} ${clr[2]} `;
   }
   x3dstr += '"/>';
@@ -106,7 +106,7 @@ export const toX3D = function (poly) {
   return x3dstr;
 };
 
-export const toVRML = function (poly) {
+export const toVRML = function (poly, pal) {
   let v;
   // ShapeWays uses 1unit = 1meter, so reduce to 3cm scale
   const SCALE_FACTOR = 0.03;
@@ -148,7 +148,7 @@ color Color
 `;
   // per-face Color
   for (let cl of poly.face_classes) {
-    const clr = defaultPalette(cl);
+    const clr = defaultPalette(cl, pal);
     x3dstr += `${clr[0]} ${clr[1]} ${clr[2]} ,`;
   }
   x3dstr = x3dstr.slice(0, +-2 + 1 || undefined);

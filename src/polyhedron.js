@@ -88,9 +88,9 @@ const hextofloats = function (hexstr) {
 
 // converts [r,g,b] floats to #xxxxxx form
 const floatstohex = function (rgb) {
-  let r_hex = Number(parseInt(255 * rgb[0], 10)).toString(16);
-  let g_hex = Number(parseInt(255 * rgb[1], 10)).toString(16);
-  let b_hex = Number(parseInt(255 * rgb[2], 10)).toString(16);
+  let r_hex = Number(parseInt(255 * rgb[0], 10)).toString(16).padStart(2, '0');
+  let g_hex = Number(parseInt(255 * rgb[1], 10)).toString(16).padStart(2, '0');
+  let b_hex = Number(parseInt(255 * rgb[2], 10)).toString(16).padStart(2, '0');
   return '#' + r_hex + g_hex + b_hex;
 }
 

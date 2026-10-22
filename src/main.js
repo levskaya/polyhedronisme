@@ -187,7 +187,7 @@ export const drawpoly = function (poly, tvec) {
       }
 
       // use pre-computed colors
-      let clr = palette(poly.face_classes[fno]);
+      let clr = palette(poly.face_classes[fno], PALETTE);
 
       // shade based on simple cosine illumination factor
       const face_verts = face.map((v) => poly.vertices[v])
@@ -314,7 +314,7 @@ $(function () { // wait for page to load
 
   // set initial palette spec
   if ('palette' in urlParams) {
-    PALETTE = urlParams['palette'].split(/\s+/g);
+    PALETTE = urlParams['palette'].trim().split(/\s+/g);
     setLink();
   }
   $('#palette').val(PALETTE.reduce((x, y) => x + ' ' + y));
@@ -342,7 +342,7 @@ $(function () { // wait for page to load
 
   // when palette changes in input, redraw polyhedra
   $('#palette').change(function (e) {
-    PALETTE = $(this).val().split(/\s+/g);
+    PALETTE = $(this).val().trim().split(/\s+/g);
     setLink();
     drawShape();
   });
@@ -463,7 +463,7 @@ $(function () { // wait for page to load
   $('#svgsavebutton').click(function (e) {
     const svgtxt = toSVG(globPolys[0], {
       rotM: globRotM,
-      palette: palette,
+      palette: PALETTE,
       paintMode: PaintMode,
       cullHidden: true,
       perspective_scale: perspective_scale,
@@ -485,7 +485,7 @@ $(function () { // wait for page to load
 
   $('#x3dsavebutton').click(function (e) {
     const triangulated = triangulate(globPolys[0], true); // triangulate to preserve face_colors for 3d printing
-    const x3dtxt = toVRML(triangulated);
+    const x3dtxt = toVRML(triangulated, PALETTE);
     const spec = $('#spec').val().split(/\s+/g)[0];
     const filename = `polyhedronisme-${spec.replace(/\([^)]+\)/g, '')}.wrl`;
     saveText(x3dtxt, filename);
