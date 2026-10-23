@@ -3,43 +3,29 @@
 //
 // A toy for constructing and manipulating polyhedra and other meshes
 //
-// Copyright 2019, Anselm Levskaya
+// Copyright 2026, Anselm Levskaya
 // Released under the MIT License
 
 /* eslint-disable camelcase */
 
-// polyfills for saving png/obj/vrml
-import 'file-saver';
-import 'blobjs';
-import 'canvas-toBlob';
-
-import Vue from 'vue'
-
 import { add, clone, eye3, mv3, mm3, getVec2VecRotM, perspT, invperspT,
-  vec_rotm, rotm, mult, dot, unit, normal, round, randomchoice, PI, quat, mat3 } from './geo';
-import { rwb_palette, sortFaces, palette, rndcolors } from './polyhedron';
-import { generatePoly } from './parser';
-import { rewriteLegacyRecipe } from './legacy_parser';
-import { triangulate } from './topo_operators';
-import { toOBJ, toVRML, toSVG } from './exporters';
-// import * as testing from './testing'
-import { sortFacesCarefully } from './depth';
+  vec_rotm, rotm, mult, dot, unit, normal, round, randomchoice, PI, quat, mat3 } from './geo.js';
+import { rwb_palette, sortFaces, palette, rndcolors } from './polyhedron.js';
+import { generatePoly } from './parser.js';
+import { rewriteLegacyRecipe, setLegacyOpParser } from './legacy_parser.js';
+import legacyParser from './legacy.pegjs';
+import { triangulate } from './topo_operators.js';
+import { toOBJ, toVRML, toSVG } from './exporters.js';
+import { sortFacesCarefully } from './depth.js';
 
 // docs
-import frontText from './components/front.md'
+import frontHtml from './components/front.md';
 
 // global css
-require('./assets/polyhedronisme.css');
+import './assets/polyhedronisme.css';
 
-// debug
-Vue.config.productionTip = false;
-
-// eslint-disable-next-line no-new
-new Vue({
-  el: '#docs',
-  components: { frontText },
-  template: '<front-text/>'
-})
+// Initialize legacy recipe parser
+setLegacyOpParser(legacyParser);
 
 // GLOBALS
 // ===================================================================================================
@@ -88,40 +74,45 @@ const DEFAULT_RECIPES = [
   'PT', 'qA40PA40oC', 'knD', 'dn6x4bT', 'oox4P7',
   'qqJ37', 'aobD', 'qaxI'];
 
-// File-saving objects used to export txt/canvas-png
+// File-saving helpers used to export txt/svg/obj/wrl/canvas-png
+const downloadBlob = function (blob, filename) {
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  a.href = url;
+  a.download = filename;
+  document.body.appendChild(a);
+  a.click();
+  document.body.removeChild(a);
+  URL.revokeObjectURL(url);
+};
+
 const saveText = function (text, filename) {
-  const blb = new Blob([text],
-    {type: `text/plain;charset=${document.characterSet}`});
-  /* eslint-disable no-undef */
-  saveAs(blb, filename);
-}
+  const blb = new Blob([text], { type: 'text/plain;charset=utf-8' });
+  downloadBlob(blb, filename);
+};
 
 // parses URL string for polyhedron recipe, for bookmarking
-// should use #! href format instead
 const parseURL = function () {
-  let e;
   const urlParams = {};
-  const a = /\+/g; // Regex for replacing addition symbol with a space
-  const r = /([^&=]+)=?([^&]*)/g;
-  const d = s => decodeURIComponent(s.replace(a, ' '));
-  const q = window.location.search.substring(1);
-
-  while ((e = r.exec(q))) {
-    urlParams[d(e[1])] = d(e[2]);
+  const params = new URLSearchParams(window.location.search);
+  for (const [key, value] of params.entries()) {
+    urlParams[key] = value;
   }
   return urlParams;
 };
 
 // update the shareable link URL with the current recipe and palette
 const setLink = function () {
-  const specs = $('#spec').val().split(/\s+/g).slice(0, 2);
+  const specEl = document.getElementById('spec');
+  const linkEl = document.getElementById('link');
+  const specs = specEl.value.split(/\s+/g).slice(0, 2);
   // strip any existing parameters
   let link = location.protocol + '//' + location.host + location.pathname;
   link += `?recipe_v2=${encodeURIComponent(specs[0])}`;
   if (PALETTE !== rwb_palette) {
     link += `&palette=${encodeURIComponent(PALETTE.reduce((x, y) => x + ' ' + y))}`;
   }
-  $('#link').attr('href', link);
+  linkEl.setAttribute('href', link);
 };
 
 // Drawing Functions
@@ -130,11 +121,11 @@ const setLink = function () {
 // init canvas element
 // -------------------------------------------------------------------------------
 const init = function () {
-  const canvas = $('#poly');
-  canvas.width(CANVAS_WIDTH);
-  canvas.height(CANVAS_HEIGHT);
+  const canvas = document.getElementById('poly');
+  canvas.width = CANVAS_WIDTH;
+  canvas.height = CANVAS_HEIGHT;
 
-  ctx = canvas[0].getContext('2d');
+  ctx = canvas.getContext('2d');
   ctx.lineWidth = ctx_linewidth;
 
   if (BG_CLEAR) {
@@ -191,7 +182,7 @@ export const drawpoly = function (poly, tvec) {
       let clr = palette(poly.face_classes[fno], PALETTE);
 
       // shade based on simple cosine illumination factor
-      const face_verts = face.map((v) => poly.vertices[v])
+      const face_verts = face.map((v) => poly.vertices[v]);
       // TODO: these magic illumination parameters should be global constants or parameters
       const illum = dot(normal(face_verts), unit([1, -1, 0]));
       clr = mult((((illum / 2.0) + 0.5) * 0.7) + 0.3, clr);
@@ -219,7 +210,7 @@ export const drawpoly = function (poly, tvec) {
     }
 
     ctx.save();
-    
+
     ctx.fillStyle = 'red';
     if (window._pts) {
       for (let i = 0; i < window._pts.length; i++) {
@@ -227,7 +218,7 @@ export const drawpoly = function (poly, tvec) {
         ctx.beginPath();
         ctx.arc(x + _2d_x_offset, y + _2d_y_offset, 3, 0, Math.PI * 2);
         ctx.fill();
-        let d = Math.round(window._pts[i][3]*1000)/1000;
+        let d = Math.round(window._pts[i][3] * 1000) / 1000;
         ctx.fillText(`${window._pts[i][1]},${window._pts[i][2]}:${d}`, x + _2d_x_offset + 5, y + _2d_y_offset);
       }
     }
@@ -253,7 +244,7 @@ export const drawpoly = function (poly, tvec) {
     ctx.restore();
 
   } catch (e) {
-    console.log(e)
+    console.log(e);
   } finally {
     // reset coords, for setting absolute rotation, as poly is passed by ref
     poly.vertices = oldxyz;
@@ -277,7 +268,7 @@ const labelFaces = function (poly, show_hidden = false) {
     }
   }
   // window._fvs = poly.faces.map(f => f.map(v => poly.vertices[v]));
-}
+};
 
 // draw polyhedra just once
 // -----------------------------------------------------------------------------------
@@ -289,32 +280,44 @@ const drawShape = function () {
 // update V E F stats on page
 // -----------------------------------------------------------------------------------
 const updateStats = function () {
+  const basicStatsEl = document.getElementById('basicstats');
+  const moreStatsEl = document.getElementById('morestats');
   for (let i = 0; i < globPolys.length; i++) {
     const p = globPolys[i];
-    $('#basicstats').html(p.data());
-    $('#morestats').html(p.moreData());
+    basicStatsEl.innerHTML = p.data();
+    moreStatsEl.innerHTML = p.moreData();
   }
-}
+};
 
 // Initialization and Basic UI
 // ===================================================================================================
 
-$(function () { // wait for page to load
+const setupApp = function () {
+  // Render markdown documentation
+  const docsEl = document.getElementById('docs');
+  if (docsEl) {
+    docsEl.innerHTML = frontHtml;
+  }
+
   init(); // init canvas
+
+  const specEl = document.getElementById('spec');
+  const paletteEl = document.getElementById('palette');
+  const canvasEl = document.getElementById('poly');
 
   let specs;
   const urlParams = parseURL(); // see if recipe is spec'd in URL
   if ('recipe_v2' in urlParams) {
     specs = [urlParams['recipe_v2']];
-    $('#spec').val(specs);
+    specEl.value = specs[0];
     setLink();
   } else if ('recipe' in urlParams) {
     specs = urlParams['recipe'].trim().split(/\s+/g).slice(0, 2).map(rewriteLegacyRecipe);
-    $('#spec').val(specs.join(' '));
+    specEl.value = specs.join(' ');
     setLink();
   } else {
     specs = [randomchoice(DEFAULT_RECIPES)];
-    $('#spec').val(specs);
+    specEl.value = specs[0];
     setLink();
   }
 
@@ -323,7 +326,7 @@ $(function () { // wait for page to load
     PALETTE = urlParams['palette'].trim().split(/\s+/g);
     setLink();
   }
-  $('#palette').val(PALETTE.reduce((x, y) => x + ' ' + y));
+  paletteEl.value = PALETTE.reduce((x, y) => x + ' ' + y);
 
   // construct the polyhedra from spec
   globPolys = specs.map(x => generatePoly(x));
@@ -336,28 +339,27 @@ $(function () { // wait for page to load
   // ----------------------------------------------------
 
   // when spec changes in input, parse and draw new polyhedra
-  $('#spec').change(function (e) {
+  specEl.addEventListener('change', function () {
     // only allow one recipe for now
-    let specs = $('#spec').val().split(/\s+/g).slice(0, 2);
+    let specs = specEl.value.trim().split(/\s+/g).slice(0, 2);
     globPolys = specs.map(x => generatePoly(x));
     updateStats();
-    // animateShape()
     setLink();
     drawShape();
   });
 
   // when palette changes in input, redraw polyhedra
-  $('#palette').change(function (e) {
-    PALETTE = $(this).val().trim().split(/\s+/g);
+  paletteEl.addEventListener('change', function () {
+    PALETTE = paletteEl.value.trim().split(/\s+/g);
     setLink();
     drawShape();
   });
 
   // randomize palette
-  $('#rndcolors').click(function (e) {
+  document.getElementById('rndcolors').addEventListener('click', function () {
     let newpalette = rndcolors();
     PALETTE = newpalette;
-    $('#palette').val(newpalette.join(' '));
+    paletteEl.value = newpalette.join(' ');
     setLink();
     drawShape();
   });
@@ -366,20 +368,21 @@ $(function () { // wait for page to load
   // ----------------------------------------------------
 
   // mousewheel changes scale of drawing
-  $('#poly').mousewheel(function (e, delta, deltaX, deltaY) {
+  canvasEl.addEventListener('wheel', function (e) {
     e.preventDefault();
+    const delta = -Math.sign(e.deltaY);
     perspective_scale *= (10 + delta) / 10;
     drawShape();
-  });
+  }, { passive: false });
 
   // Implement standard trackball routines
   // ---------------------------------------
-  $('#poly').mousedown(function (e) {
+  canvasEl.addEventListener('mousedown', function (e) {
     e.preventDefault();
     MOUSEDOWN = true;
-    // relative mouse coords
-    LastMouseX = e.clientX - $(this).offset().left;
-    LastMouseY = e.clientY - ($(this).offset().top - $(window).scrollTop());
+    const rect = canvasEl.getBoundingClientRect();
+    LastMouseX = e.clientX - rect.left;
+    LastMouseY = e.clientY - rect.top;
     // calculate inverse projection of point to sphere
     const tmpvec = invperspT(LastMouseX, LastMouseY,
       _2d_x_offset, _2d_y_offset,
@@ -392,19 +395,23 @@ $(function () { // wait for page to load
     // copy last transform state
     quat.copy(globLastQuat, globQuat);
   });
-  $('#poly').mouseup(function (e) {
+
+  canvasEl.addEventListener('mouseup', function (e) {
     e.preventDefault();
     MOUSEDOWN = false;
   });
-  $('#poly').mouseleave(function (e) {
+
+  canvasEl.addEventListener('mouseleave', function (e) {
     e.preventDefault();
     MOUSEDOWN = false;
   });
-  $('#poly').mousemove(function (e) {
+
+  canvasEl.addEventListener('mousemove', function (e) {
     e.preventDefault();
     if (MOUSEDOWN) {
-      const MouseX = e.clientX - $(this).offset().left;
-      const MouseY = e.clientY - ($(this).offset().top - $(window).scrollTop());
+      const rect = canvasEl.getBoundingClientRect();
+      const MouseX = e.clientX - rect.left;
+      const MouseY = e.clientY - rect.top;
       const SphVec = invperspT(MouseX, MouseY,
         _2d_x_offset, _2d_y_offset,
         persp_z_max, persp_z_min,
@@ -424,34 +431,34 @@ $(function () { // wait for page to load
 
   // State control via some buttons
   // ---------------------------------------
-  $('#strokeonly').click(function (e) {
+  document.getElementById('strokeonly').addEventListener('click', function () {
     PaintMode = 'stroke';
     drawShape();
   });
 
-  $('#fillonly').click(function (e) {
+  document.getElementById('fillonly').addEventListener('click', function () {
     PaintMode = 'fill';
     drawShape();
   });
 
-  $('#fillandstroke').click(function (e) {
+  document.getElementById('fillandstroke').addEventListener('click', function () {
     PaintMode = 'fillstroke';
     drawShape();
   });
 
-  $('#siderot').click(function (e) {
+  document.getElementById('siderot').addEventListener('click', function () {
     quat.setAxisAngle([0, 1, 0], PI / 2, globQuat);
     updateRotM();
     drawShape();
   });
 
-  $('#toprot').click(function (e) {
+  document.getElementById('toprot').addEventListener('click', function () {
     quat.setAxisAngle([1, 0, 0], PI / 2, globQuat);
     updateRotM();
     drawShape();
   });
 
-  $('#frontrot').click(function (e) {
+  document.getElementById('frontrot').addEventListener('click', function () {
     quat.identity(globQuat);
     updateRotM();
     drawShape();
@@ -459,14 +466,15 @@ $(function () { // wait for page to load
 
   // Export Options
   // ---------------------------------------
-  $('#pngsavebutton').click(function (e) {
-    const canvas = $('#poly')[0];
-    const spec = $('#spec').val().split(/\s+/g)[0];
+  document.getElementById('pngsavebutton').addEventListener('click', function () {
+    const spec = specEl.value.split(/\s+/g)[0];
     const filename = `polyhedronisme-${spec.replace(/\([^)]+\)/g, '')}.png`;
-    canvas.toBlobHD(blob => saveAs(blob, filename));
+    canvasEl.toBlob(blob => {
+      if (blob) downloadBlob(blob, filename);
+    }, 'image/png');
   });
 
-  $('#svgsavebutton').click(function (e) {
+  document.getElementById('svgsavebutton').addEventListener('click', function () {
     const svgtxt = toSVG(globPolys[0], {
       rotM: globRotM,
       palette: PALETTE,
@@ -477,23 +485,29 @@ $(function () { // wait for page to load
       persp_z_min: persp_z_min,
       persp_ratio: persp_ratio
     });
-    const spec = $('#spec').val().split(/\s+/g)[0];
+    const spec = specEl.value.split(/\s+/g)[0];
     const filename = `polyhedronisme-${spec.replace(/\([^)]+\)/g, '')}.svg`;
     saveText(svgtxt, filename);
   });
 
-  $('#objsavebutton').click(function (e) {
+  document.getElementById('objsavebutton').addEventListener('click', function () {
     const objtxt = toOBJ(globPolys[0]);
-    const spec = $('#spec').val().split(/\s+/g)[0];
+    const spec = specEl.value.split(/\s+/g)[0];
     const filename = `polyhedronisme-${spec.replace(/\([^)]+\)/g, '')}.obj`;
     saveText(objtxt, filename);
   });
 
-  $('#x3dsavebutton').click(function (e) {
+  document.getElementById('x3dsavebutton').addEventListener('click', function () {
     const triangulated = triangulate(globPolys[0], true); // triangulate to preserve face_colors for 3d printing
     const x3dtxt = toVRML(triangulated, PALETTE);
-    const spec = $('#spec').val().split(/\s+/g)[0];
+    const spec = specEl.value.split(/\s+/g)[0];
     const filename = `polyhedronisme-${spec.replace(/\([^)]+\)/g, '')}.wrl`;
     saveText(x3dtxt, filename);
   });
-});
+};
+
+if (document.readyState === 'loading') {
+  document.addEventListener('DOMContentLoaded', setupApp);
+} else {
+  setupApp();
+}

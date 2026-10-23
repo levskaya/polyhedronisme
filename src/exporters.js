@@ -3,7 +3,7 @@
 //
 // A toy for constructing and manipulating polyhedra.
 //
-// Copyright 2019, Anselm Levskaya
+// Copyright 2026, Anselm Levskaya
 // Released under the MIT License
 //
 
@@ -12,9 +12,9 @@
 /* eslint-disable camelcase */
 /* eslint-disable standard/array-bracket-even-spacing */
 /* eslint-disable no-multi-spaces */
-import { normal, dot, unit, mult, round, add, mv3, clone, perspT, eye3 } from './geo';
-import { palette as defaultPalette, sortFaces } from './polyhedron';
-import * as polygonclipping from 'polygon-clipping';
+import { normal, dot, unit, mult, round, add, mv3, clone, perspT, eye3 } from './geo.js';
+import { palette as defaultPalette, sortFaces } from './polyhedron.js';
+import polygonclipping from 'polygon-clipping';
 import * as martinez from 'martinez-polygon-clipping';
 
 const vertColors = function (poly) {

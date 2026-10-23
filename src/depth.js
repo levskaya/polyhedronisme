@@ -3,7 +3,7 @@
 //
 // A toy for constructing and manipulating polyhedra.
 //
-// Copyright 2019, Anselm Levskaya
+// Copyright 2026, Anselm Levskaya
 // Released under the MIT License
 //
 
@@ -11,7 +11,7 @@
 /* eslint-disable standard/array-bracket-even-spacing */
 /* eslint-disable no-multi-spaces */
 import * as martinez from 'martinez-polygon-clipping';
-import * as polygonclipping from 'polygon-clipping';
+import polygonclipping from 'polygon-clipping';
 
 import { abs, add, sub, mag2, __range__,
   calcCentroid, calcCentroid2d, dot2d, sqrt, sin, planararea2d,

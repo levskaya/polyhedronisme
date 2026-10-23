@@ -7,7 +7,7 @@
 // from code by mathematician and mathematical sculptor
 // George W. Hart http://www.georgehart.com/
 //
-// Copyright 2019, Anselm Levskaya
+// Copyright 2026, Anselm Levskaya
 // Released under the MIT License
 
 // import { generatePoly } from './parser';

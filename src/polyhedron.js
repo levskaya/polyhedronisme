@@ -3,7 +3,7 @@
 //
 // A toy for constructing and manipulating polyhedra.
 //
-// Copyright 2019, Anselm Levskaya
+// Copyright 2026, Anselm Levskaya
 // Released under the MIT License
 //
 

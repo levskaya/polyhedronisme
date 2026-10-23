@@ -17,14 +17,11 @@ This project was also inspired by the renaissance tome
 [Perspectiva Corporum Regularium][4] featuring [engravings][perspectiva] by Jost
 Amman after designs and drawings by Wenzel Jamnitzer.
 
-This still uses an HTML5 canvas renderer, as it was written long ago 
-before webGL really worked.  It uses jQuery, underscore, [PEG.js][5] parser 
-for parsing recipes, and [Eli Grey's][eli] Blob.js, FileSaver, 
-canvas-toBlob for saving files.
+This uses an HTML5 canvas renderer, [PEG.js][5] for parsing recipes, and [Vite](https://vite.dev/) for building and development.
 
 * * *
 Text CC-BY, Code MIT License
-2019 Anselm Levskaya
+2026 Anselm Levskaya
 
 [1]: http://en.wikipedia.org/wiki/Conway_polyhedron_notation "Conway Operators"
 [2]: http://www.georgehart.com/ "George W. Hart"

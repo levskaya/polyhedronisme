@@ -3,7 +3,7 @@
 //
 // A toy for constructing and manipulating polyhedra and other meshes
 //
-// Copyright 2019, Anselm Levskaya
+// Copyright 2026, Anselm Levskaya
 // Released under the MIT License
 //
 // Legacy (v1) Parser & Recipe Rewriter for backward compatibility with old ?recipe= URLs.
@@ -17,7 +17,7 @@ import * as topo from './topo_operators.js';
 import * as geo from './geo_operators.js';
 
 // Load peg.js parser for legacy v1 operator-chain-on-base-polyhedra recipes
-var legacyOpParser = typeof require !== 'undefined' ? require('./legacy.pegjs') : null;
+let legacyOpParser = null;
 
 export const setLegacyOpParser = function (parser) {
   legacyOpParser = parser;

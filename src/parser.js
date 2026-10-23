@@ -3,19 +3,25 @@
 //
 // A toy for constructing and manipulating polyhedra and other meshes
 //
-// Copyright 2019, Anselm Levskaya
+// Copyright 2026, Anselm Levskaya
 // Released under the MIT License
 
 /* eslint-disable-camelcase */
 /* eslint-disable standard/array-bracket-even-spacing */
 /* eslint-disable no-multi-spaces */
 
-import * as polyhedron from './polyhedron';
-import * as topo from './topo_operators';
-import * as geo from './geo_operators';
+import * as polyhedron from './polyhedron.js';
+import * as topo from './topo_operators.js';
+import * as geo from './geo_operators.js';
 
 // Load peg.js parser for operator-chain-on-base-polyhedra recipes
-var opParser = require('./original.pegjs');
+import defaultOpParser from './original.pegjs';
+
+let opParser = defaultOpParser;
+
+export const setOpParser = function (parser) {
+  opParser = parser;
+};
 
 
 // Parser Routines
