@@ -12,7 +12,9 @@ import { add, clone, eye3, mv3, mm3, getVec2VecRotM, perspT, invperspT,
   vec_rotm, rotm, mult, dot, unit, normal, round, randomchoice, PI, quat, mat3 } from './geo.js';
 import { rwb_palette, PRESET_PALETTES, sortFaces, palette, rndcolors,
   shufflePalette, normalizeHex } from './polyhedron.js';
-import { generatePoly } from './parser.js';
+import { PRESET_RECIPE_GROUPS, DEFAULT_RECIPES, generateRandomRecipe } from './recipes.js';
+import { generatePoly, setOpParser } from './parser.js';
+import defaultOpParser from './original.pegjs';
 import { rewriteLegacyRecipe, setLegacyOpParser } from './legacy_parser.js';
 import legacyParser from './legacy.pegjs';
 import { triangulate } from './topo_operators.js';
@@ -25,7 +27,8 @@ import frontHtml from './components/front.md';
 // global css
 import './assets/polyhedronisme.css';
 
-// Initialize legacy recipe parser
+// Initialize recipe parsers
+setOpParser(defaultOpParser);
 setLegacyOpParser(legacyParser);
 
 // GLOBALS
@@ -69,12 +72,6 @@ let LastMouseX = 0;
 let LastMouseY = 0;
 // state variable for 3d trackball
 let LastSphVec = [1, 0, 0];
-
-// random grabbag of polyhedra
-const DEFAULT_RECIPES = [
-  'CdakD', 'oCkkkT', 'kn4CA0dA4', 'opD',
-  'PT', 'qA40PA40oC', 'knD', 'dn6x4bT', 'oox4P7',
-  'qqJ37', 'aobD', 'qaxI'];
 
 // File-saving helpers used to export txt/svg/obj/wrl/canvas-png
 const downloadBlob = function (blob, filename) {
@@ -311,6 +308,9 @@ const setupApp = function () {
   init(); // init canvas
 
   const specEl = document.getElementById('spec');
+  const recipePresetEl = document.getElementById('recipe-preset');
+  const examplePolyBtn = document.getElementById('examplepoly');
+  const rndPolyBtn = document.getElementById('rndpoly');
   const paletteEl = document.getElementById('palette');
   const presetEl = document.getElementById('palette-preset');
   const swatchesEl = document.getElementById('palette-swatches');
@@ -321,6 +321,34 @@ const setupApp = function () {
   const toggleHexBtn = document.getElementById('togglehex');
   const hexRowEl = document.getElementById('palette-hex-row');
   const canvasEl = document.getElementById('poly');
+
+  // Populate curated recipe preset selector options
+  if (recipePresetEl) {
+    for (const group of PRESET_RECIPE_GROUPS) {
+      const optgroup = document.createElement('optgroup');
+      optgroup.label = group.label;
+      for (const r of group.recipes) {
+        const opt = document.createElement('option');
+        opt.value = r.spec;
+        opt.textContent = r.name;
+        optgroup.appendChild(opt);
+      }
+      recipePresetEl.appendChild(optgroup);
+    }
+    const customRecipeOpt = document.createElement('option');
+    customRecipeOpt.value = 'custom';
+    customRecipeOpt.textContent = 'Custom / Procedural';
+    customRecipeOpt.disabled = true;
+    customRecipeOpt.hidden = true;
+    recipePresetEl.appendChild(customRecipeOpt);
+  }
+
+  // Sync recipe preset dropdown to match current spec
+  const syncRecipePresetSelect = function (currentSpec) {
+    if (!recipePresetEl) return;
+    const trimmed = (currentSpec || '').trim();
+    recipePresetEl.value = DEFAULT_RECIPES.includes(trimmed) ? trimmed : 'custom';
+  };
 
   // Populate preset selector options
   if (presetEl) {
@@ -524,25 +552,61 @@ const setupApp = function () {
 
   // construct the polyhedra from spec
   globPolys = specs.map(x => generatePoly(x));
+  syncRecipePresetSelect(specs[0]);
   updateStats();
   renderSwatches();
 
   // draw it
   drawShape();
 
+  // Apply a recipe spec string, rebuild polyhedron, and sync UI
+  const applyRecipeSpec = function (rawSpec) {
+    const trimmed = (rawSpec || '').trim();
+    if (!trimmed) return;
+    specEl.value = trimmed;
+    const nextSpecs = trimmed.split(/\s+/g).slice(0, 2);
+    globPolys = nextSpecs.map(x => generatePoly(x));
+    syncRecipePresetSelect(nextSpecs[0]);
+    updateStats();
+    refreshSwatchVisuals();
+    setLink();
+    drawShape();
+  };
+
   // Event Handlers
   // ----------------------------------------------------
 
   // when spec changes in input, parse and draw new polyhedra
   specEl.addEventListener('change', function () {
-    // only allow one recipe for now
-    let specs = specEl.value.trim().split(/\s+/g).slice(0, 2);
-    globPolys = specs.map(x => generatePoly(x));
-    updateStats();
-    refreshSwatchVisuals();
-    setLink();
-    drawShape();
+    applyRecipeSpec(specEl.value);
   });
+
+  // curated recipe preset selection
+  if (recipePresetEl) {
+    recipePresetEl.addEventListener('change', function () {
+      if (recipePresetEl.value && recipePresetEl.value !== 'custom') {
+        applyRecipeSpec(recipePresetEl.value);
+      }
+    });
+  }
+
+  // pick a random curated example
+  if (examplePolyBtn) {
+    examplePolyBtn.addEventListener('click', function () {
+      const current = specEl.value.trim();
+      const pool = DEFAULT_RECIPES.filter(r => r !== current);
+      const next = randomchoice(pool.length > 0 ? pool : DEFAULT_RECIPES);
+      applyRecipeSpec(next);
+    });
+  }
+
+  // synthesize a procedural random recipe
+  if (rndPolyBtn) {
+    rndPolyBtn.addEventListener('click', function () {
+      const next = generateRandomRecipe(specEl.value.trim());
+      applyRecipeSpec(next);
+    });
+  }
 
   // preset selection
   if (presetEl) {

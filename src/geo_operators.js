@@ -14,7 +14,7 @@
 /* eslint-disable standard/array-bracket-even-spacing */
 /* eslint-disable no-multi-spaces */
 
-import { add, sub, mult, dot, mag, mag2, unit, normal, edgeDist, midpoint,
+import { add, sub, mult, dot, mag, mag2, unit, normal, orthogonal, edgeDist, midpoint,
   copyVecArray, tangentPoint, calcCentroid, reciprocal, sqrt, mat3 } from './geo.js';
 import { dual } from './topo_operators.js';
 import { Polyhedron } from './polyhedron.js';

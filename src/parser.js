@@ -15,9 +15,7 @@ import * as topo from './topo_operators.js';
 import * as geo from './geo_operators.js';
 
 // Load peg.js parser for operator-chain-on-base-polyhedra recipes
-import defaultOpParser from './original.pegjs';
-
-let opParser = defaultOpParser;
+let opParser = null;
 
 export const setOpParser = function (parser) {
   opParser = parser;

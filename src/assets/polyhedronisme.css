@@ -42,7 +42,7 @@ div.container {
 }
 
 #spec {
-    width: 300px;
+    width: 240px;
     padding: 2px 5px;
     font-family: monospace;
     font-size: 13px;
@@ -130,6 +130,12 @@ div.container {
     color: #252519;
     cursor: pointer;
     height: 24px;
+}
+
+.recipe-select {
+    width: 185px;
+    max-width: 185px;
+    text-overflow: ellipsis;
 }
 
 .palette-swatches {

@@ -522,4 +522,42 @@ console.log('Testing STL and GLB 3D exporters...');
 }
 console.log('✓ STL and GLB 3D exporters passed');
 
+// 11. Curated Recipes & Procedural Recipe Generator Tests
+console.log('Testing curated recipe gallery and procedural random generator...');
+{
+  const { createRequire } = await import('node:module');
+  const req = createRequire(import.meta.url);
+  const fs = req('node:fs');
+  const path = req('node:path');
+  const pegjs = req('pegjs');
+  const grammar = fs.readFileSync(path.join(path.dirname(new URL(import.meta.url).pathname), '../src/original.pegjs'), 'utf8');
+  const { generatePoly, setOpParser } = await import('../src/parser.js');
+  const { PRESET_RECIPE_GROUPS, DEFAULT_RECIPES, generateRandomRecipe } = await import('../src/recipes.js');
+  setOpParser(pegjs.generate(grammar));
+
+  assert.strictEqual(PRESET_RECIPE_GROUPS.length >= 6, true);
+  assert.strictEqual(DEFAULT_RECIPES.length >= 45, true);
+
+  for (const spec of DEFAULT_RECIPES) {
+    const poly = generatePoly(spec);
+    assert.strictEqual(poly.faces.length >= 4, true, `Curated recipe ${spec} has too few faces`);
+    assert.strictEqual(poly.vertices.length >= 4, true, `Curated recipe ${spec} has too few vertices`);
+    for (const v of poly.vertices) {
+      assert.strictEqual(Number.isFinite(v[0]) && Number.isFinite(v[1]) && Number.isFinite(v[2]), true, `Curated recipe ${spec} produced NaN/Inf vertex`);
+    }
+  }
+
+  for (let i = 0; i < 30; i++) {
+    const rndSpec = generateRandomRecipe('CdakD');
+    assert.strictEqual(typeof rndSpec === 'string' && rndSpec.length >= 2, true);
+    assert.notStrictEqual(rndSpec, 'CdakD');
+    const poly = generatePoly(rndSpec);
+    assert.strictEqual(poly.faces.length >= 12 && poly.faces.length <= 950, true, `Random recipe ${rndSpec} face count out of bounds: ${poly.faces.length}`);
+    for (const v of poly.vertices) {
+      assert.strictEqual(Number.isFinite(v[0]) && Number.isFinite(v[1]) && Number.isFinite(v[2]), true, `Random recipe ${rndSpec} produced NaN/Inf vertex`);
+    }
+  }
+}
+console.log('✓ Curated recipe gallery and procedural random generator passed');
+
 console.log('\nAll math and geometry tests passed successfully!');
