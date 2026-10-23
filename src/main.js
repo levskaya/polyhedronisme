@@ -123,10 +123,14 @@ const setLink = function () {
 // -------------------------------------------------------------------------------
 const init = function () {
   const canvas = document.getElementById('poly');
-  canvas.width = CANVAS_WIDTH;
-  canvas.height = CANVAS_HEIGHT;
+  const dpr = window.devicePixelRatio || 1;
+  canvas.width = CANVAS_WIDTH * dpr;
+  canvas.height = CANVAS_HEIGHT * dpr;
+  canvas.style.width = `${CANVAS_WIDTH}px`;
+  canvas.style.height = `${CANVAS_HEIGHT}px`;
 
   ctx = canvas.getContext('2d');
+  ctx.scale(dpr, dpr);
   ctx.lineWidth = ctx_linewidth;
 
   if (BG_CLEAR) {
