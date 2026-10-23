@@ -267,4 +267,38 @@ console.log('Testing Polyhedron primitives and canonicalization...');
 }
 console.log('✓ Polyhedron primitives, topological operators, and canonicalizer passed');
 
+// 7. Legacy Parser & Recipe Rewriter Tests
+console.log('Testing legacy v1 parser and recipe rewriter...');
+{
+  const { createRequire } = await import('node:module');
+  const req = createRequire(import.meta.url);
+  const fs = req('node:fs');
+  const path = req('node:path');
+  const pegjs = req('pegjs');
+  const grammar = fs.readFileSync(path.join(path.dirname(new URL(import.meta.url).pathname), '../src/legacy.pegjs'), 'utf8');
+  const { rewriteLegacyRecipe, generatePolyLegacy, setLegacyOpParser } = await import('../src/legacy_parser.js');
+  setLegacyOpParser(pegjs.generate(grammar));
+
+  // Verify KN and CN rewrites (and preservation of base C)
+  assert.strictEqual(rewriteLegacyRecipe('C2dakD'), 'CdakD');
+  assert.strictEqual(rewriteLegacyRecipe('K50dakD'), 'CdakD');
+  assert.strictEqual(rewriteLegacyRecipe('C200tC'), 'CtC');
+  assert.strictEqual(rewriteLegacyRecipe('K10C'), 'CC');
+  assert.strictEqual(rewriteLegacyRecipe('oC20kkkT'), 'oCkkkT');
+  assert.strictEqual(rewriteLegacyRecipe('kn4C40A0dA4'), 'kn4CA0dA4');
+
+  // Verify renamed operator rewrites: l -> P, z -> Z, h(0,inset,depth) -> H(inset,depth), h -> H
+  assert.strictEqual(rewriteLegacyRecipe('lC'), 'PC');
+  assert.strictEqual(rewriteLegacyRecipe('zD'), 'ZD');
+  assert.strictEqual(rewriteLegacyRecipe('h(0,0.4,0.1)C'), 'H(0.4,0.1)C');
+  assert.strictEqual(rewriteLegacyRecipe('hT'), 'HT');
+  assert.strictEqual(rewriteLegacyRecipe('C100zh(0,0.5,0.2)lD'), 'CZH(0.5,0.2)PD');
+
+  // Verify standalone legacy polyhedron generation
+  const p = generatePolyLegacy('C2dakD');
+  assert.strictEqual(p.faces.length > 0, true);
+  assert.strictEqual(p.vertices.length > 0, true);
+}
+console.log('✓ Legacy v1 parser and recipe rewriter passed');
+
 console.log('\nAll math and geometry tests passed successfully!');

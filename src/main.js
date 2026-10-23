@@ -19,6 +19,7 @@ import { add, clone, eye3, mv3, mm3, getVec2VecRotM, perspT, invperspT,
   vec_rotm, rotm, mult, dot, unit, normal, round, randomchoice, PI, quat, mat3 } from './geo';
 import { rwb_palette, sortFaces, palette, rndcolors } from './polyhedron';
 import { generatePoly } from './parser';
+import { rewriteLegacyRecipe } from './legacy_parser';
 import { triangulate } from './topo_operators';
 import { toOBJ, toVRML, toSVG } from './exporters';
 // import * as testing from './testing'
@@ -83,7 +84,7 @@ let LastSphVec = [1, 0, 0];
 
 // random grabbag of polyhedra
 const DEFAULT_RECIPES = [
-  'C2dakD', 'oC20kkkT', 'kn4C40A0dA4', 'opD',
+  'CdakD', 'oCkkkT', 'kn4CA0dA4', 'opD',
   'PT', 'qA40PA40oC', 'knD', 'dn6x4bT', 'oox4P7',
   'qqJ37', 'aobD', 'qaxI'];
 
@@ -116,7 +117,7 @@ const setLink = function () {
   const specs = $('#spec').val().split(/\s+/g).slice(0, 2);
   // strip any existing parameters
   let link = location.protocol + '//' + location.host + location.pathname;
-  link += `?recipe=${encodeURIComponent(specs[0])}`;
+  link += `?recipe_v2=${encodeURIComponent(specs[0])}`;
   if (PALETTE !== rwb_palette) {
     link += `&palette=${encodeURIComponent(PALETTE.reduce((x, y) => x + ' ' + y))}`;
   }
@@ -303,9 +304,14 @@ $(function () { // wait for page to load
 
   let specs;
   const urlParams = parseURL(); // see if recipe is spec'd in URL
-  if ('recipe' in urlParams) {
-    specs = [urlParams['recipe']];
+  if ('recipe_v2' in urlParams) {
+    specs = [urlParams['recipe_v2']];
     $('#spec').val(specs);
+    setLink();
+  } else if ('recipe' in urlParams) {
+    specs = urlParams['recipe'].trim().split(/\s+/g).slice(0, 2).map(rewriteLegacyRecipe);
+    $('#spec').val(specs.join(' '));
+    setLink();
   } else {
     specs = [randomchoice(DEFAULT_RECIPES)];
     $('#spec').val(specs);

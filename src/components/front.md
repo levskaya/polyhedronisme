@@ -62,7 +62,7 @@ There are more complicated, parameterized forms for __k__ and __n__:
 Note that for most of the above operations, while the _topology_ of the result is uniquely specified, a great variety of _geometry_ is possible. For maximum flexibility, the above operators do not enforce convexity of the polyhedron, or planarity of the faces, at each step. If these properties are desired in the final result, the following geometric "refinement" operators can be used. These operators are for canonicalizing the polyhedral shape, and are mainly intended for making the more traditional, convex polyhedra more symmetric:
 
 - __A__<i>N</i> - convex spherical <b>A</b>djustment. Iterates N times. May give more pleasing symmetry, but can be unstable for certain shapes. Usually an N of 20-40 is enough.
-- __C__<i>N</i> - proper <b>C</b>anonicalization, iteratively refines shape N times. Flattens faces. A typical N is 200 or 300.
+- __C__ - proper <b>C</b>anonicalization, solves for planar faces and midsphere-tangent edges.
 
 _Remember that these can blow up the geometry of nonconvex polyhedra._
 
