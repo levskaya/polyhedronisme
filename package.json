@@ -10,13 +10,15 @@
     "start": "vite",
     "build": "vite build",
     "preview": "vite preview",
-    "test": "node test/math_test.mjs"
+    "test": "node test/math_test.mjs",
+    "deploy": "npm run build && gh-pages -d dist --nojekyll"
   },
   "dependencies": {
     "martinez-polygon-clipping": "^0.8.1",
     "polygon-clipping": "^0.15.7"
   },
   "devDependencies": {
+    "gh-pages": "^6.3.0",
     "markdown-it": "^14.1.0",
     "markdown-it-imsize": "^2.0.1",
     "pegjs": "^0.10.0",
