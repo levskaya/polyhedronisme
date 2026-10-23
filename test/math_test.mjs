@@ -301,4 +301,115 @@ console.log('Testing legacy v1 parser and recipe rewriter...');
 }
 console.log('✓ Legacy v1 parser and recipe rewriter passed');
 
+// 8. Comprehensive Topological Operator Manifold & Invariant Tests
+console.log('Testing all topological operators (manifoldness, Euler characteristic, dual ordering)...');
+{
+  const { tetrahedron, cube, octahedron, dodecahedron, icosahedron, prism, antiprism } = await import('../src/polyhedron.js');
+  const topo = await import('../src/topo_operators.js');
+
+  // Helper to verify closed oriented 2-manifold invariants:
+  // 1. Every vertex index is valid and has finite 3D coordinates.
+  // 2. Every directed edge (u -> v) appears at most once and has a matching reverse edge (v -> u).
+  const assertClosedManifold = (poly, expectedEuler = 2) => {
+    const V = poly.vertices.length;
+    const F = poly.faces.length;
+    for (let i = 0; i < V; i++) {
+      const v = poly.vertices[i];
+      assert.strictEqual(Array.isArray(v) && v.length === 3, true, `${poly.name}: invalid vertex ${i}`);
+      assert.strictEqual(!isNaN(v[0]) && !isNaN(v[1]) && !isNaN(v[2]), true, `${poly.name}: NaN vertex ${i}`);
+    }
+
+    const directedEdges = new Set();
+    for (let fIdx = 0; fIdx < F; fIdx++) {
+      const f = poly.faces[fIdx];
+      assert.strictEqual(f.length >= 3, true, `${poly.name}: face ${fIdx} has < 3 vertices`);
+      for (let j = 0; j < f.length; j++) {
+        const u = f[j];
+        const v = f[(j + 1) % f.length];
+        assert.strictEqual(u >= 0 && u < V, true, `${poly.name}: out-of-range vertex ${u}`);
+        const dirKey = `${u}->${v}`;
+        assert.strictEqual(directedEdges.has(dirKey), false, `${poly.name}: duplicate directed edge ${dirKey}`);
+        directedEdges.add(dirKey);
+      }
+    }
+
+    for (const dirKey of directedEdges) {
+      const [u, v] = dirKey.split('->');
+      const revKey = `${v}->${u}`;
+      assert.strictEqual(directedEdges.has(revKey), true, `${poly.name}: unmatched half-edge ${dirKey}`);
+    }
+
+    const E = directedEdges.size / 2;
+    if (expectedEuler !== null) {
+      assert.strictEqual(V - E + F, expectedEuler, `${poly.name}: expected V-E+F=${expectedEuler}, got ${V}-${E}+${F}=${V - E + F}`);
+    }
+    return { V, E, F };
+  };
+
+  const seeds = [tetrahedron(), cube(), octahedron(), dodecahedron(), icosahedron(), prism(5), antiprism(4)];
+  const genusZeroOps = [
+    p => topo.kisN(p),
+    p => topo.kisN(p, 4, 0.2),
+    p => topo.ambo(p),
+    p => topo.gyro(p),
+    p => topo.propellor(p),
+    p => topo.reflect(p),
+    p => topo.dual(p),
+    p => topo.chamfer(p, 0.4),
+    p => topo.whirl(p),
+    p => topo.quinto(p),
+    p => topo.insetN(p, 0, 0.4, -0.1),
+    p => topo.insetN(p, 4, 0.4, 0.2),
+    p => topo.extrudeN(p, 0),
+    p => topo.loft(p, 0, 0.3),
+    p => topo.lace(p),
+    p => topo.joinlace(p),
+    p => topo.stake(p),
+    p => topo.perspectiva1(p),
+    p => topo.triangulate(p, true)
+  ];
+
+  for (const seed of seeds) {
+    for (const opFn of genusZeroOps) {
+      const res = opFn(seed);
+      assertClosedManifold(res, 2);
+    }
+
+    // Hollow creates a genus-(F-1) surface: Euler characteristic = 2 - 2*(F_orig - 1)
+    const hPoly = topo.hollow(seed, 0.5, 0.2);
+    const expectedHollowEuler = 2 - 2 * (seed.faces.length - 1);
+    assertClosedManifold(hPoly, expectedHollowEuler);
+
+    // Verify dual(poly) preserves exact correspondence between dpoly.faces[v] and poly.vertices[v]
+    const dPoly = topo.dual(seed);
+    assert.strictEqual(dPoly.faces.length, seed.vertices.length);
+    assert.strictEqual(dPoly.vertices.length, seed.faces.length);
+    for (let vIdx = 0; vIdx < seed.vertices.length; vIdx++) {
+      const df = dPoly.faces[vIdx];
+      for (const fIdx of df) {
+        assert.strictEqual(seed.faces[fIdx].includes(vIdx), true, `dual face ${vIdx} references non-incident primal face ${fIdx}`);
+      }
+    }
+  }
+
+  // Verify reflect() does not mutate its input polyhedron
+  const origCube = cube();
+  const origVert0 = origCube.vertices[0].slice();
+  const origFace0 = origCube.faces[0].slice();
+  const reflCube = topo.reflect(origCube);
+  assert.deepStrictEqual(origCube.vertices[0], origVert0);
+  assert.deepStrictEqual(origCube.faces[0], origFace0);
+  assert.deepStrictEqual(reflCube.vertices[0], origVert0.map(x => -x));
+
+  // Verify trisub() on triangular seeds (T, O, I) for n = 2, 3, 5
+  for (const triSeed of [tetrahedron(), octahedron(), icosahedron()]) {
+    for (const n of [2, 3, 5]) {
+      const sub = topo.trisub(triSeed, n);
+      const { F } = assertClosedManifold(sub, 2);
+      assert.strictEqual(F, triSeed.faces.length * n * n);
+    }
+  }
+}
+console.log('✓ All topological operator manifold and invariant tests passed');
+
 console.log('\nAll math and geometry tests passed successfully!');

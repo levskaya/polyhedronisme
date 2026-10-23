@@ -70,8 +70,8 @@ const specReplacements = [
   [/o/g, 'jj'],   // o --> jj   (abbr. for ortho)
   [/m/g, 'kj'],   // m --> kj   (abbr. for meta)
   [/t(\d*)/g, 'dk$1d'],  // t(n) --> dk(n)d  (dual operations)
-  [/j/g, 'dad'],  // j --> dad  (dual operations) # Why not j --> da ?
-  [/s/g, 'dgd'],  // s --> dgd  (dual operations) # Why not s --> dg ?
+  [/j/g, 'da'],   // j --> da   (dual-ambo, since ad = a)
+  [/s/g, 'dg'],   // s --> dg   (dual-gyro, since gd = g)
   [/dd/g, ''],    // dd --> null  (order 2)
   [/ad/g, 'a'],   // ad --> a   (a_ = ad_)
   [/gd/g, 'g'],   // gd --> g   (g_ = gd_)

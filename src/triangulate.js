@@ -18,19 +18,16 @@
 // STL or VRML for 3D Printing.
 //
 
-import { clone, project2dface, __range__ } from './geo.js';
+import { copyVecArray, project2dface, __range__ } from './geo.js';
 import { Polyhedron } from './polyhedron.js';
 
-// Ear-based triangulation of 2d faces, takes array of 2d coords in the face ordering
-// Returns indices of the new diagonal lines to cut.
-//
-// assumes planarity of course, so this isn't the ideal algo for making aesthetically pleasing
-// "flattening" choices in distorted polyhedral planes.
-//
-const getDiagonals = function (verts) {
+// Ear-clipping triangulation of a 2D polygon.
+// Takes an array of 2D coordinates in face ordering and returns an array of
+// local vertex index triplets [i, j, k] preserving the polygon's winding order.
+const earClipTriangulate = function (verts) {
   let v0, v2;
   const limiter = 999;
-  const diagonals = [];
+  const tris = [];
   const ear = [];
   let facelen = verts.length;
 
@@ -40,15 +37,6 @@ const getDiagonals = function (verts) {
   const LeftOn = (Va, Vb, Vc) => Area2(Va, Vb, Vc) >= 0;
   const Collinear = (Va, Vb, Vc) => Area2(Va, Vb, Vc) === 0;
 
-  // const Between = function (Va, Vb, Vc) {
-  //   if (Collinear(Va, Vb, Vc)) { return false; }
-  //   if (Va[0] !== Vb[0]) {
-  //     return ((Va[0] <= Vc[0]) && (Vc[0] <= Vb[0])) || ((Va[0] >= Vc[0]) && (Vc[0] >= Vb[0]));
-  //   } else {
-  //     return ((Va[1] <= Vc[1]) && (Vc[1] <= Vb[1])) || ((Va[1] >= Vc[1]) && (Vc[1] >= Vb[1]));
-  //   }
-  // };
-
   const IntersectProp = function (Va, Vb, Vc, Vd) {
     if (Collinear(Va, Vb, Vc) || Collinear(Va, Vb, Vd) ||
         Collinear(Vc, Vd, Va) || Collinear(Vc, Vd, Vb)) {
@@ -56,19 +44,6 @@ const getDiagonals = function (verts) {
     }
     return XOR(Left(Va, Vb, Vc), Left(Va, Vb, Vd)) && XOR(Left(Vc, Vd, Va), Left(Vc, Vd, Vb));
   };
-
-  // const Intersect = function (Va, Vb, Vc, Vd) {
-  //   if (IntersectProp(Va, Vb, Vc, Vd)) {
-  //     return true;
-  //   } else {
-  //     if (Between(Va, Vb, Vc) || Between(Va, Vb, Vd) ||
-  //         Between(Vc, Vd, Va) || Between(Vc, Vd, Vb)) {
-  //       return true;
-  //     } else {
-  //       return false;
-  //     }
-  //   }
-  // };
 
   const InCone = function (a, b) {
     const a1 = (a + 1 + facelen) % facelen;
@@ -95,6 +70,7 @@ const getDiagonals = function (verts) {
 
   const Diagonal = (a, b) => InCone(a, b) && InCone(b, a) && Diagonalie(a, b);
 
+  verts = verts.slice();
   let v1 = 0;
   while (true) {
     v2 = (v1 + 1 + facelen) % facelen; // v1.next
@@ -104,10 +80,10 @@ const getDiagonals = function (verts) {
     if (v1 === 0) { break; }
   }
 
-  let origIdx = __range__(0, facelen - 1, true);
-  let n = facelen; // verts.length
+  const origIdx = __range__(0, facelen - 1, true);
+  let n = facelen;
   let z = limiter;
-  let head = 0; // ??
+  let head = 0;
   while ((z > 0) && (n > 3)) {
     z -= 1;
     v2 = head;
@@ -120,117 +96,61 @@ const getDiagonals = function (verts) {
         let v4 = (v3 + 1 + facelen) % facelen; // v3.next
         v1 = ((v2 - 1) + facelen) % facelen; // v2.prev
         v0 = ((v1 - 1) + facelen) % facelen; // v1.prev
-        diagonals.push([ origIdx[v1], origIdx[v3] ]);
-        ear[v1] = Diagonal(v0, v3);
-        ear[v3] = Diagonal(v1, v4);
-        // v1.next = v3
-        // v3.prev = v1
-        verts = verts.slice(0, +v2 + 1 || undefined).concat(verts.slice(v3));
-        origIdx = origIdx.slice(0, +v2 + 1 || undefined).concat(origIdx.slice(v3));
+        tris.push([ origIdx[v1], origIdx[v2], origIdx[v3] ]);
+
+        // Remove clipped ear vertex v2 from polygon ring
+        verts.splice(v2, 1);
+        origIdx.splice(v2, 1);
+        ear.splice(v2, 1);
         if (v0 > v2) { v0 -= 1; }
         if (v1 > v2) { v1 -= 1; }
         if (v3 > v2) { v3 -= 1; }
         if (v4 > v2) { v4 -= 1; }
         facelen--;
-        head = v3;
         n--;
+
+        // Update ear status of neighboring vertices in the reduced polygon
+        ear[v1] = Diagonal(v0, v3);
+        ear[v3] = Diagonal(v1, v4);
+        head = v3;
         broke = true;
       }
       v2 = (v2 + 1 + facelen) % facelen; // v2.next
-      if ((y <= 0) || !!broke || (v2 === head)) { break; }
+      if ((y <= 0) || broke || (v2 === head)) { break; }
     }
   }
 
-  return diagonals;
+  // Emit final remaining triangle (or fallback fan if ear-clipping hit limiter on degenerate face)
+  for (let k = 1; k < origIdx.length - 1; k++) {
+    tris.push([ origIdx[0], origIdx[k], origIdx[k + 1] ]);
+  }
+
+  return tris;
 };
 
-// equates triplets of numbers if they can be rotated into identity
-const triEq = function (tri1, tri2) {
-  if (((tri1[0] === tri2[0]) && (tri1[1] === tri2[1]) && (tri1[2] === tri2[2])) ||
-      ((tri1[0] === tri2[1]) && (tri1[1] === tri2[2]) && (tri1[2] === tri2[0])) ||
-      ((tri1[0] === tri2[2]) && (tri1[1] === tri2[0]) && (tri1[2] === tri2[1]))) {
-    return true;
-  } else {
-    return false;
-  }
-};
-
-// god-awful but working hack to turn diagonals into triangles
-// switch to an edge-matching algo, it would be 10x simpler
-const diagsToTris = function (f, diags) {
-  let d;
-  const edges = [];
-  const redges = [];
-  // get edges from faces as assoc arrays
-  for (let [v1, v2] of
-    (__range__(0, f.length - 1, true).map((i) => [i, (i + 1) % f.length]))) {
-    edges[v1] = [v2];
-    redges[v2] = [v1];
-  }
-  for (d of diags) { // push the diagonals into the assoc arrays in both directions!
-    edges[d[0]].push(d[1]);
-    edges[d[1]].push(d[0]);
-    redges[d[0]].push(d[1]);
-    redges[d[1]].push(d[0]);
-  }
-  const tris = [];
-  for (d of diags) { // orig N-face, N-2 triangles from the N-3 diagonals
-    var e1, e2;
-    for (e1 of edges[d[1]]) { // edge after diag
-      for (e2 of redges[d[0]]) { // edge before diag
-        if (e1 === e2) { // if they meet we have a triangle!
-          tris.push([d[0], d[1], e1]);
-        }
-      }
-    }
-    for (e1 of edges[d[0]]) { // same as above for other dir along diagonal
-      for (e2 of redges[d[1]]) {
-        if (e1 === e2) {
-          tris.push([d[1], d[0], e1]);
-        }
-      }
-    }
-  }
-  // unfortunately the above duplicates triangles, so filter out repeats
-  const uniques = [tris.pop()];
-  for (let tri of tris) {
-    let already_present = false;
-    for (let extant_tri of uniques) {
-      if (triEq(tri, extant_tri)) {
-        already_present = true;
-        break;
-      }
-    }
-    if (!already_present) { uniques.push(tri); }
-  }
-
-  return uniques;
-};
-
-// Driver routine, projects 3d face to 2d, get diagonals then triangles,
-// then builds new Polyhedron out of them, preserving original face colors
-export const triangulate = function (poly, colors) {
-  colors = colors || false;
+// Driver routine: projects each 3D face to 2D, ear-clips into triangles,
+// and builds a new Polyhedron preserving original face colors.
+export const triangulate = function (poly, colors = false) {
   console.log(`Triangulating faces of ${poly.name}...`);
 
   const newpoly = new Polyhedron();
-  newpoly.vertices = clone(poly.vertices);
-  newpoly.face_classes = [ ];
-  // iterate over triplets of faces v1,v2,v3
+  newpoly.vertices = copyVecArray(poly.vertices);
+  newpoly.face_classes = [];
+  const copyColors = Boolean(colors && poly.face_classes);
+
   for (let i = 0; i < poly.faces.length; i++) {
     const f = poly.faces[i];
     if (f.length > 3) {
-      const TwoDface = project2dface(f.map((v) => poly.vertices[v]));
-      const diags = getDiagonals(TwoDface);
-      const tris = diagsToTris(f, diags);
+      const twoDface = project2dface(f.map(v => poly.vertices[v]));
+      const tris = earClipTriangulate(twoDface);
       for (let j = 0; j < tris.length; j++) {
         const tri = tris[j];
         newpoly.faces.push([ f[tri[0]], f[tri[1]], f[tri[2]] ]);
-        if (colors) { newpoly.face_classes.push(poly.face_classes[i]); }
+        if (copyColors) { newpoly.face_classes.push(poly.face_classes[i]); }
       }
     } else {
       newpoly.faces.push([ f[0], f[1], f[2] ]);
-      if (colors) { newpoly.face_classes.push(poly.face_classes[i]); }
+      if (copyColors) { newpoly.face_classes.push(poly.face_classes[i]); }
     }
   }
   newpoly.name = poly.name; // don't change the name for export
