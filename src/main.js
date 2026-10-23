@@ -698,6 +698,32 @@ const setupApp = function () {
 
   // State control via some buttons
   // ---------------------------------------
+  document.getElementById('fitscreen').addEventListener('click', function () {
+    if (!Array.isArray(globPolys) || globPolys.length === 0) return;
+    let maxUnitX = 0;
+    let maxUnitY = 0;
+    for (let i = 0; i < globPolys.length; i++) {
+      const poly = globPolys[i];
+      if (!poly || !Array.isArray(poly.vertices)) continue;
+      const tvec = [3 * i, 0, 3];
+      for (const v of poly.vertices) {
+        const tv = add(mv3(globRotM, v), tvec);
+        const [ux, uy] = perspT(tv, persp_z_max, persp_z_min, persp_ratio, 1);
+        const ax = Math.abs(ux);
+        const ay = Math.abs(uy);
+        if (ax > maxUnitX) maxUnitX = ax;
+        if (ay > maxUnitY) maxUnitY = ay;
+      }
+    }
+    if (maxUnitX > 1e-9 && maxUnitY > 1e-9) {
+      const margin = 0.9;
+      const scaleX = (_2d_x_offset * margin) / maxUnitX;
+      const scaleY = (_2d_y_offset * margin) / maxUnitY;
+      perspective_scale = Math.min(scaleX, scaleY);
+      drawShape();
+    }
+  });
+
   document.getElementById('strokeonly').addEventListener('click', function () {
     PaintMode = 'stroke';
     drawShape();

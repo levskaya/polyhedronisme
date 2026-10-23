@@ -76,6 +76,10 @@ div.container {
     margin-left:  auto;
 }
 
+.controlswrapper img {
+    cursor: pointer;
+}
+
 .specwrapper {
     text-align:   center;
     margin-right: auto;
