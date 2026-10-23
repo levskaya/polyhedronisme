@@ -41,6 +41,7 @@ function markdownPlugin() {
 }
 
 export default defineConfig({
+  base: './',
   publicDir: 'public',
   plugins: [pegjsPlugin(), markdownPlugin()],
   server: {
