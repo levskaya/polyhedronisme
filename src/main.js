@@ -34,6 +34,7 @@ export let globPolys = {}; // constructed polyhedras
 
 const CANVAS_WIDTH = 720; // canvas dims
 const CANVAS_HEIGHT = 500; // canvas dims
+const PNG_EXPORT_SCALE = 4; // scale factor for high-res PNG exports
 let globQuat = quat.create();
 let globLastQuat = quat.create();
 let globRotM = mat3.create();
@@ -469,7 +470,22 @@ const setupApp = function () {
   document.getElementById('pngsavebutton').addEventListener('click', function () {
     const spec = specEl.value.split(/\s+/g)[0];
     const filename = `polyhedronisme-${spec.replace(/\([^)]+\)/g, '')}.png`;
-    canvasEl.toBlob(blob => {
+    const exportCanvas = document.createElement('canvas');
+    exportCanvas.width = CANVAS_WIDTH * PNG_EXPORT_SCALE;
+    exportCanvas.height = CANVAS_HEIGHT * PNG_EXPORT_SCALE;
+    const exportCtx = exportCanvas.getContext('2d');
+    exportCtx.scale(PNG_EXPORT_SCALE, PNG_EXPORT_SCALE);
+    exportCtx.lineWidth = ctx_linewidth;
+
+    const prevCtx = ctx;
+    try {
+      ctx = exportCtx;
+      drawShape();
+    } finally {
+      ctx = prevCtx;
+    }
+
+    exportCanvas.toBlob(blob => {
       if (blob) downloadBlob(blob, filename);
     }, 'image/png');
   });
