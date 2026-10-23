@@ -103,9 +103,17 @@ div.container {
     margin-right: 2px;
 }
 
-.spec-row #link img {
+.spec-row #link {
+    text-decoration: none;
+    color: #555;
+    font-size: 16px;
+    line-height: 1;
     vertical-align: middle;
     display: inline-block;
+}
+
+.spec-row #link:hover {
+    color: #111;
 }
 
 .palette-select {
