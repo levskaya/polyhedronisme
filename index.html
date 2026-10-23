@@ -1,198 +1,82 @@
 <!DOCTYPE html>
 <html>
-<head>
-<meta http-equiv="Content-Type" content="text/html; charset=ISO-8859-1">
-<title>polyH&eacute;dronisme</title>
+  <head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width,initial-scale=1.0">
+    <title>polyhedronisme</title>
+    <style> 
+    body { background: #f0f0e5; }
+    </style>
+    <script type="module" crossorigin src="./assets/index-DSobphbj.js"></script>
+    <link rel="stylesheet" crossorigin href="./assets/index-CHE1irZx.css">
+  </head>
+  <body>
+    <div class="container">
+      <h2 style="text-align:center;">
+        <span class="fadey">poly</span>H&eacute;d<span class="fadey">r</span>onisme<span style="font-size:10px;">v0.3</span>
+      </h2>
 
-<script type="text/javascript" src="libs/jquery-1.7.min.js"></script>
-<script type="text/javascript" src="libs/jquery.mousewheel.js"></script>
-<script type="text/javascript" src="libs/underscore-min.js"></script>
-<script type="text/javascript" src="libs/Blob.js"></script>
-<script type="text/javascript" src="libs/canvas-toBlob.js"></script>
-<script type="text/javascript" src="libs/FileSaver.js"></script>
-<script type="text/javascript" src="libs/peg-0.6.2.min.js"></script>
+      <div class="canvaswrapper clearfix">
+        <canvas id="poly" width="700" height="500"></canvas>
+      </div>
+      
+      <div class="controlswrapper">
+        <img id="fitscreen" src="static/fitscreen.svg" style="vertical-align:middle;" title="Center and fit to screen">
+        <span style="width:100px;">&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;</span>
 
-<script type="text/javascript" src="polyhedronisme.js"></script>
+        <img id="strokeonly"  src="static/strokeonly.svg"  style="vertical-align:middle;" title="Edges only (wireframe)">
+        <img id="fillonly"  src="static/fillonly.svg"  style="vertical-align:middle;" title="Faces only">
+        <img id="fillandstroke"  src="static/fillandstroke.svg" style="vertical-align:middle;" title="Edges and faces">
+        <span style="width:100px;">&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;</span>
+      
+        <img id="frontrot" src="static/frontrot.svg" style="vertical-align:middle;" title="Front rotation">
+        <img id="siderot"  src="static/siderot.svg"  style="vertical-align:middle;" title="Side rotation">
+        <img id="toprot"   src="static/toprot.svg"   style="vertical-align:middle;" title="Top rotation">
+        <span style="width:100px;">&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;</span>
+      
+        <span id="pngsavebutton" style="font-size:12px;cursor:pointer;" title="Export as PNG image">PNG</span>
+        <span id="svgsavebutton" style="font-size:12px;cursor:pointer;" title="Export as SVG vector image">SVG</span>
+        <span id="objsavebutton" style="font-size:12px;cursor:pointer;" title="Export as OBJ geometry">OBJ</span>
+        <span id="x3dsavebutton" style="font-size:12px;cursor:pointer;" title="Export as VRML2 model">VRML2</span>
+      
+      <p class="centered"><i>rotate by dragging on polyhedron, rescale by scrolling over canvas</i><br>
+      </div>
+      
+      <div class="specwrapper">
+        <div class="spec-row">
+          <label for="spec">recipe</label>
+          <input id="spec"></input>
+          <a id="link" href="#" title="Copy this URL to share">&#x1F517;&#xFE0E;</a>
+        </div>
+        <div class="palette-row">
+          <label for="palette-preset">palette</label>
+          <select id="palette-preset" class="palette-select" title="Choose a preset color palette"></select>
+          <div id="palette-swatches" class="palette-swatches"></div>
+          <div class="palette-step-group">
+            <button type="button" id="remove-color" class="swatch-step-btn" title="Remove last color slot">&minus;</button>
+            <button type="button" id="add-color" class="swatch-step-btn" title="Add color slot">+</button>
+          </div>
+          <span id="shufflecolors" class="textbutton" title="Shuffle palette order">SHUFFLE</span>
+          <span id="rndcolors" class="textbutton" title="Generate harmonic random palette">RANDOM</span>
+          <span id="togglehex" class="textbutton" title="Toggle hex color input">HEX</span>
+        </div>
+        <div id="palette-hex-row" class="palette-hex-row" hidden>
+          <input id="palette" spellcheck="false" placeholder="#ff7777 #dddddd #889999 ..."></input>
+        </div>
+      </div>
+            
+      <div class="statswrapper">
+        <div id="statsinner">
+          <div id="basicstats"></div>
+        </div>
+      </div>
 
-<link rel="stylesheet" type="text/css" href="polyhedronisme.css">
-<style></style>
-</head>
+      <div id="docs"></div>
 
-<body>
-<div class="container">
-
-<h2 style="text-align:center;">
-  <span class="fadey">poly</span>H&eacute;d<span class="fadey">r</span>onisme<span style="font-size:10px;">v0.2.1<span>
-</h2>
-
-<div class="canvaswrapper clearfix">
-  <!-- <div class="leftside" width="10" height="500"></div> -->
-  <canvas id="poly" width="700" height="500"></canvas>
-  <!-- <div class="rightside" width="10" height="500"></div> -->
-</div>
-
-<div class="controlswrapper">
-  <img id="strokeonly"  src="media/strokeonly.png"  style="vertical-align:middle;" title="Edges only (wireframe)">
-  <img id="fillonly"  src="media/fillonly.png"  style="vertical-align:middle;" title="Faces only">
-  <img id="fillandstroke"  src="media/fillandstroke.png" style="vertical-align:middle;" title="Edges and faces">
-  <span style="width:100px;">&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;</span>
-
-  <img id="frontrot" src="media/frontrot.png" style="vertical-align:middle;position:relative;top:-1px;" title="Front rotation">
-  <img id="siderot"  src="media/siderot.png"  style="vertical-align:middle;" title="Side rotation">
-  <img id="toprot"   src="media/toprot.png"   style="vertical-align:middle;" title="Top rotation">
-  <span style="width:100px;">&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;</span>
-
-  <span id="pngsavebutton" style="font-size:12px;cursor:pointer;" title="Export as PNG image">PNG</span>
-  <span id="objsavebutton" style="font-size:12px;cursor:pointer;" title="Export as OBJ geometry">OBJ</span>
-  <span id="x3dsavebutton" style="font-size:12px;cursor:pointer;" title="Export as VRML2 model">VRML2</span>
-
-<p class="centered"><i>rotate by dragging on polyhedron, rescale by scrolling over canvas</i><br>
-</div>
-
-<div class="specwrapper">
-  <label style="width: 10em">recipe  <input id="spec"></input></label>
-  <a id="link" href="#" title="Copy this URL to share"><img src="media/link.png"></a>
-  <br>
-  <label>palette <input id="palette"></input></label>
-  <span id="rndcolors" class="textbutton" title="Randomize Colors">RANDOM</span>
-</div>
-
-<br />
-
-<div class="statswrapper">
-  <label style="">stats </label>
-  <div id="statsinner">
-    <div id="basicstats"></div>
-    <img id="expandcollapse" src="media/plus.png" />
-    <br />
-    <div id="morestats"></div>
-  </div>
-  <div style="clear: both"></div>
-</div>
-
-<p>The specification consists of a space-delimited series of polyhedral recipes.
-Each recipe looks like: </p>
-
-<p>[<b>op</b>][<b>op</b>] ... [<b>op</b>][<b>base</b>] <i>no spaces,
-  just a string of characters</i> </p>
-
-  <p>where [<b>base</b>] is one of</p>
-
-  <ul>
-    <li>T - tetrahedron</li>
-    <li>C - cube</li>
-    <li>O - octahedron</li>
-    <li>I - icosahedron</li>
-    <li>D - dodecahedron</li>
-    <li>P<i>N</i> - N-sided prism</li>
-    <li>A<i>N</i> - N-sided anti-prism</li>
-    <li>Y<i>N</i> - N-sided pyramid</li>
-    <li>J<i>N</i> - Nth Johnson Solid (1 to 92)</li>
-  </ul>
-
-<p>and <b>op</b> is one of these
-    <a href="https://en.wikipedia.org/wiki/Conway_polyhedron_notation">polyhedron-building operators</a>:</p>
-
-<ul>
-  <li><b>k<i>N</i></b> - <a href="https://en.wikipedia.org/wiki/Kleetope">kis</a> on N-sided faces (if no N, then general kis)</li>
-  <li><b>a</b> - ambo</li>
-  <li><b>g</b> - gyro</li>
-  <li><b>d</b> - dual</li>
-  <li><b>r</b> - reflect</li>
-  <li><b>e</b> - explode (a.k.a. <a href="https://en.wikipedia.org/wiki/Expansion_%28geometry%29">expand</a>, equiv. to <i>aa</i>) </li>
-  <li><b>b</b> - bevel (equiv. to <i>ta</i>) </li>
-  <li><b>o</b> - ortho (equiv. to <i>jj</i>) </li>
-  <li><b>m</b> - meta (equiv. to <i>k3j</i>) </li>
-  <li><b>t<i>N</i></b> - truncate vertices of degree N (equiv. to <i>dkNd</i>; if no N, then truncate all vertices) </li>
-  <li><b>j</b> - join (equiv. to <i>dad</i>) </li>
-  <li><b>s</b> - snub (equiv. to <i>dgd</i>) </li>
-  <li><b>p</b> - propellor</li>
-  <li><b>c</b> - chamfer</li>
-  <li><b>w</b> - whirl</li>
-  <li><b>q</b> - quinto</li>
-  <!--
-  <li><b>h</b> - half (caution: requires even-sided faces, and can produce digons)</li>
-  -->
-</ul>
-
-<p>Also, some newer, experimental operators:</p>
-
-<ul>
-  <li><b>l</b> - ste<b>l</b>lation</li>
-  <li><b>n<i>N</i></b> - i<b>n</b>setN </li>
-  <li><b>x<i>N</i></b> - e<b>x</b>trudeN </li>
-  <li><b>z</b> - triangulate</li>
-  <li><b>h</b> - hollow/skeletonize, useful for 3D printing, makes a
-  hollow-faced shell version of the polyhedron, only apply it once in
-  a recipe!</li>
-  <li><b>u<i>N</i></b> - limited version of the Goldberg-Coxeter u_n operator 
-  (for triangular meshes only)</li>
-</ul>
-
-<p> There are more complicated, parameterized forms for <b>k</b> and <b>n</b>: </p>
-<ul>
-  <li><b>n</b>(<i>n</i>,<i>inset</i>,<i>depth</i>) - this applies the
-  inset operator on <i>n</i>-sided faces, insetting by <i>inset</i> scaled from
-  0 to 1, and extruding in or out along the normal by <i>depth</i>
-  (can be negative)
-  </li>
-  <li><b>k</b>(<i>n</i>,<i>depth</i>) - this applies the kis operator
-  on <i>n</i>-sided faces, setting the pyramidal height out or in along the normal by <i>depth</i>
-  (can be negative)
-  </li>
-  <li><b>h</b>(<i>0</i>,<i>inset</i>,<i>depth</i>) - this applies the
-  hollowing/skeletonizing operator on all faces, insetting by
-  <i>inset</i> (scaled from 0 to 1), and with a shell thickness of <i>depth</i>
-  </li>
-</ul>
-  
-<p>Note that for most of the above operations, while the <i>topology</i> of the result is uniquely specified,
-  a great variety of <i>geometry</i> is possible. For maximum flexibility, the above operators do not enforce convexity
-  of the polyhedron, or planarity of the faces,
-  at each step. If these properties are desired in the final result, the following geometric "refinement" operators 
-  can be used. These operators are for
-  canonicalizing the polyhedral shape, and are mainly intended for making
-  the more traditional, convex polyhedra more symmetric:</p>
-<ul>
-  <li><b>K<i>N</i></b> - quic<b>K</b> and dirty canonicalization, it can blow
-  up, iteratively refines shape N times.</li>
-  <li><b>C<i>N</i></b> - proper <b>C</b>anonicalization, intensive, slow convergence, iteratively refines shape N times.
-     Flattens faces.
-     A typical N is 200 or 300.</li>
-  <li><b>A<i>N</i></b> - convex spherical <b>A</b>djustment. Iterates N times. May give more pleasing symmetry,
-  but can be unstable for certain shapes.</li>
-</ul>
-
-<p>These can blow up the geometry of the weirder polyhedra, which can
-be interesting too!</p>
-
-<b> 3D Printing </b>
-<p>You can export these shapes in forms appropriate for 3D printing by
-shapeways. Export in VRML2 format to preserve face colors if you want
-to use their colored fused-sand process.  You'll probably want to rescale 
-the exported geometry to a non-tiny size.</p>
-
-<p>More Information: </p>
-<ul>
-<li><a href="http://en.wikipedia.org/wiki/Conway_polyhedron_notation">
-  Wikipedia on Conway Polyhedral Notation</a></li>
-<li><a href="http://www.georgehart.com/">George W. Hart's Polyhedral Site</a></li>
-<li><a href="http://dmccooey.com/polyhedra/index.html">Visual Polyhedra</a></li>
-<li><a href="http://github.com/levskaya/polyhedronisme">Source and more information at Github</a></li>
-</ul>
-
-<p>Thanks:</p>
-<ul>
-  <li>George Hart - for his original pages, artworks and software characterizing higher polyhedra.</li>
-  <li>Lars Huttar - for adding several new operators, and helping improve this site.</li>
-  <li>Lei Willems - for inventing quinto.</li>
-  <li>Everyone else - for all of your kind words and suggestions!</li>
-</ul>
-
-<div class="footer">
-  Text &amp; Figures CC-BY | Code MIT License | <a href="http://anselmlevskaya.com">Anselm Levskaya</a> 2019
-</div>
-</div>
-
-</body>
+      <div class="footer">
+        Text &amp; Figures CC-BY | Code MIT License | <a href="http://anselmlevskaya.com">Anselm Levskaya</a> 2026
+      </div>
+      
+    </div>
+  </body>
 </html>
