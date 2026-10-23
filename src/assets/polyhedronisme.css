@@ -42,15 +42,25 @@ div.container {
 }
 
 #spec {
-    margin-left: auto;
-    margin-right: auto;
     width: 300px;
+    padding: 2px 5px;
+    font-family: monospace;
+    font-size: 13px;
+    border: 1px solid #aaa;
+    border-radius: 3px;
+    background: #fafaf5;
 }
 
 #palette {
-    margin-left: auto;
-    margin-right: auto;
-    width: 300px;
+    width: 440px;
+    max-width: 90%;
+    padding: 3px 6px;
+    font-family: monospace;
+    font-size: 12px;
+    border: 1px solid #aaa;
+    border-radius: 3px;
+    background: #fafaf5;
+    color: #333;
 }
 
 .canvaswrapper {
@@ -70,15 +80,163 @@ div.container {
     text-align:   center;
     margin-right: auto;
     margin-left:  auto;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 6px;
+    margin-bottom: 8px;
+}
+
+.spec-row,
+.palette-row {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 6px;
+    flex-wrap: wrap;
+}
+
+.spec-row label,
+.palette-row label {
+    min-width: 52px;
+    text-align: right;
+    margin-right: 2px;
+}
+
+.spec-row #link img {
+    vertical-align: middle;
+    display: inline-block;
+}
+
+.palette-select {
+    font-family: inherit;
+    font-size: 12px;
+    padding: 2px 4px;
+    border: 1px solid #999;
+    border-radius: 3px;
+    background: #fafaf5;
+    color: #252519;
+    cursor: pointer;
+    height: 24px;
+}
+
+.palette-swatches {
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+    padding: 2px 4px;
+    background: rgba(0, 0, 0, 0.04);
+    border: 1px solid rgba(0, 0, 0, 0.12);
+    border-radius: 4px;
+    user-select: none;
+}
+
+.swatch-item {
+    position: relative;
+    width: 22px;
+    height: 22px;
+    border-radius: 3px;
+    border: 1px solid rgba(0, 0, 0, 0.38);
+    box-sizing: border-box;
+    cursor: pointer;
+    transition: transform 0.1s ease, box-shadow 0.1s ease, opacity 0.15s ease;
+    box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.25);
+}
+
+.swatch-item:hover {
+    transform: translateY(-1px) scale(1.06);
+    border-color: rgba(0, 0, 0, 0.75);
+    z-index: 2;
+}
+
+.swatch-item.swatch-unused {
+    opacity: 0.45;
+    border-style: dashed;
+}
+
+.swatch-item.swatch-unused:hover {
+    opacity: 0.85;
+}
+
+.swatch-item.swatch-dragging {
+    transform: scale(1.14);
+    box-shadow: 0 2px 6px rgba(0, 0, 0, 0.35);
+    border-color: #111;
+    z-index: 5;
+    cursor: grabbing;
+}
+
+.swatch-input {
+    position: absolute;
+    inset: 0;
+    width: 100%;
+    height: 100%;
+    opacity: 0;
+    padding: 0;
+    margin: 0;
+    border: none;
+    cursor: inherit;
+}
+
+.palette-step-group {
+    display: inline-flex;
+    align-items: center;
+    gap: 2px;
+}
+
+.swatch-step-btn {
+    width: 18px;
+    height: 20px;
+    padding: 0;
+    line-height: 18px;
+    font-size: 13px;
+    font-family: monospace;
+    border: 1px solid #888;
+    border-radius: 2px;
+    background: #fafaf5;
+    color: #252519;
+    cursor: pointer;
+    user-select: none;
+}
+
+.swatch-step-btn:hover:not(:disabled) {
+    background: #e6e6da;
+    border-color: #333;
+}
+
+.swatch-step-btn:disabled {
+    opacity: 0.35;
+    cursor: default;
 }
 
 .textbutton {
     user-select: none;
-    font-size: 12px;
+    font-size: 11px;
+    font-family: sans-serif;
+    letter-spacing: 0.03em;
+    line-height: 18px;
     cursor: pointer;
-    border: 1px solid black;
-    border-radius: 2px;
-    padding: 1px;
+    border: 1px solid #555;
+    border-radius: 3px;
+    padding: 1px 6px;
+    background: #fafaf5;
+    color: #252519;
+    transition: background 0.1s ease;
+}
+
+.textbutton:hover {
+    background: #e6e6da;
+    border-color: #111;
+}
+
+.textbutton.active {
+    background: #dcdccf;
+    border-color: #111;
+}
+
+.palette-hex-row {
+    width: 100%;
+    text-align: center;
 }
 
 .statswrapper {

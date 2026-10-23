@@ -10,7 +10,8 @@
 
 import { add, clone, eye3, mv3, mm3, getVec2VecRotM, perspT, invperspT,
   vec_rotm, rotm, mult, dot, unit, normal, round, randomchoice, PI, quat, mat3 } from './geo.js';
-import { rwb_palette, sortFaces, palette, rndcolors } from './polyhedron.js';
+import { rwb_palette, PRESET_PALETTES, sortFaces, palette, rndcolors,
+  shufflePalette, normalizeHex } from './polyhedron.js';
 import { generatePoly } from './parser.js';
 import { rewriteLegacyRecipe, setLegacyOpParser } from './legacy_parser.js';
 import legacyParser from './legacy.pegjs';
@@ -103,6 +104,11 @@ const parseURL = function () {
 };
 
 // update the shareable link URL with the current recipe and palette
+const isDefaultPalette = function (pal) {
+  if (!Array.isArray(pal) || pal.length !== rwb_palette.length) return false;
+  return pal.every((c, i) => normalizeHex(c) === normalizeHex(rwb_palette[i]));
+};
+
 const setLink = function () {
   const specEl = document.getElementById('spec');
   const linkEl = document.getElementById('link');
@@ -110,8 +116,8 @@ const setLink = function () {
   // strip any existing parameters
   let link = location.protocol + '//' + location.host + location.pathname;
   link += `?recipe_v2=${encodeURIComponent(specs[0])}`;
-  if (PALETTE !== rwb_palette) {
-    link += `&palette=${encodeURIComponent(PALETTE.reduce((x, y) => x + ' ' + y))}`;
+  if (!isDefaultPalette(PALETTE)) {
+    link += `&palette=${encodeURIComponent(PALETTE.join(' '))}`;
   }
   linkEl.setAttribute('href', link);
 };
@@ -308,7 +314,190 @@ const setupApp = function () {
 
   const specEl = document.getElementById('spec');
   const paletteEl = document.getElementById('palette');
+  const presetEl = document.getElementById('palette-preset');
+  const swatchesEl = document.getElementById('palette-swatches');
+  const addColorBtn = document.getElementById('add-color');
+  const removeColorBtn = document.getElementById('remove-color');
+  const shuffleBtn = document.getElementById('shufflecolors');
+  const rndBtn = document.getElementById('rndcolors');
+  const toggleHexBtn = document.getElementById('togglehex');
+  const hexRowEl = document.getElementById('palette-hex-row');
   const canvasEl = document.getElementById('poly');
+
+  // Populate preset selector options
+  if (presetEl) {
+    for (const preset of PRESET_PALETTES) {
+      const opt = document.createElement('option');
+      opt.value = preset.id;
+      opt.textContent = preset.name;
+      presetEl.appendChild(opt);
+    }
+    const customOpt = document.createElement('option');
+    customOpt.value = 'custom';
+    customOpt.textContent = 'Custom';
+    customOpt.disabled = true;
+    customOpt.hidden = true;
+    presetEl.appendChild(customOpt);
+  }
+
+  // Compute which palette indices are actively used by the current polyhedron(s)
+  const getUsedPaletteIndices = function () {
+    const used = new Set();
+    if (Array.isArray(globPolys) && PALETTE.length > 0) {
+      for (const poly of globPolys) {
+        if (poly && Array.isArray(poly.face_classes)) {
+          for (const fc of poly.face_classes) {
+            used.add(((fc % PALETTE.length) + PALETTE.length) % PALETTE.length);
+          }
+        }
+      }
+    }
+    return used;
+  };
+
+  // Sync preset dropdown to match current PALETTE
+  const syncPresetSelect = function () {
+    if (!presetEl) return;
+    const normCurrent = PALETTE.map(c => normalizeHex(c));
+    const matched = PRESET_PALETTES.find(p =>
+      p.colors.length === normCurrent.length &&
+      p.colors.every((c, i) => normalizeHex(c) === normCurrent[i])
+    );
+    presetEl.value = matched ? matched.id : 'custom';
+  };
+
+  // Sync raw hex input box and +/- button states
+  const syncPaletteAuxUI = function () {
+    if (paletteEl && document.activeElement !== paletteEl) {
+      paletteEl.value = PALETTE.join(' ');
+    }
+    syncPresetSelect();
+    if (removeColorBtn) removeColorBtn.disabled = PALETTE.length <= 2;
+    if (addColorBtn) addColorBtn.disabled = PALETTE.length >= 16;
+  };
+
+  // Update visual styling of existing swatch nodes without rebuilding DOM
+  const refreshSwatchVisuals = function () {
+    if (!swatchesEl) return;
+    const used = getUsedPaletteIndices();
+    const items = swatchesEl.querySelectorAll('.swatch-item');
+    items.forEach((item, idx) => {
+      const hex = normalizeHex(PALETTE[idx]);
+      const isUsed = used.size === 0 || used.has(idx);
+      item.style.backgroundColor = hex;
+      item.classList.toggle('swatch-unused', !isUsed);
+      item.title = isUsed
+        ? `Color #${idx + 1} (${hex}) — click to change, drag to reorder`
+        : `Color #${idx + 1} (${hex}, unused on this shape) — drag left to use, or click to edit`;
+      const input = item.querySelector('.swatch-input');
+      if (input && input.value !== hex) {
+        input.value = hex;
+      }
+    });
+  };
+
+  // Render interactive color swatch squares with click-to-pick and drag-to-reorder
+  const renderSwatches = function () {
+    if (!swatchesEl) return;
+    swatchesEl.innerHTML = '';
+
+    PALETTE.forEach((color, initialIdx) => {
+      const hex = normalizeHex(color);
+      PALETTE[initialIdx] = hex;
+
+      const item = document.createElement('div');
+      item.className = 'swatch-item';
+
+      const input = document.createElement('input');
+      input.type = 'color';
+      input.className = 'swatch-input';
+      input.value = hex;
+
+      let suppressNextClick = false;
+
+      // Live color picking
+      input.addEventListener('input', function () {
+        const currentIdx = Array.from(swatchesEl.children).indexOf(item);
+        if (currentIdx === -1) return;
+        PALETTE[currentIdx] = normalizeHex(input.value);
+        refreshSwatchVisuals();
+        syncPaletteAuxUI();
+        setLink();
+        drawShape();
+      });
+
+      // Suppress color picker popup if pointer interaction was a drag-reorder
+      input.addEventListener('click', function (e) {
+        if (suppressNextClick) {
+          e.preventDefault();
+          e.stopPropagation();
+          suppressNextClick = false;
+        }
+      }, true);
+
+      // Pointer-based drag reordering across the swatch strip
+      item.addEventListener('pointerdown', function (e) {
+        if (e.button !== 0) return;
+        const startX = e.clientX;
+        const startY = e.clientY;
+        let didDrag = false;
+
+        const onPointerMove = function (moveEvt) {
+          const dist = Math.hypot(moveEvt.clientX - startX, moveEvt.clientY - startY);
+          if (!didDrag && dist > 4) {
+            didDrag = true;
+            suppressNextClick = true;
+            item.classList.add('swatch-dragging');
+          }
+          if (!didDrag) return;
+
+          const children = Array.from(swatchesEl.children);
+          const fromIdx = children.indexOf(item);
+          if (fromIdx === -1) return;
+
+          for (let toIdx = 0; toIdx < children.length; toIdx++) {
+            if (toIdx === fromIdx) continue;
+            const rect = children[toIdx].getBoundingClientRect();
+            const midX = rect.left + rect.width / 2;
+            if ((toIdx < fromIdx && moveEvt.clientX < midX) ||
+                (toIdx > fromIdx && moveEvt.clientX > midX)) {
+              // Move color in PALETTE and reorder DOM node in-place
+              const [movedColor] = PALETTE.splice(fromIdx, 1);
+              PALETTE.splice(toIdx, 0, movedColor);
+              if (toIdx < fromIdx) {
+                swatchesEl.insertBefore(item, children[toIdx]);
+              } else {
+                swatchesEl.insertBefore(item, children[toIdx].nextSibling);
+              }
+              refreshSwatchVisuals();
+              syncPaletteAuxUI();
+              setLink();
+              drawShape();
+              break;
+            }
+          }
+        };
+
+        const onPointerUp = function () {
+          window.removeEventListener('pointermove', onPointerMove);
+          window.removeEventListener('pointerup', onPointerUp);
+          item.classList.remove('swatch-dragging');
+          if (didDrag) {
+            setTimeout(() => { suppressNextClick = false; }, 50);
+          }
+        };
+
+        window.addEventListener('pointermove', onPointerMove);
+        window.addEventListener('pointerup', onPointerUp);
+      });
+
+      item.appendChild(input);
+      swatchesEl.appendChild(item);
+    });
+
+    refreshSwatchVisuals();
+    syncPaletteAuxUI();
+  };
 
   let specs;
   const urlParams = parseURL(); // see if recipe is spec'd in URL
@@ -326,16 +515,19 @@ const setupApp = function () {
     setLink();
   }
 
-  // set initial palette spec
+  // set initial palette spec (defaulting to a fresh copy of rwb_palette)
   if ('palette' in urlParams) {
-    PALETTE = urlParams['palette'].trim().split(/\s+/g);
+    const parsedPal = urlParams['palette'].trim().split(/[\s,]+/g).filter(Boolean).map(c => normalizeHex(c));
+    PALETTE = parsedPal.length >= 2 ? parsedPal : [...rwb_palette];
     setLink();
+  } else {
+    PALETTE = [...rwb_palette];
   }
-  paletteEl.value = PALETTE.reduce((x, y) => x + ' ' + y);
 
   // construct the polyhedra from spec
   globPolys = specs.map(x => generatePoly(x));
   updateStats();
+  renderSwatches();
 
   // draw it
   drawShape();
@@ -349,25 +541,97 @@ const setupApp = function () {
     let specs = specEl.value.trim().split(/\s+/g).slice(0, 2);
     globPolys = specs.map(x => generatePoly(x));
     updateStats();
+    refreshSwatchVisuals();
     setLink();
     drawShape();
   });
 
-  // when palette changes in input, redraw polyhedra
-  paletteEl.addEventListener('change', function () {
-    PALETTE = paletteEl.value.trim().split(/\s+/g);
-    setLink();
-    drawShape();
-  });
+  // preset selection
+  if (presetEl) {
+    presetEl.addEventListener('change', function () {
+      const preset = PRESET_PALETTES.find(p => p.id === presetEl.value);
+      if (preset) {
+        PALETTE = [...preset.colors];
+        renderSwatches();
+        setLink();
+        drawShape();
+      }
+    });
+  }
 
-  // randomize palette
-  document.getElementById('rndcolors').addEventListener('click', function () {
-    let newpalette = rndcolors();
-    PALETTE = newpalette;
-    paletteEl.value = newpalette.join(' ');
-    setLink();
-    drawShape();
-  });
+  // add/remove color slots
+  if (addColorBtn) {
+    addColorBtn.addEventListener('click', function () {
+      if (PALETTE.length >= 16) return;
+      const extra = rndcolors(1)[0];
+      PALETTE = [...PALETTE, extra];
+      renderSwatches();
+      setLink();
+      drawShape();
+    });
+  }
+
+  if (removeColorBtn) {
+    removeColorBtn.addEventListener('click', function () {
+      if (PALETTE.length <= 2) return;
+      PALETTE = PALETTE.slice(0, -1);
+      renderSwatches();
+      setLink();
+      drawShape();
+    });
+  }
+
+  // shuffle current palette order
+  if (shuffleBtn) {
+    shuffleBtn.addEventListener('click', function () {
+      PALETTE = shufflePalette(PALETTE);
+      renderSwatches();
+      setLink();
+      drawShape();
+    });
+  }
+
+  // randomize palette using color-theory generator
+  if (rndBtn) {
+    rndBtn.addEventListener('click', function () {
+      const targetLen = Math.max(6, Math.min(12, PALETTE.length || 8));
+      PALETTE = rndcolors(targetLen);
+      renderSwatches();
+      setLink();
+      drawShape();
+    });
+  }
+
+  // toggle raw hex input row
+  if (toggleHexBtn && hexRowEl) {
+    toggleHexBtn.addEventListener('click', function () {
+      const willShow = hexRowEl.hasAttribute('hidden');
+      if (willShow) {
+        hexRowEl.removeAttribute('hidden');
+        toggleHexBtn.classList.add('active');
+        paletteEl.value = PALETTE.join(' ');
+        paletteEl.focus();
+      } else {
+        hexRowEl.setAttribute('hidden', '');
+        toggleHexBtn.classList.remove('active');
+      }
+    });
+  }
+
+  // when palette changes in raw hex input, sync swatches and redraw polyhedra
+  const applyRawHexInput = function () {
+    const tokens = paletteEl.value.trim().split(/[\s,]+/g).filter(Boolean);
+    const valid = tokens.filter(t => /^#?([0-9a-fA-F]{3}|[0-9a-fA-F]{6})$/.test(t)).map(t => normalizeHex(t));
+    if (valid.length >= 1) {
+      PALETTE = valid;
+      renderSwatches();
+      setLink();
+      drawShape();
+    }
+  };
+
+  paletteEl.addEventListener('change', applyRawHexInput);
+  paletteEl.addEventListener('input', applyRawHexInput);
 
   // Basic manipulation: rotation and scaling of geometry
   // ----------------------------------------------------

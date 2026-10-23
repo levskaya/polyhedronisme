@@ -40,12 +40,26 @@
       </div>
       
       <div class="specwrapper">
-        <label style="width: 10em">recipe  <input id="spec"></input></label>
-        <a id="link" href="#" title="Copy this URL to share"><img src="static/link.png"></a>
-        <br>
-        <label>palette <input id="palette"></input></label>
-        <span id="rndcolors" class="textbutton" title="Randomize Colors">RANDOM</span>
-        <br>
+        <div class="spec-row">
+          <label for="spec">recipe</label>
+          <input id="spec"></input>
+          <a id="link" href="#" title="Copy this URL to share"><img src="static/link.png"></a>
+        </div>
+        <div class="palette-row">
+          <label for="palette-preset">palette</label>
+          <select id="palette-preset" class="palette-select" title="Choose a preset color palette"></select>
+          <div id="palette-swatches" class="palette-swatches"></div>
+          <div class="palette-step-group">
+            <button type="button" id="remove-color" class="swatch-step-btn" title="Remove last color slot">&minus;</button>
+            <button type="button" id="add-color" class="swatch-step-btn" title="Add color slot">+</button>
+          </div>
+          <span id="shufflecolors" class="textbutton" title="Shuffle palette order">SHUFFLE</span>
+          <span id="rndcolors" class="textbutton" title="Generate harmonic random palette">RANDOM</span>
+          <span id="togglehex" class="textbutton" title="Toggle hex color input">HEX</span>
+        </div>
+        <div id="palette-hex-row" class="palette-hex-row" hidden>
+          <input id="palette" spellcheck="false" placeholder="#ff7777 #dddddd #889999 ..."></input>
+        </div>
       </div>
             
       <div class="statswrapper">

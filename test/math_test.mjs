@@ -412,4 +412,32 @@ console.log('Testing all topological operators (manifoldness, Euler characterist
 }
 console.log('✓ All topological operator manifold and invariant tests passed');
 
+// 9. Palette & Color Theory Generator Tests
+console.log('Testing palettes and OKLCH harmonic generator...');
+{
+  const { rwb_palette, PRESET_PALETTES, rndcolors, shufflePalette, normalizeHex, hextofloats, floatstohex } = await import('../src/polyhedron.js');
+  assert.strictEqual(rwb_palette.length, 8);
+  assert.strictEqual(rwb_palette[0], '#ff7777');
+  assert.strictEqual(PRESET_PALETTES.length >= 6, true);
+  assert.deepStrictEqual(PRESET_PALETTES[0].colors, rwb_palette);
+
+  assert.strictEqual(normalizeHex('#abc'), '#aabbcc');
+  assert.strictEqual(normalizeHex('FF7700'), '#ff7700');
+  assert.strictEqual(floatstohex(hextofloats('#ff7700')), '#ff7700');
+
+  for (let trial = 0; trial < 10; trial++) {
+    const rnd = rndcolors(8);
+    assert.strictEqual(rnd.length, 8);
+    for (const c of rnd) {
+      assert.strictEqual(/^#[0-9a-f]{6}$/.test(c), true, `Invalid hex generated: ${c}`);
+    }
+  }
+
+  const shuffled = shufflePalette(rwb_palette);
+  assert.strictEqual(shuffled.length, rwb_palette.length);
+  assert.deepStrictEqual([...shuffled].sort(), [...rwb_palette].sort());
+  assert.strictEqual(shuffled.some((c, i) => c !== rwb_palette[i]), true);
+}
+console.log('✓ Palettes and OKLCH harmonic generator passed');
+
 console.log('\nAll math and geometry tests passed successfully!');

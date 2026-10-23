@@ -13,6 +13,11 @@ import { add, sub, mult, mag2, linePointDist2, normal, __range__,
   random, sigfigs, planararea, faceSignature, sqrt, sin, cos, PI, pow } from './geo.js';
 import { canonicalXYZ, adjustXYZ } from './geo_operators.js';
 import { sortFacesCarefully } from './depth.js';
+import { rwb_palette, PRESET_PALETTES, hextofloats, floatstohex, hsl2rgb,
+  rndcolors, shufflePalette, normalizeHex } from './palettes.js';
+
+export { rwb_palette, PRESET_PALETTES, hextofloats, floatstohex, hsl2rgb,
+  rndcolors, shufflePalette, normalizeHex };
 
 export const VISIBILITY_ZNORMAL_CUTOFF = -Infinity;
 export const COLOR_METHOD = 'signature';
@@ -39,73 +44,11 @@ const faceToEdges = function (face) {
 
 // Polyhedra Coloring Functions
 // =================================================================================================
-export const rwb_palette =
-[ '#ff7777', '#dddddd', '#889999', '#fff0e5',
-  '#aa3333', '#ff0000', '#ffffff', '#aaaaaa'];
-
 export const palette = function (n, pal = (typeof PALETTE !== 'undefined' ? PALETTE : rwb_palette)) {
   const p = (pal && pal.length) ? pal : rwb_palette;
   const k = ((n % p.length) + p.length) % p.length;
   return hextofloats(p[k]);
 };
-
-// converts [h,s,l] float args to [r,g,b] list
-function hsl2rgb (h, s, l) {
-  let r, g, b;
-  if (s === 0) {
-    r = g = b = l; // achromatic
-  } else {
-    const hue2rgb = function (p, q, t) {
-      if (t < 0) t += 1;
-      if (t > 1) t -= 1;
-      if (t < 1 / 6) return p + (q - p) * 6 * t;
-      if (t < 1 / 2) return q;
-      if (t < 2 / 3) return p + (q - p) * (2 / 3 - t) * 6;
-      return p;
-    }
-    let q = l < 0.5 ? l * (1 + s) : l + s - l * s;
-    let p = 2 * l - q;
-    r = hue2rgb(p, q, h + 1 / 3);
-    g = hue2rgb(p, q, h);
-    b = hue2rgb(p, q, h - 1 / 3);
-  }
-  return [r, g, b];
-}
-
-// converts #xxxxxx / #xxx format into list of [r,g,b] floats
-const hextofloats = function (hexstr) {
-  let rgb;
-  if (hexstr[0] === '#') {
-    hexstr = hexstr.slice(1);
-  }
-  if (hexstr.length === 3) {
-    rgb = hexstr.split('').map(c => parseInt(c + c, 16) / 255);
-  } else {
-    rgb = hexstr.match(/.{2}/g).map(c => parseInt(c, 16) / 255);
-  }
-  return rgb;
-};
-
-// converts [r,g,b] floats to #xxxxxx form
-const floatstohex = function (rgb) {
-  let r_hex = Number(parseInt(255 * rgb[0], 10)).toString(16).padStart(2, '0');
-  let g_hex = Number(parseInt(255 * rgb[1], 10)).toString(16).padStart(2, '0');
-  let b_hex = Number(parseInt(255 * rgb[2], 10)).toString(16).padStart(2, '0');
-  return '#' + r_hex + g_hex + b_hex;
-}
-
-// randomize color palette
-export const rndcolors = function () {
-  let newpalette = [];
-  for (let i = 0; i < 100; i++) {
-    let h = random();
-    let s = 0.5 * random() + 0.3;
-    let l = 0.5 * random() + 0.45;
-    let rgb = hsl2rgb(h, s, l);
-    newpalette.push(floatstohex(rgb));
-  }
-  return newpalette;
-}
 
 // Color the faces of the polyhedra for display
 export const paintPolyhedron = function (poly) {
@@ -140,7 +83,8 @@ export const paintPolyhedron = function (poly) {
     }
     poly.face_classes.push(clr);
   }
-  console.log(Object.keys(colormemory).length + ' face classes');
+  poly.num_face_classes = Object.keys(colormemory).length;
+  console.log(poly.num_face_classes + ' face classes');
   return poly;
 };
 
