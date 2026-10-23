@@ -292,11 +292,9 @@ const drawShape = function () {
 // -----------------------------------------------------------------------------------
 const updateStats = function () {
   const basicStatsEl = document.getElementById('basicstats');
-  const moreStatsEl = document.getElementById('morestats');
   for (let i = 0; i < globPolys.length; i++) {
     const p = globPolys[i];
     basicStatsEl.innerHTML = p.data();
-    moreStatsEl.innerHTML = p.moreData();
   }
 };
 
