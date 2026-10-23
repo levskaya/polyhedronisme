@@ -40,7 +40,7 @@ const intersectProp = function (va, vb, vc, vd) {
 // Ear-clipping triangulation of a 2D polygon.
 // Takes an array of 2D coordinates in face ordering and returns an array of
 // local vertex index triplets [i, j, k] preserving the polygon's winding order.
-const earClipTriangulate = function (verts) {
+export const earClipTriangulate = function (verts) {
   const MAX_ITERS = 999;
   const tris = [];
   const ear = [];

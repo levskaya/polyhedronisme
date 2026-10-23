@@ -440,4 +440,86 @@ console.log('Testing palettes and OKLCH harmonic generator...');
 }
 console.log('✓ Palettes and OKLCH harmonic generator passed');
 
+// 10. Exporters Tests (STL and GLB)
+console.log('Testing STL and GLB 3D exporters...');
+{
+  const zlib = await import('node:zlib');
+  const { cube, dodecahedron, paintPolyhedron, rwb_palette } = await import('../src/polyhedron.js');
+  const { ambo } = await import('../src/topo_operators.js');
+  const { toSTL, toGLB } = await import('../src/exporters.js');
+
+  // Test binary STL on Cube (6 quad faces -> 12 triangles)
+  const c = paintPolyhedron(cube());
+  const stlBuf = toSTL(c);
+  assert.strictEqual(stlBuf instanceof ArrayBuffer, true);
+  assert.strictEqual(stlBuf.byteLength, 84 + (12 * 50));
+  const stlView = new DataView(stlBuf);
+  assert.strictEqual(stlView.getUint32(80, true), 12);
+
+  // Verify normal and vertex floats are finite and non-zero
+  for (let t = 0; t < 12; t++) {
+    const off = 84 + (t * 50);
+    const nx = stlView.getFloat32(off, true);
+    const ny = stlView.getFloat32(off + 4, true);
+    const nz = stlView.getFloat32(off + 8, true);
+    const nMag = Math.hypot(nx, ny, nz);
+    assert.strictEqual(Math.abs(nMag - 1.0) < 1e-5, true, `Invalid STL triangle normal length: ${nMag}`);
+    assert.strictEqual(stlView.getUint16(off + 48, true), 0);
+  }
+
+  // Test ASCII STL option
+  const asciiStl = toSTL(c, { ascii: true });
+  assert.strictEqual(typeof asciiStl, 'string');
+  assert.strictEqual(asciiStl.startsWith('solid C\n'), true);
+  assert.strictEqual((asciiStl.match(/facet normal/g) || []).length, 12);
+
+  // Test GLB on Ambo-Dodecahedron (icosidodecahedron: 20 triangles + 12 pentagons)
+  const ad = paintPolyhedron(ambo(dodecahedron()));
+  const glbBuf = toGLB(ad, rwb_palette);
+  assert.strictEqual(glbBuf instanceof ArrayBuffer, true);
+  assert.strictEqual(glbBuf.byteLength % 4, 0);
+
+  const glbView = new DataView(glbBuf);
+  assert.strictEqual(glbView.getUint32(0, true), 0x46546c67); // 'glTF'
+  assert.strictEqual(glbView.getUint32(4, true), 2);          // version 2
+  assert.strictEqual(glbView.getUint32(8, true), glbBuf.byteLength);
+
+  // Parse JSON chunk
+  const jsonLen = glbView.getUint32(12, true);
+  assert.strictEqual(glbView.getUint32(16, true), 0x4e4f534a); // 'JSON'
+  const jsonStr = new TextDecoder().decode(new Uint8Array(glbBuf, 20, jsonLen));
+  const gltf = JSON.parse(jsonStr);
+  assert.strictEqual(gltf.asset.version, '2.0');
+  assert.strictEqual(gltf.meshes.length, 1);
+  // 2 face classes (triangles & pentagons) -> 2 materials & 2 primitives
+  assert.strictEqual(gltf.materials.length, 2);
+  assert.strictEqual(gltf.meshes[0].primitives.length, 2);
+  assert.strictEqual(gltf.textures.length, 1);
+  assert.strictEqual(gltf.images.length, 1);
+
+  // Expected vertices: 20*3 + 12*5 = 120; Expected triangle indices across both primitives: (20*1 + 12*3)*3 = 168
+  assert.strictEqual(gltf.accessors[0].count, 120);
+  assert.strictEqual(gltf.accessors[3].count + gltf.accessors[4].count, 168);
+
+  // Verify BIN chunk & embedded PNG texture integrity
+  const binChunkOffset = 20 + jsonLen;
+  const binLen = glbView.getUint32(binChunkOffset, true);
+  assert.strictEqual(glbView.getUint32(binChunkOffset + 4, true), 0x004e4942); // 'BIN\0'
+  assert.strictEqual(String.fromCharCode(...new Uint8Array(glbBuf, binChunkOffset + 4, 4)), 'BIN\0');
+  assert.strictEqual(binChunkOffset + 8 + binLen, glbBuf.byteLength);
+
+  const pngBv = gltf.bufferViews[gltf.images[0].bufferView];
+  const pngBytes = new Uint8Array(glbBuf, binChunkOffset + 8 + pngBv.byteOffset, pngBv.byteLength);
+  // Check PNG signature
+  assert.deepStrictEqual(Array.from(pngBytes.slice(0, 8)), [137, 80, 78, 71, 13, 10, 26, 10]);
+  // Locate IDAT chunk (starts after 8-byte sig + 25-byte IHDR chunk = offset 33)
+  const idatLen = new DataView(pngBytes.buffer, pngBytes.byteOffset + 33, 4).getUint32(0, false);
+  const idatType = String.fromCharCode(...pngBytes.slice(37, 41));
+  assert.strictEqual(idatType, 'IDAT');
+  const inflated = zlib.inflateSync(pngBytes.slice(41, 41 + idatLen));
+  // 1 neutral swatch * 8px = 8px width, 8px height -> 8 rows * (1 + 8 * 3) = 200 bytes
+  assert.strictEqual(inflated.length, 8 * (1 + (8 * 3)));
+}
+console.log('✓ STL and GLB 3D exporters passed');
+
 console.log('\nAll math and geometry tests passed successfully!');

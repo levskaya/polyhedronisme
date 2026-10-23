@@ -16,7 +16,7 @@ import { generatePoly } from './parser.js';
 import { rewriteLegacyRecipe, setLegacyOpParser } from './legacy_parser.js';
 import legacyParser from './legacy.pegjs';
 import { triangulate } from './topo_operators.js';
-import { toOBJ, toVRML, toSVG } from './exporters.js';
+import { toOBJ, toVRML, toSVG, toSTL, toGLB } from './exporters.js';
 import { sortFacesCarefully } from './depth.js';
 
 // docs
@@ -803,6 +803,20 @@ const setupApp = function () {
     const spec = specEl.value.split(/\s+/g)[0];
     const filename = `polyhedronisme-${spec.replace(/\([^)]+\)/g, '')}.obj`;
     saveText(objtxt, filename);
+  });
+
+  document.getElementById('stlsavebutton').addEventListener('click', function () {
+    const stlbuf = toSTL(globPolys[0]);
+    const spec = specEl.value.split(/\s+/g)[0];
+    const filename = `polyhedronisme-${spec.replace(/\([^)]+\)/g, '')}.stl`;
+    downloadBlob(new Blob([stlbuf], { type: 'model/stl' }), filename);
+  });
+
+  document.getElementById('glbsavebutton').addEventListener('click', function () {
+    const glbbuf = toGLB(globPolys[0], PALETTE);
+    const spec = specEl.value.split(/\s+/g)[0];
+    const filename = `polyhedronisme-${spec.replace(/\([^)]+\)/g, '')}.glb`;
+    downloadBlob(new Blob([glbbuf], { type: 'model/gltf-binary' }), filename);
   });
 
   document.getElementById('x3dsavebutton').addEventListener('click', function () {
