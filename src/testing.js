@@ -27,20 +27,3 @@ export const topolog = function (poly) {
   }
   console.log(str);
 };
-
-// test basic cross of all ops against all seeds
-/*
-export const testrig = function () {
-  const seeds = ['T', 'O', 'C', 'I', 'D', 'P3', 'P4', 'A4', 'A5', 'Y3', 'Y4'];
-  const ops = ['k', 'a', 'g', 'p', 'd', 'r', 'e', 'b', 'o', 'm', 't', 'j',
-    's', 'p', 'c', 'w', 'l', 'n', 'x', 'Z', 'H'];
-  console.log('===== Test Basic Ops =====');
-  for (let op of ops) {
-    console.log(`Operator ${op}`);
-    for (let seed of seeds) {
-      console.log(op + seed + ':', generatePoly(op + seed));
-    }
-  }
-  console.log('===== Done Testing Basic Ops =====');
-};
-*/

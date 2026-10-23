@@ -17,7 +17,7 @@ This project was also inspired by the renaissance tome
 [Perspectiva Corporum Regularium][4] featuring [engravings][perspectiva] by Jost
 Amman after designs and drawings by Wenzel Jamnitzer.
 
-This uses an HTML5 canvas renderer, [PEG.js][5] for parsing recipes, and [Vite](https://vite.dev/) for building and development.
+This uses a bespoke HTML5 canvas renderer, [PEG.js][5] for parsing recipes, and [Vite](https://vite.dev/) for building and development.
 
 * * *
 Text CC-BY, Code MIT License
