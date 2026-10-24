@@ -83,7 +83,11 @@ export const rewriteLegacyRecipe = function (spec) {
       }
       return { op: 'H', args };
     }
-    // 3. Single-letter renamed operators ('l' -> 'P', 'z' -> 'Z')
+    // 3. Old 'u(m,0)' -> 'uM' shorthand while preserving general 'u(m,n)' and 'uM'
+    if (op === 'u' && args.length === 2 && args[1] === 0 && args[0] > 0) {
+      return { op: 'u', args: [args[0]] };
+    }
+    // 4. Single-letter renamed operators ('l' -> 'P', 'z' -> 'Z')
     if (op in legacyToV2OpSwaps) {
       return { op: legacyToV2OpSwaps[op], args };
     }

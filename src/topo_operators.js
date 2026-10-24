@@ -873,16 +873,27 @@ export const hollow = function (poly, inset_dist = 0.5, thickness = 0.2) {
 
 
 // ===================================================================================================
-// Goldberg-Coxeter Operators  (in progress...)
+// Goldberg-Coxeter Operators
 // ===================================================================================================
 
-// Triangular Subdivision Operator
+// Triangular Subdivision Operator u(m, n)
 // ----------------------------------------------------------------------------------------------
-// Limited version of the Goldberg-Coxeter u_n operator for triangular meshes.
-// Uses exact O(F * n^2) topological indexing across shared vertices and edges.
-export const trisub = function (poly, n = 2) {
-  console.log(`Taking trisub of ${poly.name}...`);
-  if (!n) { n = 2; }
+// General Goldberg-Coxeter u_{m,n} operator for triangular meshes (Class I, II, and III).
+// Maps each base triangle (v0, v1, v2) onto the Eisenstein triangular lattice with corners at
+// A = (0, 0), B = (m, n), C = (-n, m + n) and triangulation number T = m^2 + m*n + n^2.
+// Uses exact integer barycentric coordinates (w0 + w1 + w2 = T) to stitch lattice vertices
+// and straddling unit triangles seamlessly across shared mesh edges in O(F * T).
+export const trisub = function (poly, m = 2, n = 0) {
+  if (m === undefined || m === null) { m = 2; }
+  if (n === undefined || n === null) { n = 0; }
+  m = Math.floor(m);
+  n = Math.floor(n);
+  if (m < 0 || n < 0 || (m === 0 && n === 0)) {
+    m = 2;
+    n = 0;
+  }
+
+  console.log(`Taking trisub u(${m},${n}) of ${poly.name}...`);
 
   // No-Op for non-triangular meshes.
   for (let fn = 0; fn < poly.faces.length; fn++) {
@@ -891,72 +902,116 @@ export const trisub = function (poly, n = 2) {
     }
   }
 
+  const T = (m * m) + (m * n) + (n * n);
+
+  // Build directed half-edge lookup table so lattice vertices stepping across an edge
+  // of face fn can be resolved in the adjacent face across that reverse half-edge.
+  const opp = new Map();
+  for (let fn = 0; fn < poly.faces.length; fn++) {
+    const [v0, v1, v2] = poly.faces[fn];
+    opp.set(`${v0}_${v1}`, { fn, v3: v2 });
+    opp.set(`${v1}_${v2}`, { fn, v3: v0 });
+    opp.set(`${v2}_${v0}`, { fn, v3: v1 });
+  }
+
   const uniqVs = [];
   const vertKeyToIdx = new Map();
 
-  // Returns the unique vertex index for barycentric grid point (i, j) on face fn,
-  // creating the 3D vertex only on first visit.
-  const getOrCreateVertex = (fn, i1, i2, i3, v1, v21, v31, i, j) => {
-    const k = n - i - j;
+  // Returns the unique vertex index for lattice point (i, j) on face fn, resolving
+  // edge-crossing points (where one integer barycentric weight < 0) into the adjacent face.
+  const getOrCreateVertex = (fn, i, j) => {
+    let w1 = ((m + n) * i) + (n * j);
+    let w2 = (-n * i) + (m * j);
+    let w0 = T - w1 - w2;
+    let [v0, v1, v2] = poly.faces[fn];
+
+    if (w2 < 0) {
+      const nb = opp.get(`${v1}_${v0}`);
+      fn = nb.fn;
+      const [nv0, nv1, nv2] = poly.faces[fn];
+      const weights = { [v1]: w1 + w2, [v0]: w0 + w2, [nb.v3]: -w2 };
+      w0 = weights[nv0]; w1 = weights[nv1]; w2 = weights[nv2];
+      [v0, v1, v2] = [nv0, nv1, nv2];
+    } else if (w0 < 0) {
+      const nb = opp.get(`${v2}_${v1}`);
+      fn = nb.fn;
+      const [nv0, nv1, nv2] = poly.faces[fn];
+      const weights = { [v2]: w2 + w0, [v1]: w1 + w0, [nb.v3]: -w0 };
+      w0 = weights[nv0]; w1 = weights[nv1]; w2 = weights[nv2];
+      [v0, v1, v2] = [nv0, nv1, nv2];
+    } else if (w1 < 0) {
+      const nb = opp.get(`${v0}_${v2}`);
+      fn = nb.fn;
+      const [nv0, nv1, nv2] = poly.faces[fn];
+      const weights = { [v0]: w0 + w1, [v2]: w2 + w1, [nb.v3]: -w1 };
+      w0 = weights[nv0]; w1 = weights[nv1]; w2 = weights[nv2];
+      [v0, v1, v2] = [nv0, nv1, nv2];
+    }
+
     let key;
-    if (i === 0 && j === 0) {
-      key = `v_${i1}`;
-    } else if (i === n && j === 0) {
-      key = `v_${i2}`;
-    } else if (i === 0 && j === n) {
-      key = `v_${i3}`;
-    } else if (j === 0) {
-      // On edge (i1, i2) at step i from i1
-      key = i1 < i2 ? `e_${i1}_${i2}_${i}` : `e_${i2}_${i1}_${n - i}`;
-    } else if (i === 0) {
-      // On edge (i1, i3) at step j from i1
-      key = i1 < i3 ? `e_${i1}_${i3}_${j}` : `e_${i3}_${i1}_${n - j}`;
-    } else if (k === 0) {
-      // On edge (i2, i3) at step j from i2
-      key = i2 < i3 ? `e_${i2}_${i3}_${j}` : `e_${i3}_${i2}_${n - j}`;
+    if (w0 === T) {
+      key = `v_${v0}`;
+    } else if (w1 === T) {
+      key = `v_${v1}`;
+    } else if (w2 === T) {
+      key = `v_${v2}`;
+    } else if (w2 === 0) {
+      key = v0 < v1 ? `e_${v0}_${v1}_${w1}` : `e_${v1}_${v0}_${w0}`;
+    } else if (w0 === 0) {
+      key = v1 < v2 ? `e_${v1}_${v2}_${w2}` : `e_${v2}_${v1}_${w1}`;
+    } else if (w1 === 0) {
+      key = v2 < v0 ? `e_${v2}_${v0}_${w0}` : `e_${v0}_${v2}_${w2}`;
     } else {
-      // Strictly interior to face fn
-      key = `f_${fn}_${i}_${j}`;
+      key = `f_${fn}_${w0}_${w1}_${w2}`;
     }
 
     let idx = vertKeyToIdx.get(key);
     if (idx === undefined) {
       idx = uniqVs.length;
       vertKeyToIdx.set(key, idx);
-      uniqVs.push(add(add(v1, mult(i / n, v21)), mult(j / n, v31)));
+      const p0 = poly.vertices[v0];
+      const p1 = poly.vertices[v1];
+      const p2 = poly.vertices[v2];
+      uniqVs.push([
+        ((w0 * p0[0]) + (w1 * p1[0]) + (w2 * p2[0])) / T,
+        ((w0 * p0[1]) + (w1 * p1[1]) + (w2 * p2[1])) / T,
+        ((w0 * p0[2]) + (w1 * p1[2]) + (w2 * p2[2])) / T
+      ]);
     }
     return idx;
   };
 
   const faces = [];
   for (let fn = 0; fn < poly.faces.length; fn++) {
-    const [i1, i2, i3] = poly.faces[fn];
-    const v1 = poly.vertices[i1];
-    const v2 = poly.vertices[i2];
-    const v3 = poly.vertices[i3];
-    const v21 = sub(v2, v1);
-    const v31 = sub(v3, v1);
+    for (let i = -n - 1; i <= m + 1; i++) {
+      for (let j = -1; j <= m + n + 1; j++) {
+        // Upward unit lattice triangle: (i, j) -> (i + 1, j) -> (i, j + 1)
+        let B3 = ((m + n) * ((3 * i) + 1)) + (n * ((3 * j) + 1));
+        let C3 = (-n * ((3 * i) + 1)) + (m * ((3 * j) + 1));
+        let A3 = (3 * T) - B3 - C3;
+        if (A3 >= 0 && B3 >= 0 && C3 >= 0) {
+          faces.push([
+            getOrCreateVertex(fn, i, j),
+            getOrCreateVertex(fn, i + 1, j),
+            getOrCreateVertex(fn, i, j + 1)
+          ]);
+        }
 
-    // Build local (i, j) lookup table for face fn
-    const grid = new Array(n + 1);
-    for (let i = 0; i <= n; i++) {
-      grid[i] = new Array(n - i + 1);
-      for (let j = 0; j + i <= n; j++) {
-        grid[i][j] = getOrCreateVertex(fn, i1, i2, i3, v1, v21, v31, i, j);
-      }
-    }
-
-    for (let i = 0; i < n; i++) {
-      for (let j = 0; j + i < n; j++) {
-        faces.push([grid[i][j], grid[i + 1][j], grid[i][j + 1]]);
-      }
-    }
-    for (let i = 1; i < n; i++) {
-      for (let j = 0; j + i < n; j++) {
-        faces.push([grid[i][j], grid[i][j + 1], grid[i - 1][j + 1]]);
+        // Downward unit lattice triangle: (i + 1, j) -> (i + 1, j + 1) -> (i, j + 1)
+        B3 = ((m + n) * ((3 * i) + 2)) + (n * ((3 * j) + 2));
+        C3 = (-n * ((3 * i) + 2)) + (m * ((3 * j) + 2));
+        A3 = (3 * T) - B3 - C3;
+        if (A3 > 0 && B3 > 0 && C3 > 0) {
+          faces.push([
+            getOrCreateVertex(fn, i + 1, j),
+            getOrCreateVertex(fn, i + 1, j + 1),
+            getOrCreateVertex(fn, i, j + 1)
+          ]);
+        }
       }
     }
   }
 
-  return new Polyhedron(uniqVs, faces, `u${n}${poly.name}`);
+  const opLabel = n === 0 ? `u${m}` : `u(${m},${n})`;
+  return new Polyhedron(uniqVs, faces, `${opLabel}${poly.name}`);
 };

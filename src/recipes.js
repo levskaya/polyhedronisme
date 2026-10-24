@@ -52,6 +52,8 @@ export const PRESET_RECIPE_GROUPS = [
     label: 'Goldberg, Fullerenes & Geodesics',
     recipes: [
       { spec: 'Cdu3I', name: 'Cdu3I — Goldberg GP(3,0) Fullerene (92 faces)' },
+      { spec: 'Cdu(3,1)I', name: 'Cdu(3,1)I — Chiral Goldberg GP(3,1) Fullerene (132 faces)' },
+      { spec: 'Cdu(2,2)I', name: 'Cdu(2,2)I — Class II Goldberg GP(2,2) Fullerene (122 faces)' },
       { spec: 'Cdu4I', name: 'Cdu4I — Goldberg GP(4,0) Fullerene (162 faces)' },
       { spec: 'Cdu5T', name: 'Cdu5T — Tetrahedral Goldberg Sphere' },
       { spec: 'Cdu4O', name: 'Cdu4O — Octahedral Goldberg Sphere' },
@@ -165,10 +167,12 @@ export const generateRandomRecipe = function (avoidSpec = '') {
       let poly = generatePoly(spec);
       let topo = analyzeTopology(poly);
 
-      // Path A: Goldberg / Subdivision path on all-triangle seeds (~15% chance when triangular)
+      // Path A: Goldberg / Subdivision path on all-triangle seeds (~25% chance when triangular)
       if (topo.allTriangles && poly.faces.length <= 20 && random() < 0.25) {
-        const subN = poly.faces.length <= 8 ? randomchoice([3, 4, 5]) : randomchoice([2, 3, 4]);
-        spec = `Cdu${subN}${spec}`;
+        const subOp = poly.faces.length <= 8
+          ? randomchoice(['u3', 'u4', 'u5', 'u(2,1)', 'u(3,1)', 'u(2,2)', 'u(3,2)'])
+          : randomchoice(['u2', 'u3', 'u4', 'u(2,1)', 'u(3,1)', 'u(2,2)']);
+        spec = `Cd${subOp}${spec}`;
         poly = generatePoly(spec);
         topo = analyzeTopology(poly);
 

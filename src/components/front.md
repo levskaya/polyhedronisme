@@ -51,7 +51,7 @@ Also, some newer, experimental operators:
 - __x__<i>N</i> - extrudeN 
 - __Z__ - triangulate
 - __H__(_inset_, _depth_) - hollow - useful for 3D printing, makes a hollow-faced shell version of the polyhedron, this applies the hollowing operator on all faces, insetting by _inset_ (scaled from 0 to 1), and with a shell thickness of _depth_
-- __u__<i>N</i> - limited version of the Goldberg-Coxeter u_n operator (for triangular meshes only)
+- __u__<i>M</i> or __u__(_m_, _n_) - [Goldberg-Coxeter][12] _(m,n)_ triangular subdivision operator (for triangular meshes only; _n_ defaults to 0, so _du(m,n)I_, _du(m,n)O_, and _du(m,n)T_ yield the Goldberg polyhedra _GP(m,n)_)
 
 
 There are more complicated, parameterized forms for __k__ and __n__: 
@@ -99,3 +99,4 @@ You can export these shapes in forms appropriate for 3D printing by shapeways. E
 [9]:http://www.antiprism.com/index.html
 [10]:https://www.software3d.com/Stella.php
 [11]:https://en.wikipedia.org/wiki/Dual_polyhedron
+[12]:https://en.wikipedia.org/wiki/Goldberg_polyhedron

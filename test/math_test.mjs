@@ -287,12 +287,15 @@ console.log('Testing legacy v1 parser and recipe rewriter...');
   assert.strictEqual(rewriteLegacyRecipe('oC20kkkT'), 'oCkkkT');
   assert.strictEqual(rewriteLegacyRecipe('kn4C40A0dA4'), 'kn4CA0dA4');
 
-  // Verify renamed operator rewrites: l -> P, z -> Z, h(0,inset,depth) -> H(inset,depth), h -> H
+  // Verify renamed operator rewrites: l -> P, z -> Z, h(0,inset,depth) -> H(inset,depth), h -> H, u(m,0) -> uM
   assert.strictEqual(rewriteLegacyRecipe('lC'), 'PC');
   assert.strictEqual(rewriteLegacyRecipe('zD'), 'ZD');
   assert.strictEqual(rewriteLegacyRecipe('h(0,0.4,0.1)C'), 'H(0.4,0.1)C');
   assert.strictEqual(rewriteLegacyRecipe('hT'), 'HT');
   assert.strictEqual(rewriteLegacyRecipe('C100zh(0,0.5,0.2)lD'), 'CZH(0.5,0.2)PD');
+  assert.strictEqual(rewriteLegacyRecipe('C100du3I'), 'Cdu3I');
+  assert.strictEqual(rewriteLegacyRecipe('du(3,0)I'), 'du3I');
+  assert.strictEqual(rewriteLegacyRecipe('du(3,2)I'), 'du(3,2)I');
 
   // Verify standalone legacy polyhedron generation
   const p = generatePolyLegacy('C2dakD');
@@ -401,12 +404,42 @@ console.log('Testing all topological operators (manifoldness, Euler characterist
   assert.deepStrictEqual(origCube.faces[0], origFace0);
   assert.deepStrictEqual(reflCube.vertices[0], origVert0.map(x => -x));
 
-  // Verify trisub() on triangular seeds (T, O, I) for n = 2, 3, 5
-  for (const triSeed of [tetrahedron(), octahedron(), icosahedron()]) {
-    for (const n of [2, 3, 5]) {
-      const sub = topo.trisub(triSeed, n);
-      const { F } = assertClosedManifold(sub, 2);
-      assert.strictEqual(F, triSeed.faces.length * n * n);
+  // Verify trisub(poly, m, n) across Class I (m,0), Class II (m,m), and Class III (m,n)
+  // on triangular seeds (T, O, I), and verify dual(trisub) produces exact Goldberg polyhedra GP_p(m,n)
+  const triSeeds = [
+    [tetrahedron(), 3, 4],
+    [octahedron(), 4, 6],
+    [icosahedron(), 5, 12]
+  ];
+  const mnPairs = [
+    [2, 0], [3, 0], [5, 0], [0, 3], // Class I
+    [1, 1], [2, 2], [3, 3],         // Class II
+    [2, 1], [1, 2], [3, 1], [3, 2]  // Class III (chiral)
+  ];
+  for (const [triSeed, pGon, numBaseVerts] of triSeeds) {
+    for (const [m, n] of mnPairs) {
+      const T = (m * m) + (m * n) + (n * n);
+      const sub = topo.trisub(triSeed, m, n);
+      const { V, F } = assertClosedManifold(sub, 2);
+      assert.strictEqual(F, triSeed.faces.length * T);
+      const expectedHexCount = ((T - 1) * triSeed.faces.length) / 2;
+      assert.strictEqual(V, numBaseVerts + expectedHexCount);
+
+      // Dual of u(m,n) is the Goldberg polyhedron GP_p(m,n)
+      const gp = topo.dual(sub);
+      assertClosedManifold(gp, 2);
+      assert.strictEqual(gp.faces.length, numBaseVerts + expectedHexCount);
+      assert.strictEqual(gp.vertices.length, triSeed.faces.length * T);
+
+      let pGonCount = 0;
+      let hexCount = 0;
+      for (const f of gp.faces) {
+        if (f.length === pGon) pGonCount++;
+        else if (f.length === 6) hexCount++;
+        else assert.fail(`${gp.name}: unexpected face of length ${f.length}`);
+      }
+      assert.strictEqual(pGonCount, numBaseVerts);
+      assert.strictEqual(hexCount, expectedHexCount);
     }
   }
 }
